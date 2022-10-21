@@ -1,0 +1,97 @@
+struct Score27 {
+    current_target: u8,
+    scores: [NumHits; 20],
+}
+impl super::PlayerScore for Score27 {
+    type ScoreType = i16;
+    type NotableScores = (u8, bool);
+    fn total(&self) -> i16 {
+        let mut score = 27;
+        for t in 1..self.current_target {
+            score += i16::from(self.scores[usize::from(t - 1)].value(t.try_into().unwrap()));
+        }
+        score
+    }
+    fn completed(&self) -> bool {
+        self.current_target > 20
+    }
+    fn notable_scores(&self) -> Self::NotableScores {
+        (self.cliffs(), self.all_positive())
+    }
+    fn score<S>(&mut self, _round_num: u8, _round_score: S) where Self::ScoreType: std::ops::AddAssign<S> {
+        todo!()
+    }
+    fn get_pb(scores: Vec<Self::ScoreType>) -> Option<Self::ScoreType> {
+        scores.iter().max().copied()
+    }
+    
+}
+impl Score27 {
+    fn cliffs(&self) -> u8 {
+        self.scores
+            .iter()
+            .filter(|&h| h == &NumHits::Three)
+            .count()
+            .try_into()
+            .unwrap()
+    }
+    fn all_positive(&self) -> bool {
+        let mut score = 27;
+        for t in 1..self.current_target {
+            score += i32::from(self.scores[usize::from(t - 1)].value(t.try_into().unwrap()));
+            if score < 0 {
+                return false;
+            }
+        }
+        true
+    }
+}
+impl core::fmt::Debug for Score27 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Score")
+            .field("current_target", &self.current_target)
+            .field(
+                "scores",
+                &self
+                    .scores
+                    .iter()
+                    .enumerate()
+                    .map(|(i, h)| h.value(i.try_into().unwrap()))
+                    .collect::<Vec<_>>(),
+            )
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum NumHits {
+    None,
+    One,
+    Two,
+    Three,
+}
+impl NumHits {
+    fn value(&self, target: i8) -> i8 {
+        target
+            * match self {
+                NumHits::None => -2,
+                NumHits::One => 2,
+                NumHits::Two => 4,
+                NumHits::Three => 6,
+            }
+    }
+}
+impl core::fmt::Debug for NumHits {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:+}",
+            match self {
+                NumHits::None => -2,
+                NumHits::One => 2,
+                NumHits::Two => 4,
+                NumHits::Three => 6,
+            }
+        )
+    }
+}
