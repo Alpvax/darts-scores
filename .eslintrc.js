@@ -1,18 +1,52 @@
 module.exports = {
   root: true,
   env: {
-    node: true
+    node: true,
   },
   extends: [
-    'plugin:vue/vue3-essential',
-    '@vue/standard',
-    '@vue/typescript/recommended'
+    "plugin:vue/vue3-recommended",
+    "@vue/eslint-config-typescript",
   ],
   parserOptions: {
-    ecmaVersion: 2020
+    ecmaVersion: 2020,
   },
   rules: {
-    'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-    'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off'
-  }
-}
+    "@typescript-eslint/array-type": ["error"],
+    "arrow-parens": ["warn", "as-needed", { requireForBlockBody: true }],
+    "brace-style": ["error", "1tbs", { allowSingleLine: true }],
+    // "@typescript-eslint/class-name-casing": "error",
+    "comma-dangle": ["error", "always-multiline"],
+    curly: ["warn", "all"],
+    "@typescript-eslint/explicit-function-return-type": ["warn", { allowExpressions: true }],
+    "@typescript-eslint/explicit-member-accessibility": ["warn", { accessibility: "no-public" }],
+    "eol-last": ["error", "always"],
+    "@typescript-eslint/indent": ["error", 2, { SwitchCase: 1 }],
+    // "@typescript-eslint/interface-name-prefix": ["warn", "always"],
+    "linebreak-style": ["error", "unix"],
+    "max-len": ["warn", {
+      code: 100,
+      tabWidth: 2,
+      ignoreTrailingComments: true,
+    }],
+    "@typescript-eslint/member-delimiter-style": ["error", {
+      multiline: { delimiter: "semi", requireLast: true },
+      singleline: { delimiter: "semi", requireLast: false },
+    }],
+    "multiline-ternary": ["error", "always-multiline"],
+    "no-console": ["off"],
+    "@typescript-eslint/no-non-null-assertion": ["off"],
+    "no-trailing-spaces": ["error"],
+    "no-undef": ["error"],
+    "@typescript-eslint/no-unused-vars": ["error", { args: "none" }],
+    "@typescript-eslint/no-use-before-define": ["off"],
+    "object-curly-spacing": ["warn", "always", {
+      objectsInObjects: false,
+      arraysInObjects: false,
+    }],
+    "@typescript-eslint/prefer-function-type": ["error"],
+    quotes: ["error", "double"],
+    semi: ["error", "always"],
+    "@typescript-eslint/type-annotation-spacing": ["error"],
+    "vue/multi-word-component-names": "off",
+  },
+};
