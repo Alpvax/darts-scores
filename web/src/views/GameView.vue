@@ -28,7 +28,7 @@
 import { defineComponent, ref } from "vue";
 import Game27 from "@/components/Game27.vue"; // @ is an alias to /src
 
-const ALL_PLAYERS = ["Cliff", "Hans", "Fat Nick", "Javelin", "Barron von Sprk"];
+const ALL_PLAYERS = ["Cliff", "Hans", "Fat Nick", "Javelin", "Baron von Sprk"];
 
 export default defineComponent({
   components: {

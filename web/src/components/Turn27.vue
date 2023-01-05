@@ -81,7 +81,7 @@ export default defineComponent({
         event.preventDefault();
         emit("score", score.value);
         turnHitsEl.value!.classList.remove("empty");
-        emit("update:hits", event.target);
+        emit("update:hits", hits.value);
       },
     };
   },
