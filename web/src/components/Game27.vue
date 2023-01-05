@@ -149,7 +149,7 @@ export default defineComponent({
             const hits = toRaw(gameHits.value[p].value);
             const cliffs = hits.filter(c => c == 3).length;
             const score = scores.value[p].value;
-            const finalScore = score[19];
+            const finalScore = score[20]; // Score 20 is the final score
             const allPositive = score.every(s => s > 0);
             o[pId] = { rounds: hits, cliffs, score: finalScore, allPositive };
             return o;
