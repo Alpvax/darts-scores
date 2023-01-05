@@ -20,7 +20,7 @@
     </fieldset>
   </div>
   <div class="game">
-    <Game27 :players="players" />
+    <Game27 :players="players.sort((a, b) => all_players.indexOf(a) - all_players.indexOf(b))" />
   </div>
 </template>
 
@@ -28,15 +28,17 @@
 import { defineComponent, ref } from "vue";
 import Game27 from "@/components/Game27.vue"; // @ is an alias to /src
 
+const ALL_PLAYERS = ["Cliff", "Hans", "Fat Nick", "Javelin", "Barron von Sprk"];
+
 export default defineComponent({
   components: {
     Game27,
   },
   setup() {
-    const players = ref(["Cliff", "Hans", "Fat Nick", "Javelin", "Barron von Sprk"]);
+    const players = ref([...ALL_PLAYERS]);
     return {
       players,
-      all_players: ["Cliff", "Hans", "Fat Nick", "Javelin", "Barron von Sprk"],
+      all_players: ALL_PLAYERS,
     };
   },
 });
