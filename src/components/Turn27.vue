@@ -13,8 +13,8 @@
     <sup>({{ numfmt.format(deltaScore ?? -2 * targetNo) }})</sup>
   </td> -->
   <td
-    class="turnHits"
-    :class="{ empty: hits == null }"
+    ref="turnHitsEl"
+    class="turnHits empty"
   >
     <input
       v-model.number="hits"
@@ -25,7 +25,7 @@
       placeholder="0"
       :autofocus="autofocus"
       @blur="hits = hits ?? 0"
-      @keypress.enter="$event.target!.parent.focus()"
+      @keydown="onKey"
       @change="$emit('score', score)"
     >
     <span />
@@ -33,7 +33,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, ref } from "vue";
+import { computed, defineComponent, Ref, ref } from "vue";
 
 export default defineComponent({
   props: {
@@ -42,17 +42,47 @@ export default defineComponent({
     autofocus: Boolean,
   },
   emits: ["score", "update:hits"],
-  setup (props) {
+  setup (props, { emit }) {
     const hits = ref(null as number | null);
     const delta = (hits: number): number =>
       hits == 0 ? props.targetNo * -2 : hits * props.targetNo * 2;
     const deltaScore = computed(() => hits.value == null ? null : delta(hits.value));
     const score = computed(() => props.scoreIn + (deltaScore.value ?? delta(0)));
+    const turnHitsEl: Ref<HTMLElement | null> = ref(null);
     return {
       hits,
       deltaScore,
       score,
       numfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
+      turnHitsEl,
+      onKey: (event: KeyboardEvent) => {
+        switch (event.key) {
+          case "0":
+            hits.value = 0;
+            break;
+          case "1":
+            hits.value = 1;
+            break;
+          case "2":
+            hits.value = 2;
+            break;
+          case "3":
+            hits.value = 3;
+            break;
+          case "Enter":
+          case "Tab":
+            if (hits.value == null) {
+              hits.value = 0;
+            }
+            break;
+          default:
+            return;
+        }
+        event.preventDefault();
+        emit("score", score.value);
+        turnHitsEl.value!.classList.remove("empty");
+        emit("update:hits", event.target);
+      },
     };
   },
 });

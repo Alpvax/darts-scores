@@ -27,6 +27,7 @@
           :target-no="n"
           :score-in="scores[player].value[n - 1] ?? 0"
           @score="(s) => score(player, n, s)"
+          @update:hits="focusNext"
         />
       </tr>
     </tbody>
@@ -45,7 +46,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType, Ref, ref } from "vue";
+import { computed, defineComponent, onMounted, PropType, Ref, ref } from "vue";
 // import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
@@ -82,8 +83,25 @@ export default defineComponent({
           ps.value[i] = ps.value[i - 1] - i * 2;
         }
       }
-      console.log(`${player} t${turn} = ${score};`, scores.value, completed.value);
+      function unwrapRef<T extends { [k: string]: Ref<U> }, U>(obj: T): { [K in keyof T]: U } {
+        return Object.entries(obj).reduce((o, [p, r]) => {
+          o[p] = r.value;
+          return o;
+        }, {} as { [k: string]: U }) as { [K in keyof T]: U };
+      }
+      console.debug(
+        `${player} t${turn} = ${score};`,
+        unwrapRef(scores.value),
+        unwrapRef(completed.value),
+      );
     }
+    function focusNext(): void {
+      let el = document.querySelector(".turnHits.empty input");
+      if (el && el instanceof HTMLInputElement) {
+        el.focus();
+      }
+    };
+    onMounted(() => focusNext());
     return {
       score,
       scores,
@@ -94,6 +112,7 @@ export default defineComponent({
             return endScore > hs ? [p, endScore] : [hp, hs];
           }, ["", -394] as [string, number])[0]
         : null),
+      focusNext,
       submitScores: () => {
         // const db = getFirestore();
         // addDoc(collection(db, "games/twentyseven/games"), players);
