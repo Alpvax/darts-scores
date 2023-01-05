@@ -1,0 +1,16 @@
+{
+  "name": "darts-scores",
+  "description": "",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alpvax/darts-scores.git"
+  },
+  "author": "Alpvax",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/Alpvax/darts-scores/issues"
+  },
+  "homepage": "https://alpvax-darts-scores.web.app"
+}
