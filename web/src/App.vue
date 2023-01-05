@@ -5,7 +5,12 @@
     </router-link> <!-- |
     <router-link to="/games">Past Games</router-link> -->
   </nav>
-  <router-view />
+  <Suspense>
+    <router-view />
+    <template #fallback>
+      Loading...
+    </template>
+  </Suspense>
 </template>
 
 <style>
@@ -19,6 +24,8 @@
 
 nav {
   padding: 30px;
+  /* TODO: re-enable nav */
+  display: none;
 }
 
 nav a {

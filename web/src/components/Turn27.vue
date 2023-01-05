@@ -1,7 +1,7 @@
 <template>
   <td
     class="turnScore"
-    :class="{ taken: hits != null, cliff: hits == 3 }"
+    :class="{ taken: hits != null, cliff: hits == 3, doubledouble: hits == 2 }"
   >
     {{ score }}
     <sup>({{ numfmt.format(deltaScore ?? -2 * targetNo) }})</sup>
@@ -24,9 +24,8 @@
       max="3"
       placeholder="0"
       :autofocus="autofocus"
-      @blur="hits = hits ?? 0"
       @keydown="onKey"
-      @change="$emit('score', score)"
+      @change="emitScore(false)"
     >
     <span />
   </td>
@@ -49,12 +48,18 @@ export default defineComponent({
     const deltaScore = computed(() => hits.value == null ? null : delta(hits.value));
     const score = computed(() => props.scoreIn + (deltaScore.value ?? delta(0)));
     const turnHitsEl: Ref<HTMLElement | null> = ref(null);
+    function emitScore(moveFocus: boolean): void {
+      emit("score", score.value);
+      turnHitsEl.value!.classList.remove("empty");
+      emit("update:hits", hits.value, moveFocus);
+    }
     return {
       hits,
       deltaScore,
       score,
       numfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
       turnHitsEl,
+      emitScore,
       onKey: (event: KeyboardEvent) => {
         switch (event.key) {
           case "0":
@@ -69,8 +74,11 @@ export default defineComponent({
           case "3":
             hits.value = 3;
             break;
-          case "Enter":
           case "Tab":
+            if (event.shiftKey) {
+              return;
+            }
+          case "Enter":
             if (hits.value == null) {
               hits.value = 0;
             }
@@ -79,9 +87,7 @@ export default defineComponent({
             return;
         }
         event.preventDefault();
-        emit("score", score.value);
-        turnHitsEl.value!.classList.remove("empty");
-        emit("update:hits", hits.value);
+        emitScore(true);
       },
     };
   },
@@ -95,10 +101,11 @@ export default defineComponent({
   width: 5em;
 }
 .turnScore:not(.taken) {
-  color: rgb(160, 160, 160);
+  color: #b0b0b0;
 }
 .hitsInput {
-  width: 1.7em;
+  width: 1.3em;
+  font-size: 2vh;
 }
 .hitsInput:invalid + span::after {
   position: absolute;
@@ -107,7 +114,10 @@ export default defineComponent({
   padding-left: 5px;
 }
 .cliff {
-  color: green;
+  color: #00aa00;
+}
+.doubledouble {
+  color: #0000aa;
 }
 /* .turnDelta {
   font-size: smaller;

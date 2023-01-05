@@ -4,7 +4,7 @@
       <tr>
         <td>&nbsp;</td>
         <td
-          v-for="player in players"
+          v-for="[player] in players"
           :key="player"
           class="playerName"
           colspan="2"
@@ -22,12 +22,12 @@
           {{ n }}
         </td>
         <Turn27
-          v-for="player in players"
+          v-for="[player] in players"
           :key="player"
           :target-no="n"
           :score-in="scores[player].value[n - 1] ?? 0"
           @score="(s) => score(player, n, s)"
-          @update:hits="(h) => updateHits(player, n, h)"
+          @update:hits="(h, f) => updateHits(player, n, h, f)"
         />
       </tr>
     </tbody>
@@ -36,8 +36,12 @@
     v-if="winner != null"
     class="completed"
   >
-    Game Completed! Winner = {{ winner }}!
+    Game Completed! {{ winner.length === 1
+      ? `Winner = ${winner[0]}`
+      // eslint-disable-next-line max-len
+      : `It is a tie between ${winner.slice(0, winner.length - 1).join(", ")} and ${winner[winner.length - 1]}` }}!
     <input
+      v-if="!submitted"
       type="button"
       value="Submit Scores"
       @click="submitScores"
@@ -47,7 +51,7 @@
 
 <script lang="ts">
 import { computed, defineComponent, onMounted, PropType, Ref, ref, toRaw } from "vue";
-// import { addDoc, collection, getFirestore } from "firebase/firestore";
+import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
 
@@ -61,7 +65,7 @@ export default defineComponent({
     Turn27,
   },
   props: {
-    players: { type: Array as PropType<string[]>, required: true },
+    players: { type: Array as PropType<[string, string][]>, required: true },
     date: { type: Date, default: new Date() },
   },
   setup (props) {
@@ -71,24 +75,28 @@ export default defineComponent({
         return o;
       }, {} as { [k: string]: U }) as { [K in keyof T]: U };
     }
-    const scores = computed(() => props.players.reduce((m, p) => {
+    const scores = computed(() => props.players.reduce((m, [p]) => {
       m[p] = ref([...startScores]);
       return m;
     }, {} as { [k: string]: Ref<number[]> }));
-    const gameHits = computed(() => props.players.reduce((m, p) => {
-      m[p] = ref(new Array(20));
+    const gameHits = computed(() => props.players.reduce((m, [p]) => {
+      m[p] = ref(new Array(20).fill(0));
       return m;
     }, {} as { [k: string]: Ref<number[]> }));
-    const completed = computed(() => props.players.reduce((o, p) => {
+    const completed = computed(() => props.players.reduce((o, [p]) => {
       o[p] = ref(false);
       return o;
     }, {} as { [k: string]: Ref<boolean> }));
     const winner = computed(() => Object.values(completed.value).every(b => b.value)
       ? Object.entries(scores.value)
-        .reduce(([hp, hs]: [string, number], [p, s]: [string, Ref<number[]>]) => {
-          let endScore = s.value[s.value.length - 1 ];
-          return endScore > hs ? [p, endScore] : [hp, hs];
-        }, ["", -394] as [string, number])[0]
+        .reduce(([hp, hs]: [string[], number], [p, s]: [string, Ref<number[]>]) => {
+          let endScore = s.value[20];
+          return endScore > hs
+            ? [[p], endScore]
+            : endScore === hs
+              ? [[...hp, p], hs]
+              : [hp, hs];
+        }, [[], -394] as [string[], number])[0]
       : null);
     function score(player: string, turn: number, score: number): void {
       let ps = scores.value[player];
@@ -113,28 +121,39 @@ export default defineComponent({
       }
     };
     onMounted(() => focusNext());
-    function updateHits(player: string, turn: number, hits: number): void {
+    function updateHits(player: string, turn: number, hits: number, moveFocus: boolean): void {
       let ph = gameHits.value[player];
       ph.value[turn - 1] = hits;
-      focusNext();
+      if (moveFocus) {
+        focusNext();
+      }
     }
+    const submitted = ref(false);
     return {
       score,
       scores,
       winner,
       updateHits,
+      submitted,
       submitScores: () => {
+        const winners = winner.value!.map(name => props.players.find(([n]) => n === name)![1]);
         let result = {
-          winner: winner.value,
-          game: props.players.reduce((o, p) => {
-            const hits = toRaw(gameHits.value[p].value).map(h => h || 0);
+          date: props.date.toISOString(),
+          winner: winners.length == 1
+            ? winners[0]
+            : {
+              tie: winners,
+              tiebreak: {},//TODO: implement tiebreak saving
+            },
+          game: props.players.reduce((o, [p, pId]) => {
+            const hits = toRaw(gameHits.value[p].value);
             const cliffs = hits.filter(c => c == 3).length;
             const score = scores.value[p].value;
             const finalScore = score[19];
             const allPositive = score.every(s => s > 0);
-            o[p] = { rounds: hits, cliffs, score: finalScore, allPositive };
+            o[pId] = { rounds: hits, cliffs, score: finalScore, allPositive };
             return o;
-          }, {} as { [k: string]: {
+          }, {} as { [player: string]: {
             rounds: number[];
             cliffs: number;
             score: number;
@@ -142,10 +161,9 @@ export default defineComponent({
           }; }),
         };
         console.log(result);
-        // const db = getFirestore();
-        // addDoc(collection(db, "games/twentyseven/games"), players);
-        alert("Not yet implemented! For now, record the scores manually."
-        + "(You could take a screenshot)");
+        const db = getFirestore();
+        addDoc(collection(db, "game/twentyseven/games"), result);
+        submitted.value = true;
       },
     };
   },
@@ -158,5 +176,8 @@ export default defineComponent({
 }
 .completed {
   width: fit-content;
+}
+input[type=button] {
+  font-size: 2.2vh;
 }
 </style>
