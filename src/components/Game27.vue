@@ -116,7 +116,8 @@ export default defineComponent({
       submitScores: () => {
         // const db = getFirestore();
         // addDoc(collection(db, "games/twentyseven/games"), players);
-
+        alert("Not yet implemented! For now, record the scores manually."
+        + "(You could take a screenshot)");
       },
     };
   },
