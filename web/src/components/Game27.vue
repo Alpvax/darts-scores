@@ -55,6 +55,19 @@ import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
 
+export type Result27 = {
+  date: string;
+  winner: string | { tie: string[]; tiebreak: {} };
+  game: {
+    [player: string]: {
+      rounds: number[];
+      cliffs: number;
+      score: number;
+      allPositive: boolean;
+    };
+  };
+}
+
 const startScores = [27];
 for (let i = 1; i < 21; i++) {
   startScores.push(startScores[i - 1] - i * 2);
@@ -137,7 +150,7 @@ export default defineComponent({
       submitted,
       submitScores: () => {
         const winners = winner.value!.map(name => props.players.find(([n]) => n === name)![1]);
-        let result = {
+        let result: Result27 = {
           date: props.date.toISOString(),
           winner: winners.length == 1
             ? winners[0]

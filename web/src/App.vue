@@ -2,8 +2,10 @@
   <nav>
     <router-link to="/">
       Game
-    </router-link> <!-- |
-    <router-link to="/games">Past Games</router-link> -->
+    </router-link>
+    | <router-link to="/history">
+      Past Games
+    </router-link>
   </nav>
   <Suspense>
     <router-view />
@@ -24,8 +26,6 @@
 
 nav {
   padding: 30px;
-  /* TODO: re-enable nav */
-  display: none;
 }
 
 nav a {

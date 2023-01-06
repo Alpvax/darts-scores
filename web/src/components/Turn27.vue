@@ -61,6 +61,9 @@ export default defineComponent({
       turnHitsEl,
       emitScore,
       onKey: (event: KeyboardEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+          return;
+        }
         switch (event.key) {
           case "0":
             hits.value = 0;
@@ -75,9 +78,6 @@ export default defineComponent({
             hits.value = 3;
             break;
           case "Tab":
-            if (event.shiftKey) {
-              return;
-            }
           case "Enter":
             if (hits.value == null) {
               hits.value = 0;
@@ -104,20 +104,20 @@ export default defineComponent({
   color: #b0b0b0;
 }
 .hitsInput {
-  width: 1.3em;
+  width: 1.6em;
   font-size: 2vh;
 }
 .hitsInput:invalid + span::after {
   position: absolute;
   content: "✖";
-  color: red;
+  color: #ff0000;
   padding-left: 5px;
 }
 .cliff {
-  color: #00aa00;
+  color: #00cc00;
 }
 .doubledouble {
-  color: #0000aa;
+  color: #0000ff;
 }
 /* .turnDelta {
   font-size: smaller;
