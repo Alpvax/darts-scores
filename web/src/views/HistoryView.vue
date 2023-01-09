@@ -34,7 +34,7 @@
     Date	<players>	Winner	TieBreak	RealWinner	Game total	Game avg
     05/01/2023	-149	17	-345	-191	-349	Hans		Hans	-1017	-203.4
    -->
-  <table>
+  <table id="gameResults">
     <thead>
       <tr>
         <td class="tableHeader">
@@ -42,11 +42,11 @@
         </td>
         <!-- <td>&nbsp;</td> -->
         <td
-          v-for="player in players"
-          :key="player"
+          v-for="[player, id] in all_players.filter(([_name, id]) => players.includes(id))"
+          :key="id"
           class="playerName"
         >
-          {{ all_players.find(([_name, id]) => id === player)![0] }}
+          {{ player }}
         </td>
       </tr>
     </thead>
@@ -59,10 +59,19 @@
           {{ (new Date(game.date)).toLocaleDateString() }}
         </td>
         <td
-          v-for="(score, player) in game.game"
+          v-for="player in all_players
+            .filter(([_name, id]) => players.includes(id))
+            .map(([_name, id]) => id)"
           :key="player"
+          class="gameScore"
+          :class="{
+            winner: typeof game.winner === 'string'
+              ? game.winner == player
+              : game.winner.tie.includes(player),
+            tie: typeof game.winner === 'object'
+          }"
         >
-          {{ score.score }}
+          {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
         </td>
       </tr>
     </tbody>
@@ -70,14 +79,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watchEffect } from "vue";
+import { computed, defineComponent, ref, watchEffect } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import {
   collection, doc, DocumentReference,
   getDoc, getDocs, getFirestore,
   orderBy, query, where,
 } from "firebase/firestore";
-import { Result27 } from "@/components/Game27.vue";
+import { PlayerGameResult27, Result27 } from "@/components/Game27.vue";
 
 export default defineComponent({
   components: {
@@ -117,6 +126,15 @@ export default defineComponent({
       all_players,
       toDate, fromDate,
       games,
+      scores: computed(() => games.value.reduce((scores, game) => {
+        for (const player of players.value) {
+          scores[player].push(Object.hasOwn(game.game, player) ? game.game[player] : null);
+        }
+        return scores;
+      }, players.value.reduce((o, p) => {
+        o[p] = [];
+        return o;
+      }, {} as { [k: string]: (PlayerGameResult27 | null)[] }))),
     };
   },
 });
@@ -128,5 +146,14 @@ export default defineComponent({
 }
 #historyFilter, .dateFilters {
   width: fit-content;
+}
+#gameResults td {
+  padding: 0.2em;
+}
+#gameResults td.tie.winner {
+  background-color: #bbff66;
+}
+#gameResults td.winner {
+  background-color: #00ff00;
 }
 </style>

@@ -119,6 +119,12 @@ export default defineComponent({
 .doubledouble {
   color: #0000ff;
 }
+tbody > tr:has(.turnHits.empty) {
+  background-color: bisque;
+}
+tbody > tr:has(.turnHits.empty) ~ tr:has(.turnHits.empty) {
+  background-color: inherit;
+}
 /* .turnDelta {
   font-size: smaller;
 } */

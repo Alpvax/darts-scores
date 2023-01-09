@@ -55,16 +55,17 @@ import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
 
+export type PlayerGameResult27 = {
+  rounds: number[];
+  cliffs: number;
+  score: number;
+  allPositive: boolean;
+};
 export type Result27 = {
   date: string;
   winner: string | { tie: string[]; tiebreak: {} };
   game: {
-    [player: string]: {
-      rounds: number[];
-      cliffs: number;
-      score: number;
-      allPositive: boolean;
-    };
+    [player: string]: PlayerGameResult27;
   };
 }
 
@@ -131,6 +132,11 @@ export default defineComponent({
       let el = document.querySelector(".turnHits.empty input");
       if (el && el instanceof HTMLInputElement) {
         el.focus();
+      } else {
+        el = document.querySelector("div.completed > input[type=button]");
+        if (el && el instanceof HTMLInputElement) {
+          el.focus();
+        }
       }
     };
     onMounted(() => focusNext());
