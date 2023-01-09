@@ -150,6 +150,9 @@ export default defineComponent({
 #gameResults td {
   padding: 0.2em;
 }
+#gameResults tr:hover {
+  background-color: bisque;
+}
 #gameResults td.tie.winner {
   background-color: #bbff66;
 }
