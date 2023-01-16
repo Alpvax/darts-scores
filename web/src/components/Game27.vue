@@ -63,7 +63,13 @@ export type PlayerGameResult27 = {
 };
 export type Result27 = {
   date: string;
-  winner: string | { tie: string[]; tiebreak: {} };
+  winner: string | {
+    tie: string[];
+    tiebreak: { //TODO: implement tiebreak
+      winner?: string;
+      // [k: string | number]: any;
+    };
+  };
   game: {
     [player: string]: PlayerGameResult27;
   };

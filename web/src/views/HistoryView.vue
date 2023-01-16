@@ -15,7 +15,7 @@
       >
     </div>
     <PlayerSelection
-      legend="Select players (unimplemented)"
+      legend="Select required players"
       :available-players="all_players"
       @players="p => players = p"
     />
@@ -34,48 +34,121 @@
     Date	<players>	Winner	TieBreak	RealWinner	Game total	Game avg
     05/01/2023	-149	17	-345	-191	-349	Hans		Hans	-1017	-203.4
    -->
-  <table id="gameResults">
-    <thead>
-      <tr>
-        <td class="tableHeader">
-          Date
-        </td>
-        <!-- <td>&nbsp;</td> -->
-        <td
-          v-for="[player, id] in all_players.filter(([_name, id]) => players.includes(id))"
-          :key="id"
-          class="playerName"
+  <div id="histBodyContainer">
+    <table id="playerSummary">
+      <thead>
+        <tr>
+          <td>&nbsp;</td>
+          <td
+            v-for="[player, id] in all_players"
+            :key="id"
+            class="playerName"
+          >
+            {{ player }}
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="(values, name) in scoreSummary"
+          :key="name"
         >
-          {{ player }}
-        </td>
-      </tr>
-    </thead>
-    <tbody>
-      <tr
-        v-for="game in games"
-        :key="game.date"
-      >
-        <td class="date">
-          {{ (new Date(game.date)).toLocaleDateString() }}
-        </td>
-        <td
-          v-for="player in all_players
-            .filter(([_name, id]) => players.includes(id))
-            .map(([_name, id]) => id)"
-          :key="player"
-          class="gameScore"
-          :class="{
-            winner: typeof game.winner === 'string'
-              ? game.winner == player
-              : game.winner.tie.includes(player),
-            tie: typeof game.winner === 'object'
-          }"
+          <td class="summaryLabel">
+            {{ name }}
+          </td>
+          <td
+            v-for="(val, idx) in values"
+            :key="idx"
+            class="summaryValue"
+          >
+            {{ val }}
+          </td>
+        </tr>
+        <!-- <tr class="pb">
+          <td class="summaryLabel">
+            Personal Best
+          </td>
+        </tr>
+        <tr class="winsCount">
+          <td class="summaryLabel">
+            Wins
+          </td>
+        </tr>
+        <tr class="fatNicks">
+          <td class="summaryLabel">
+            Fat Nicks
+          </td>
+        </tr>
+        <tr class="gamesPlayed">
+          <td class="summaryLabel">
+            Total games played
+          </td>
+        </tr>
+        <tr class="winRate">
+          <td class="summaryLabel">
+            Win rate
+          </td>
+        </tr>
+        <tr class="meanScore">
+          <td class="summaryLabel">
+            Average score
+          </td>
+        </tr>
+        <tr class="cliffs">
+          <td class="summaryLabel">
+            Cliffs
+          </td>
+        </tr>
+        <tr class="allPositive">
+          <td class="summaryLabel">
+            All Positive
+          </td>
+        </tr> -->
+      </tbody>
+    </table>
+    <table id="gameResults">
+      <thead>
+        <tr>
+          <td class="tableHeader">
+            Date
+          </td>
+          <!-- <td>&nbsp;</td> -->
+          <td
+            v-for="[player, id] in all_players"
+            :key="id"
+            class="playerName"
+          >
+            {{ player }}
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="game in games"
+          :key="game.date"
         >
-          {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
-        </td>
-      </tr>
-    </tbody>
-  </table>
+          <td class="date">
+            {{ (new Date(game.date)).toLocaleDateString() }}
+          </td>
+          <td
+            v-for="player in all_players
+              // .filter(([_name, id]) => players.includes(id))
+              .map(([_name, id]) => id)"
+            :key="player"
+            class="gameScore"
+            :class="{
+              winner: typeof game.winner === 'string'
+                ? game.winner == player
+                : game.winner.tie.includes(player),
+              tie: typeof game.winner === 'object'
+            }"
+          >
+            {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <script lang="ts">
@@ -121,36 +194,131 @@ export default defineComponent({
       );
     const players = ref(all_players.map(([_name, id]) => id));
 
+    const scores = computed(() => games.value.reduce((scores, game) => {
+      for (const player of all_players) {
+        const pid = player[1];
+        scores[pid].push(Object.hasOwn(game.game, pid) ? game.game[pid] : null);
+      }
+      return scores;
+    }, all_players.reduce((o, p) => {
+      o[p[1]] = [];
+      return o;
+    }, {} as { [k: string]: (PlayerGameResult27 | null)[] })));
+
+    const wins = computed(() => games.value.reduce((acc, game) => {
+      const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
+      acc[winner].push(Object.keys(game.game));
+      return acc;
+    }, all_players.reduce((o, p) => {
+      o[p[1]] = [];
+      return o;
+    }, {} as { [k: string]: string[][] })));
+
     return {
       players,
       all_players,
       toDate, fromDate,
       games,
-      scores: computed(() => games.value.reduce((scores, game) => {
-        for (const player of players.value) {
-          scores[player].push(Object.hasOwn(game.game, player) ? game.game[player] : null);
-        }
-        return scores;
-      }, players.value.reduce((o, p) => {
-        o[p] = [];
-        return o;
-      }, {} as { [k: string]: (PlayerGameResult27 | null)[] }))),
+      scores,
+      scoreSummary: computed(() => all_players
+        .reduce((summary, [_name, player]) => {
+          const playerScores = scores.value[player].filter(s => s != null) as PlayerGameResult27[];
+          const [allWins, reqWins] = wins.value[player].reduce(([all, req], gamePlayers) => {
+            all += 1;
+            if (players.value.every(p => gamePlayers.includes(p))) {
+              req += 1;
+            }
+            return [all, req];
+          }, [0, 0]);
+          const gamesPlayed = playerScores.length;
+          const [totalScore, pb, fn, cliffs, pos] =
+            playerScores.reduce(([totalScore, pb, fn, cliffs, pos], s) => {
+              totalScore += s.score;
+              if (s.score > pb) {
+                pb = s.score;
+              }
+              if (s.score === -393) {
+                fn += 1;
+              }
+              cliffs += s.cliffs;
+              if (s.allPositive) {
+                pos += 1;
+              }
+              return [totalScore, pb, fn, cliffs, pos];
+            }, [0, -394, 0, 0, 0]);
+          summary["Personal Best"].push(pb);
+          summary["Wins"].push(reqWins);
+          summary["Total Wins"].push(allWins);
+          summary["Fat Nicks"].push(fn);
+          summary["Total games played"].push(gamesPlayed);
+          summary["Win rate"].push((allWins / gamesPlayed * 100).toString() + "%");
+          summary["Average score"].push(totalScore / gamesPlayed);
+          summary["Cliffs"].push(cliffs);
+          summary["All Positive"].push(pos);
+          return summary;
+        }, {
+          "Personal Best": [] as number[],
+          "Wins": [] as number[],
+          "Total Wins": [] as number[],
+          "Fat Nicks": [] as number[],
+          "Total games played": [] as number[],
+          "Win rate": [] as string[],
+          "Average score": [] as number[],
+          "Cliffs": [] as number[],
+          "All Positive": [] as number[],
+        })),
     };
   },
 });
 </script>
 
 <style>
+#histBodyContainer {
+  display: flex;
+  /* flex-direction: column; */
+  /* display: grid; */
+  width: fit-content;
+  /* grid-template-columns: 2;
+  grid-template-rows: 1; */
+}
+#gameResults {
+  order: 1
+  /* grid-column-start: 1;
+  grid-row-start: 1;
+  align-self: center;
+  justify-self: center; */
+  /* float: left; */
+}
+#playerSummary {
+  order: 2;
+  margin-left: 10%;
+  /* grid-column-start: 2;
+  grid-row-start: 1;
+  align-self: center;
+  justify-self: center; */
+  /* float: left; */
+}
+.playerName {
+  width: 6em;
+}
 .playerName, .tableHeader {
   font-weight: bold;
+}
+.summaryLabel {
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+}
+.summaryValue {
+  text-align: center;
 }
 #historyFilter, .dateFilters {
   width: fit-content;
 }
-#gameResults td {
+#histBodyContainer td {
   padding: 0.2em;
 }
-#gameResults tr:hover {
+#histBodyContainer tbody tr:hover {
   background-color: bisque;
 }
 #gameResults td.tie.winner {
