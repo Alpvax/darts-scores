@@ -50,7 +50,9 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, nextTick, onMounted, PropType, Ref, ref, toRaw } from "vue";
+import {
+  computed, defineComponent, nextTick, onMounted, PropType, Ref, ref, toRaw, watch,
+} from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
@@ -150,6 +152,7 @@ export default defineComponent({
         }
       }
     };
+    watch(() => props.players, () => focusNext());
     onMounted(() => focusNext());
     function updateHits(player: string, turn: number, hits: number, moveFocus: boolean): void {
       let ph = gameHits.value[player];
