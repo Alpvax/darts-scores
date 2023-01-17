@@ -231,40 +231,48 @@ export default defineComponent({
             return [all, req];
           }, [0, 0]);
           const gamesPlayed = playerScores.length;
-          const [totalScore, pb, fn, cliffs, pos] =
-            playerScores.reduce(([totalScore, pb, fn, cliffs, pos], s) => {
+          const [totalScore, pb, pw, fn, cliffs, dd, pos] =
+            playerScores.reduce(([totalScore, pb, pw, fn, cliffs, dd, pos], s) => {
               totalScore += s.score;
               if (s.score > pb) {
                 pb = s.score;
+              }
+              if (s.score < pw) {
+                pw = s.score;
               }
               if (s.score === -393) {
                 fn += 1;
               }
               cliffs += s.cliffs;
+              dd += s.rounds.filter(c => c == 2).length;
               if (s.allPositive) {
                 pos += 1;
               }
-              return [totalScore, pb, fn, cliffs, pos];
-            }, [0, -394, 0, 0, 0]);
+              return [totalScore, pb, pw, fn, cliffs, dd, pos];
+            }, [0, -394, 1288, 0, 0, 0, 0]);
           summary["Personal Best"].push(pb);
-          summary["Wins"].push(reqWins);
+          summary["Personal Worst"].push(pw);
+          summary["Real Wins"].push(reqWins);
           summary["Total Wins"].push(allWins);
           summary["Fat Nicks"].push(fn);
           summary["Total games played"].push(gamesPlayed);
-          summary["Win rate"].push((allWins / gamesPlayed * 100).toString() + "%");
-          summary["Average score"].push(totalScore / gamesPlayed);
+          summary["Win rate"].push(parseFloat((allWins / gamesPlayed * 100).toFixed(2)) + "%");
+          summary["Average score"].push(parseFloat((totalScore / gamesPlayed).toFixed(2)));
           summary["Cliffs"].push(cliffs);
+          summary["Double Doubles"].push(dd);
           summary["All Positive"].push(pos);
           return summary;
         }, {
           "Personal Best": [] as number[],
-          "Wins": [] as number[],
+          "Personal Worst": [] as number[],
+          "Real Wins": [] as number[],
           "Total Wins": [] as number[],
           "Fat Nicks": [] as number[],
           "Total games played": [] as number[],
           "Win rate": [] as string[],
           "Average score": [] as number[],
           "Cliffs": [] as number[],
+          "Double Doubles": [] as number[],
           "All Positive": [] as number[],
         })),
     };
@@ -298,7 +306,7 @@ export default defineComponent({
   justify-self: center; */
   /* float: left; */
 }
-.playerName {
+#histBodyContainer .playerName {
   width: 6em;
 }
 .playerName, .tableHeader {

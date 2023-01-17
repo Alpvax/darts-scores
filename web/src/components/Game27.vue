@@ -50,7 +50,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, onMounted, PropType, Ref, ref, toRaw } from "vue";
+import { computed, defineComponent, nextTick, onMounted, PropType, Ref, ref, toRaw } from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import Turn27 from "./Turn27.vue";
@@ -134,14 +134,19 @@ export default defineComponent({
         unwrapRefObj(completed.value),
       );
     }
-    function focusNext(): void {
+    async function focusNext(next = true): Promise<void> {
       let el = document.querySelector(".turnHits.empty input");
+      console.log("Moving focus to:", el);//XXX
       if (el && el instanceof HTMLInputElement) {
         el.focus();
       } else {
         el = document.querySelector("div.completed > input[type=button]");
+        console.log("Completed: moving focus to:", el);//XXX
         if (el && el instanceof HTMLInputElement) {
           el.focus();
+        } else if (next) {
+          await nextTick();
+          await focusNext(false);
         }
       }
     };
@@ -149,6 +154,7 @@ export default defineComponent({
     function updateHits(player: string, turn: number, hits: number, moveFocus: boolean): void {
       let ph = gameHits.value[player];
       ph.value[turn - 1] = hits;
+      console.log(player, turn, hits, moveFocus);//XXX
       if (moveFocus) {
         focusNext();
       }
@@ -178,12 +184,7 @@ export default defineComponent({
             const allPositive = score.every(s => s > 0);
             o[pId] = { rounds: hits, cliffs, score: finalScore, allPositive };
             return o;
-          }, {} as { [player: string]: {
-            rounds: number[];
-            cliffs: number;
-            score: number;
-            allPositive: boolean;
-          }; }),
+          }, {} as { [player: string]: PlayerGameResult27 }),
         };
         console.log(result);
         const db = getFirestore();
