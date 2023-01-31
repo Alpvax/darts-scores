@@ -16,6 +16,10 @@ export const getPlayerNames = (players: PlayerList): string[] =>
 export const getPlayerId = (p: Player): string => Array.isArray(p) ? p[1] : p.id;
 export const getPlayerName = (p: Player): string => Array.isArray(p) ? p[0] : p.name;
 
+export const asPlayerObj = (p: Player): PlayerObj => Array.isArray(p)
+  ? { name: p[0], id: p[1] }
+  : p;
+
 export const spreadPlayer = (p: Player): [string, string] => Array.isArray(p) ? p : [p.name, p.id];
 export const iterPlayers = (players: PlayerList): PlayerObj[] =>
   (Array.isArray(players) ? players : Object.entries(players))

@@ -1,23 +1,23 @@
 <template>
   <td
     class="turnScore"
-    :class="{ taken: hits != null, cliff: hits == 3, doubledouble: hits == 2 }"
+    :class="{
+      taken: hits >= 0,
+      cliff: hits == 3,
+      doubledouble: hits == 2,
+      editable: editable,
+    }"
   >
     {{ score }}
     <sup>({{ numfmt.format(deltaScore ?? -2 * targetNo) }})</sup>
   </td>
-  <!-- <td
-    class="turnDelta"
-    :class="{ empty: hits == null }"
-  >
-    <sup>({{ numfmt.format(deltaScore ?? -2 * targetNo) }})</sup>
-  </td> -->
   <td
+    v-if="editable"
     ref="turnHitsEl"
     class="turnHits empty"
   >
     <input
-      v-model.number="hits"
+      v-model="hitsInternal"
       class="hitsInput"
       type="number"
       min="0"
@@ -25,7 +25,6 @@
       placeholder="0"
       :autofocus="autofocus"
       @keydown="onKey"
-      @change="emitScore(false)"
     >
     <span />
   </td>
@@ -36,58 +35,64 @@ import { computed, defineComponent, Ref, ref } from "vue";
 
 export default defineComponent({
   props: {
+    editable: { type: Boolean, default: true },
     targetNo: { type: Number, required: true },
-    scoreIn: { type: Number, default: 27 },
+    score: { type: Number, required: true },
+    hits: { type: Number, default: -1 },
     autofocus: Boolean,
   },
-  emits: ["score", "update:hits"],
+  emits: ["update:hits", "focusNext"],
   setup (props, { emit }) {
-    const hits = ref(null as number | null);
-    const delta = (hits: number): number =>
-      hits == 0 ? props.targetNo * -2 : hits * props.targetNo * 2;
-    const deltaScore = computed(() => hits.value == null ? null : delta(hits.value));
-    const score = computed(() => props.scoreIn + (deltaScore.value ?? delta(0)));
+    const hitsInternal = computed({
+      get: () => props.hits < 1 ? 0 : props.hits,
+      set(val) {
+        setHits(val, true);
+      },
+    });
+    const deltaScore = computed(() =>
+      2 * (hitsInternal.value > 0 ? hitsInternal.value * props.targetNo : -props.targetNo));
     const turnHitsEl: Ref<HTMLElement | null> = ref(null);
-    function emitScore(moveFocus: boolean): void {
-      emit("score", score.value);
+    function setHits(value: number, moveFocus: boolean): void {
       turnHitsEl.value!.classList.remove("empty");
-      emit("update:hits", hits.value, moveFocus);
+      // Required because "" == 0
+      if ((value === 0 || value > 0) && value < 4) {
+        console.log(`Setting hits for round ${props.targetNo} to "${value}"\n >= 0: ${value >= 0}`);//XXX
+        emit("update:hits", value);
+        if (moveFocus) {
+          emit("focusNext");
+        }
+      }
     }
     return {
-      hits,
+      hitsInternal,
       deltaScore,
-      score,
       numfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
       turnHitsEl,
-      emitScore,
       onKey: (event: KeyboardEvent) => {
         if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
           return;
         }
         switch (event.key) {
           case "0":
-            hits.value = 0;
+            hitsInternal.value = 0;
             break;
           case "1":
-            hits.value = 1;
+            hitsInternal.value = 1;
             break;
           case "2":
-            hits.value = 2;
+            hitsInternal.value = 2;
             break;
           case "3":
-            hits.value = 3;
+            hitsInternal.value = 3;
             break;
           case "Tab":
           case "Enter":
-            if (hits.value == null) {
-              hits.value = 0;
-            }
+            setHits(hitsInternal.value < 0 ? 0 : hitsInternal.value, true);
             break;
-          default:
-            return;
+          // default:
+          //   return;
         }
         event.preventDefault();
-        emitScore(true);
       },
     };
   },
@@ -96,9 +101,11 @@ export default defineComponent({
 
 <style>
 .turnScore {
-  text-align: right;
   padding-left: 10px;
   width: 5em;
+}
+.turnScore.editable {
+  text-align: right;
 }
 .turnScore:not(.taken) {
   color: #b0b0b0;

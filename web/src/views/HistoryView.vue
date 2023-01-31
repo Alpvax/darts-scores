@@ -20,7 +20,10 @@
       @players="p => players = p"
     />
   </div>
-  <div id="histBodyContainer">
+  <div
+    id="histBodyContainer"
+    @click.prevent="selectedGame = null"
+  >
     <Summary27
       :players="all_players"
       :filtered="players"
@@ -47,6 +50,7 @@
         <tr
           v-for="game in games"
           :key="game.date"
+          @click.stop.prevent="selectedGame = game"
         >
           <td class="date">
             {{ (new Date(game.date)).toLocaleDateString() }}
@@ -61,7 +65,8 @@
               winner: typeof game.winner === 'string'
                 ? game.winner == player
                 : game.winner.tie.includes(player),
-              tie: typeof game.winner === 'object'
+              tie: typeof game.winner === 'object',
+              allPos: Object.hasOwn(game.game, player) && game.game[player].allPositive,
             }"
           >
             {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
@@ -69,14 +74,26 @@
         </tr>
       </tbody>
     </table>
+    <div
+      v-if="selectedGame != null"
+      id="pastGameOverlay"
+    >
+      <Game27
+        :players="all_players.filter(([_n, id]) => id in selectedGame!.game)"
+        :date="new Date(selectedGame!.date)"
+        :editable="false"
+        :player-game-hits="selectedRounds"
+        :display-winner="false"
+      />
+    </div>
   </div>
 </template>
 
 <script lang="ts">
 import { computed, defineComponent, ref, watchEffect } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
-// import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
 import Summary27 from "@/components/27/Summary.vue";
+import Game27 from "@/components/27/Game27.vue";
 import {
   collection, doc, DocumentReference,
   getDoc, getDocs, getFirestore,
@@ -87,8 +104,8 @@ import { PlayerGameResult27, Result27 } from "@/components/27/Game27.vue";
 export default defineComponent({
   components: {
     PlayerSelection,
-    // PlayerTable,
     Summary27,
+    Game27,
   },
   async setup() {
     const gamesRef = collection(getFirestore(), "game/twentyseven/games");
@@ -139,60 +156,7 @@ export default defineComponent({
       return o;
     }, {} as { [k: string]: string[][] })));
 
-    // const rowMeta: RowMetadata[] = [
-    //   {
-    //     label: "Personal Best",
-    //     slotId: "pb",
-    //   },
-    //   {
-    //     label: "Personal Worst",
-    //     slotId: "pw",
-    //   },
-    //   {
-    //     label: "Average score",
-    //     slotId: "mean",
-    //   },
-    //   {
-    //     label: "Real Wins",
-    //     slotId: "filteredW",
-    //   },
-    //   {
-    //     label: "Total Wins",
-    //     slotId: "wins",
-    //   },
-    //   {
-    //     label: "Total games played",
-    //     slotId: "gameCount",
-    //   },
-    //   {
-    //     label: "Win rate",
-    //     slotId: "winR",
-    //   },
-    //   {
-    //     label: "Fat Nicks",
-    //     slotId: "fn",
-    //   },
-    //   {
-    //     label: "Cliffs",
-    //     slotId: "cliff",
-    //   },
-    //   {
-    //     label: "Cliff Rate",
-    //     slotId: "cliffR",
-    //   },
-    //   {
-    //     label: "Double Doubles",
-    //     slotId: "dd",
-    //   },
-    //   {
-    //     label: "Double Double Rate",
-    //     slotId: "ddR",
-    //   },
-    //   {
-    //     label: "All Positive",
-    //     slotId: "ap",
-    //   },
-    // ];
+    const selectedGame = ref(null as Result27 | null);
 
     return {
       players,
@@ -255,7 +219,12 @@ export default defineComponent({
           "Double Doubles": [] as number[],
           "All Positive": [] as number[],
         })),
-      // rowMeta,
+      selectedGame,
+      selectedRounds: computed(() => Object.entries(selectedGame.value!.game)
+        .reduce((o, [p, { rounds }]) => {
+          o[p] = rounds;
+          return o;
+        }, {} as { [pid: string]: number[] })),
     };
   },
 });
@@ -263,8 +232,9 @@ export default defineComponent({
 
 <style>
 #histBodyContainer {
+  position: relative;
   display: flex;
-  width: fit-content;
+  width: 100%;
   align-items: flex-start;
 }
 #gameResults {
@@ -312,5 +282,18 @@ export default defineComponent({
 }
 #gameResults td.winner {
   background-color: #00ff00;
+}
+#gameResults td.allPos::after {
+  content: " (+)";
+  color: #228b22;
+}
+
+#pastGameOverlay {
+  position: absolute;
+  top: 0%;
+  z-index: 5;
+  background: white;
+  border: 2px lightslategrey solid;
+  margin: 5em;
 }
 </style>

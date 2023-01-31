@@ -257,4 +257,7 @@ export default defineComponent({
 .roundSummaryCell:hover > .tooltip:hover {
   display: none;
 }
+#playerSummary {
+  margin-bottom: 4.5em;
+}
 </style>
