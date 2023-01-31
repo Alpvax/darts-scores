@@ -20,92 +20,13 @@
       @players="p => players = p"
     />
   </div>
-  <!--
-    PB	-149	17	-345	-191	-349
-    Wins	0	1	0	0	0
-    Real Wins	0	1	0	0	0	Real Wins = games where all Required players played
-    Fat Nicks	0	0	0	0	0
-    Games	1	1	1	1	1
-    Win rate	0.0%	100.0%	0.0%	0.0%	0.0%
-    Mean	-149	17	-345	-191	-349
-    Cliffs	0	0	0	0	0
-    All Positive	0	0	0	0	0
-    Required	TRUE	TRUE	TRUE	FALSE	TRUE
-    Date	<players>	Winner	TieBreak	RealWinner	Game total	Game avg
-    05/01/2023	-149	17	-345	-191	-349	Hans		Hans	-1017	-203.4
-   -->
   <div id="histBodyContainer">
-    <table id="playerSummary">
-      <thead>
-        <tr>
-          <td>&nbsp;</td>
-          <td
-            v-for="[player, id] in all_players"
-            :key="id"
-            class="playerName"
-          >
-            {{ player }}
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="(values, name) in scoreSummary"
-          :key="name"
-        >
-          <td class="summaryLabel">
-            {{ name }}
-          </td>
-          <td
-            v-for="(val, idx) in values"
-            :key="idx"
-            class="summaryValue"
-          >
-            {{ val }}
-          </td>
-        </tr>
-        <!-- <tr class="pb">
-          <td class="summaryLabel">
-            Personal Best
-          </td>
-        </tr>
-        <tr class="winsCount">
-          <td class="summaryLabel">
-            Wins
-          </td>
-        </tr>
-        <tr class="fatNicks">
-          <td class="summaryLabel">
-            Fat Nicks
-          </td>
-        </tr>
-        <tr class="gamesPlayed">
-          <td class="summaryLabel">
-            Total games played
-          </td>
-        </tr>
-        <tr class="winRate">
-          <td class="summaryLabel">
-            Win rate
-          </td>
-        </tr>
-        <tr class="meanScore">
-          <td class="summaryLabel">
-            Average score
-          </td>
-        </tr>
-        <tr class="cliffs">
-          <td class="summaryLabel">
-            Cliffs
-          </td>
-        </tr>
-        <tr class="allPositive">
-          <td class="summaryLabel">
-            All Positive
-          </td>
-        </tr> -->
-      </tbody>
-    </table>
+    <Summary27
+      :players="all_players"
+      :filtered="players"
+      :games="games"
+      :scores="scores"
+    />
     <table id="gameResults">
       <thead>
         <tr>
@@ -154,16 +75,20 @@
 <script lang="ts">
 import { computed, defineComponent, ref, watchEffect } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
+// import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
+import Summary27 from "@/components/27/Summary.vue";
 import {
   collection, doc, DocumentReference,
   getDoc, getDocs, getFirestore,
   orderBy, query, where,
 } from "firebase/firestore";
-import { PlayerGameResult27, Result27 } from "@/components/Game27.vue";
+import { PlayerGameResult27, Result27 } from "@/components/27/Game27.vue";
 
 export default defineComponent({
   components: {
     PlayerSelection,
+    // PlayerTable,
+    Summary27,
   },
   async setup() {
     const gamesRef = collection(getFirestore(), "game/twentyseven/games");
@@ -214,6 +139,61 @@ export default defineComponent({
       return o;
     }, {} as { [k: string]: string[][] })));
 
+    // const rowMeta: RowMetadata[] = [
+    //   {
+    //     label: "Personal Best",
+    //     slotId: "pb",
+    //   },
+    //   {
+    //     label: "Personal Worst",
+    //     slotId: "pw",
+    //   },
+    //   {
+    //     label: "Average score",
+    //     slotId: "mean",
+    //   },
+    //   {
+    //     label: "Real Wins",
+    //     slotId: "filteredW",
+    //   },
+    //   {
+    //     label: "Total Wins",
+    //     slotId: "wins",
+    //   },
+    //   {
+    //     label: "Total games played",
+    //     slotId: "gameCount",
+    //   },
+    //   {
+    //     label: "Win rate",
+    //     slotId: "winR",
+    //   },
+    //   {
+    //     label: "Fat Nicks",
+    //     slotId: "fn",
+    //   },
+    //   {
+    //     label: "Cliffs",
+    //     slotId: "cliff",
+    //   },
+    //   {
+    //     label: "Cliff Rate",
+    //     slotId: "cliffR",
+    //   },
+    //   {
+    //     label: "Double Doubles",
+    //     slotId: "dd",
+    //   },
+    //   {
+    //     label: "Double Double Rate",
+    //     slotId: "ddR",
+    //   },
+    //   {
+    //     label: "All Positive",
+    //     slotId: "ap",
+    //   },
+    // ];
+
     return {
       players,
       all_players,
@@ -252,12 +232,12 @@ export default defineComponent({
             }, [0, -394, 1288, 0, 0, 0, 0]);
           summary["Personal Best"].push(pb);
           summary["Personal Worst"].push(pw);
+          summary["Average score"].push(parseFloat((totalScore / gamesPlayed).toFixed(2)));
           summary["Real Wins"].push(reqWins);
           summary["Total Wins"].push(allWins);
           summary["Fat Nicks"].push(fn);
           summary["Total games played"].push(gamesPlayed);
           summary["Win rate"].push(parseFloat((allWins / gamesPlayed * 100).toFixed(2)) + "%");
-          summary["Average score"].push(parseFloat((totalScore / gamesPlayed).toFixed(2)));
           summary["Cliffs"].push(cliffs);
           summary["Double Doubles"].push(dd);
           summary["All Positive"].push(pos);
@@ -265,16 +245,17 @@ export default defineComponent({
         }, {
           "Personal Best": [] as number[],
           "Personal Worst": [] as number[],
+          "Average score": [] as number[],
           "Real Wins": [] as number[],
           "Total Wins": [] as number[],
-          "Fat Nicks": [] as number[],
           "Total games played": [] as number[],
           "Win rate": [] as string[],
-          "Average score": [] as number[],
+          "Fat Nicks": [] as number[],
           "Cliffs": [] as number[],
           "Double Doubles": [] as number[],
           "All Positive": [] as number[],
         })),
+      // rowMeta,
     };
   },
 });
@@ -283,11 +264,8 @@ export default defineComponent({
 <style>
 #histBodyContainer {
   display: flex;
-  /* flex-direction: column; */
-  /* display: grid; */
   width: fit-content;
-  /* grid-template-columns: 2;
-  grid-template-rows: 1; */
+  align-items: flex-start;
 }
 #gameResults {
   order: 1
@@ -312,7 +290,7 @@ export default defineComponent({
 .playerName, .tableHeader {
   font-weight: bold;
 }
-.summaryLabel {
+.rowLabel {
   font-weight: bold;
   text-align: right;
   white-space: nowrap;

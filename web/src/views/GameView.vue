@@ -22,7 +22,7 @@
 <script lang="ts">
 import { defineComponent, ref } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
-import Game27 from "@/components/Game27.vue";
+import Game27 from "@/components/27/Game27.vue";
 import { doc, DocumentReference, getDoc, getFirestore } from "firebase/firestore";
 
 export default defineComponent({
