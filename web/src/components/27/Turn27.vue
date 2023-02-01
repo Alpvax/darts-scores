@@ -56,7 +56,6 @@ export default defineComponent({
       turnHitsEl.value!.classList.remove("empty");
       // Required because "" == 0
       if ((value === 0 || value > 0) && value < 4) {
-        console.log(`Setting hits for round ${props.targetNo} to "${value}"\n >= 0: ${value >= 0}`);//XXX
         emit("update:hits", value);
         if (moveFocus) {
           emit("focusNext");

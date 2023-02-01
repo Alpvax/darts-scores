@@ -150,16 +150,18 @@ export default defineComponent({
     function setHits(player: string, round: number, hits: number): void {
       const prevHits = gameHits.value[player].value[round - 1];
       const deltaScore = 2 * round *
-        (prevHits < 1 ? hits + 1 : hits < 1 ? -(prevHits + 1) : hits - prevHits);
+        (prevHits < 1
+          ? hits < 1 ? 0 : hits + 1
+          : hits < 1 ? -(prevHits + 1) : hits - prevHits);
       gameHits.value[player].value[round - 1] = hits;
       const playerScore = scores.value[player];
       for (let r = round; r <= 20; r++) {
         playerScore[r] += deltaScore;
       }
       console.debug(
-        `${player} t${round} = (${prevHits} => ${hits} hits = ${deltaScore});`,
+        `${player} t${round} = (hits: ${prevHits} => ${hits}; delta = ${deltaScore});`,
         scores.value[player],
-        gameHits.value[player],
+        toRaw(gameHits.value[player].value),
         completed.value[player],
       );
     }
