@@ -17,8 +17,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: "/history",
-    name: "about",
+    name: "history",
     component: () => import(/* webpackChunkName: "history" */ "../views/HistoryView.vue"),
+  },
+  {
+    path: "/game/:gameId",
+    name: "pastGame",
+    props: true,
+    component: () => import(/* webpackChunkName: "prevGame" */ "../views/PastGameView.vue"),
   },
 ];
 

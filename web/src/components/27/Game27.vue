@@ -5,6 +5,17 @@
     :width="editable ? 2 : 1"
   >
     <template
+      v-if="displayDate"
+      #__column0header
+    >
+      <span
+        class="gameDate"
+      >{{ dateDayMonthFmt.format(date) }}</span><br>
+      <span
+        class="gameDate"
+      >{{ date.getFullYear() }}</span>
+    </template>
+    <template
       v-for="round in 20"
       :key="round"
       #[round]="{player}"
@@ -105,6 +116,7 @@ export default defineComponent({
       type: Object as PropType<{ [player: string]: number[] } | null>,
       default: null,
     },
+    displayDate: { type: Boolean, default: false },
     displayWinner: { type: Boolean, default: true },
   },
   setup (props) {
@@ -227,6 +239,7 @@ export default defineComponent({
         };
       }),
       deltaNumfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
+      dateDayMonthFmt: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }),
     };
   },
 });
@@ -234,6 +247,10 @@ export default defineComponent({
 
 <style>
 .playerName, .rowLabel {
+  font-weight: bold;
+}
+.gameDate {
+  width: fit-content;
   font-weight: bold;
 }
 .completed {

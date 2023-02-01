@@ -2,7 +2,9 @@
   <table>
     <thead>
       <tr>
-        <td>&nbsp;</td>
+        <slot name="__column0header">
+          <td>&nbsp;</td>
+        </slot>
         <td
           v-for="{name, id} in playersIter"
           :key="id"

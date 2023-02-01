@@ -1,4 +1,4 @@
-type PlayerObj = { name: string; id: string };
+export type PlayerObj = { name: string; id: string };
 
 export type Player
   = ([string, string]

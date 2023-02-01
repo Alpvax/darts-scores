@@ -83,8 +83,14 @@
         :date="new Date(selectedGame!.date)"
         :editable="false"
         :player-game-hits="selectedRounds"
+        :display-date="true"
         :display-winner="false"
       />
+      <input
+        type="button"
+        value="Share"
+        @click="copySelectedToClipboard"
+      >
     </div>
   </div>
 </template>
@@ -113,7 +119,7 @@ export default defineComponent({
     const today = new Date();
     const toDate = ref(today.toISOString().slice(0, 10));
     const fromDate = ref(`${today.getFullYear()}-01-01`);
-    const games = ref([] as Result27[]);
+    const games = ref([] as (Result27 & { gameId: string })[]);
     watchEffect(async (): Promise<void> => {
       games.value = [];
       if (fromDate.value <= toDate.value && new Date(fromDate.value) <= today) {
@@ -123,7 +129,7 @@ export default defineComponent({
           orderBy("date", "asc"),
           where("date", ">=", fromDate.value),
           where("date", "<=", td.toISOString().slice(0, 10)),
-        ))).forEach(d => games.value.push(d.data() as Result27));
+        ))).forEach(d => games.value.push(Object.assign({ gameId: d.id } , d.data() as Result27)));
       } else {
         //TODO display error
       }
@@ -156,7 +162,7 @@ export default defineComponent({
       return o;
     }, {} as { [k: string]: string[][] })));
 
-    const selectedGame = ref(null as Result27 | null);
+    const selectedGame = ref(null as (Result27 & { gameId: string }) | null);
 
     return {
       players,
@@ -225,6 +231,16 @@ export default defineComponent({
           o[p] = rounds;
           return o;
         }, {} as { [pid: string]: number[] })),
+      copySelectedToClipboard: async () => {
+        const link = `${window.location.origin}/game/${selectedGame.value!.gameId}`;
+        console.info("Sharing link:", link);//XXX
+        try {
+          await navigator.clipboard.writeText(link);
+          alert("Copied link to clipboard");
+        } catch($e) {
+          alert("Cannot copy to clipboard: share the following link:\n" + link);
+        }
+      },
     };
   },
 });
