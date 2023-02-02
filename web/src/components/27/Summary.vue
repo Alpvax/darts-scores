@@ -83,7 +83,7 @@
       #[round]="{player}"
     >
       <td class="roundSummaryCell">
-        {{ roundData(player, round).hitRate }}
+        {{ asRate(player, roundData(player, round).gamesWithHits) }}
         <SummaryTooltip
           v-bind="roundData(player, round)"
           :player="player"
@@ -211,28 +211,27 @@ export default defineComponent({
       asFixed,
       asRate,
       roundData: (player: string, round: number) => {
-        const [totalHits, dd, c] = props.scores[player].reduce(([t, d, c], s) => {
+        const [totalHits, dd, c, g] = props.scores[player].reduce(([t, d, c, g], s) => {
           if (s == null) {
-            return [t, d, c];
+            return [t, d, c, g];
           }
           switch (s.rounds[round - 1]) {
             case 1:
-              return [t + 1, d, c];
+              return [t + 1, d, c, g + 1];
             case 2:
-              return [t + 2, d + 1, c];
+              return [t + 2, d + 1, c, g + 1];
             case 3:
-              return [t + 3, d, c + 1];
+              return [t + 3, d, c + 1, g + 1];
             default:
-              return [t, d, c];
+              return [t, d, c, g];
           }
-        }, [0, 0, 0]);
+        }, [0, 0, 0, 0]);
         // const num = numGames.value[player] * 3;
-        const hitRate = asRate(player, totalHits / 3);
         return {
           totalHits,
+          gamesWithHits: g,
           doubleDoubles: dd,
           cliffs: c,
-          hitRate,
         };
       },
     };
