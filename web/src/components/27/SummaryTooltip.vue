@@ -22,9 +22,9 @@ export default defineComponent({
     const numDarts = computed(() => props.numGames * 3);
     return {
       numDarts,
-      hitRate: computed(() => asFixed(props.totalHits / numDarts.value * 100)),
-      ddR: computed(() => asFixed(props.doubleDoubles / numDarts.value * 100)),
-      cR: computed(() => asFixed(props.cliffs / numDarts.value * 100)),
+      hitRate: computed(() => asFixed(props.totalHits / props.numGames * 100)),
+      ddR: computed(() => asFixed(props.doubleDoubles / props.numGames * 100)),
+      cR: computed(() => asFixed(props.cliffs / props.numGames * 100)),
     };
   },
 });
