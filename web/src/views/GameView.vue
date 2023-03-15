@@ -2,7 +2,7 @@
   <div class="playerSelect">
     <PlayerSelection
       legend="Select who is playing:"
-      :available-players="all_players"
+      :available="all_players"
       @players="p => players = p"
     />
     <input
@@ -13,7 +13,7 @@
   </div>
   <div class="game">
     <Game27
-      :players="all_players.filter(([_name, id]) => players.includes(id))"
+      :players="all_players.filter(({ id }) => players.includes(id))"
       :date="new Date(date)"
     />
   </div>
@@ -23,7 +23,7 @@
 import { defineComponent, ref } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import Game27 from "@/components/27/Game27.vue";
-import { doc, DocumentReference, getDoc, getFirestore } from "firebase/firestore";
+import { usePlayerStore } from "@/store/player";
 
 export default defineComponent({
   components: {
@@ -31,12 +31,9 @@ export default defineComponent({
     Game27,
   },
   async setup() {
-    const all_players: [string, string][] =
-      await Promise.all(((await getDoc(doc(getFirestore(), "game/twentyseven")))
-        .get("defaultplayers") as DocumentReference[])
-        .map(async d => [(await getDoc(d)).get("funName") as string, d.id]),
-      );
-    const players = ref(all_players.map(([_name, id]) => id));
+    const playerStore = usePlayerStore();
+    const all_players = await playerStore.loadDefaultPlayers("twentyseven");
+    const players = ref(all_players.map(({ id }) => id));
     return {
       players,
       all_players,

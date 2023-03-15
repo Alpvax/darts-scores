@@ -30,6 +30,15 @@
           .filter(opponents => filtered.every(p => opponents.includes(p))).length }}
       </td>
     </template>
+    <template
+      v-if="isFiltered"
+      #filteredW_tooltip
+    >
+      <div class="tooltip">
+        Wins where the following players all played:<br>
+        {{ filteredNames.join(", ") }}
+      </div>
+    </template>
     <template #wins="{player}">
       <td>
         {{ gameWinners[player].length }}
@@ -80,7 +89,7 @@
     <template
       v-for="round in 20"
       :key="round"
-      #[round]="{player}"
+      #[round.toString()]="{player}"
     >
       <td class="roundSummaryCell">
         {{ asRate(player, roundData(player, round).gamesWithHits) }}
@@ -99,7 +108,7 @@ import { computed, ComputedRef, defineComponent, PropType } from "vue";
 import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
 import SummaryTooltip from "./SummaryTooltip.vue";
 import { PlayerGameResult27, Result27 } from "./Game27.vue";
-import { Player, getPlayerIds } from "@/util/player";
+import { Player, usePlayerStore } from "@/store/player";
 
 export default defineComponent({
   components: {
@@ -107,7 +116,7 @@ export default defineComponent({
     SummaryTooltip,
   },
   props: {
-    players: { type: Array as PropType<Player[]>, required: true },
+    players: { type: Array as PropType<(Player | string)[]>, required: true },
     filtered: { type: Array as PropType<string[]>, required: true },
     games: { type: Array as PropType<Result27[]>, required: true },
     scores: {
@@ -116,6 +125,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const playerStore = usePlayerStore();
     // function computedPlayers<T>(f: (player: string) => T): { [K: string]: ComputedRef<T> } {
     //   return getPlayerIds(props.players).reduce((obj, id) => {
     //     obj[id] = computed(() => f(id));
@@ -123,7 +133,8 @@ export default defineComponent({
     //   }, {} as { [K: string]: ComputedRef<T> });
     // }
     function computedPlayers<T>(f: (player: string) => T): ComputedRef<{ [K: string]: T }> {
-      return computed(() => getPlayerIds(props.players).reduce((obj, id) => {
+      return computed(() => props.players.reduce((obj, p) => {
+        const id = typeof p === "object" ? p.id : p;
         obj[id] = f(id);
         return obj;
       }, {} as { [K: string]: T }));
@@ -133,12 +144,12 @@ export default defineComponent({
       props.scores[p].reduce((t, s) => s == null ? t : t + s.score, 0));
     const gameWinners = computed(() => props.games.reduce((acc, game) => {
       const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
+      if (!Object.hasOwn(acc, winner)) {
+        acc[winner] = [];
+      }
       acc[winner].push(Object.keys(game.game));
       return acc;
-    }, getPlayerIds(props.players).reduce((o, p) => {
-      o[p] = [];
-      return o;
-    }, {} as { [k: string]: string[][] })));
+    }, {} as { [k: string]: string[][] }));
     const rowMeta: RowMetadata[] = [
       {
         label: "Personal Best",
@@ -207,6 +218,7 @@ export default defineComponent({
       numGames,
       sumScores,
       isFiltered: computed(() => props.filtered.length != props.players.length),
+      filteredNames: computed(() => props.filtered.map(p => playerStore.getName(p))),
       gameWinners,
       asFixed,
       asRate,
@@ -250,10 +262,10 @@ export default defineComponent({
   margin-left: -4em;
   margin-top: 1em;
 }
-.roundSummaryCell:hover > .tooltip {
+td:hover > .tooltip {
   display: inline-block;
 }
-.roundSummaryCell:hover > .tooltip:hover {
+td:hover > .tooltip:hover {
   display: none;
 }
 #playerSummary {

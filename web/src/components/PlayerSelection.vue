@@ -3,35 +3,41 @@
     <legend>{{ legend }}</legend>
 
     <div
-      v-for="player in availablePlayers"
-      :key="player[0]"
+      v-for="{ name, id } in availablePlayers"
+      :key="id"
       class="playerCheckbox"
     >
       <input
-        :id="'select_' + player[1]"
+        :id="'select_' + id"
         v-model="players"
         type="checkbox"
-        :name="player[0]"
-        :value="player[1]"
-        @change="e => onCheckboxChange(player[1], (e.target! as HTMLInputElement).checked)"
+        :name="name"
+        :value="id"
+        @change="e => onCheckboxChange(id, (e.target! as HTMLInputElement).checked)"
       >
-      <label :for="'select_' + player[1]">{{ player[0] }}</label>
+      <label :for="'select_' + id">{{ name ?? id }}</label>
     </div>
   </fieldset>
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, ref } from "vue";
+import { Player, usePlayerStore } from "@/store/player";
+import { computed, defineComponent, PropType, ref } from "vue";
 
 export default defineComponent({
   props: {
     legend: { type: String, required: true },
-    availablePlayers: { type: Array as PropType<[string, string][]>, required: true },
+    available: { type: Array as PropType<(Player | string)[]>, required: true },
+    selected: { type: Array as PropType<string[] | null>, default: null },
   },
   emits: [ "update:player", "players" ],
   async setup(props, { emit }) {
-    const players = ref(props.availablePlayers.map(([_name, id]) => id));
+    const playerStore = usePlayerStore();
+    const players = ref(props.selected
+      ?? props.available.map(p => typeof p === "object" ? p.id :p));
     return {
+      availablePlayers: computed(() =>
+        props.available.map(p => typeof p === "object" ? p : playerStore.getPlayer(p))),
       players,
       date: ref((new Date()).toISOString().slice(0, 16)),
       onCheckboxChange(playerId: string, checked: boolean): void {

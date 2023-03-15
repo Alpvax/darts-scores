@@ -18,13 +18,14 @@
     <template
       v-for="round in 20"
       :key="round"
-      #[round]="{player}"
+      #[round.toString()]="{player, index}"
     >
       <Turn27
         :editable="editable"
         :target-no="round"
         :hits="gameHits[player].value[round - 1]"
         :score="scores[player][round]"
+        @focus-prev="focusTurn(index - 1, round - 1)"
         @focus-next="focusNext"
         @update:hits="h => setHits(player, round, h)"
       />
@@ -56,8 +57,9 @@ import {
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import PlayerTable from "@/components/PlayerTable.vue";
-import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
+// import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
 import Turn27 from "./Turn27.vue";
+import { Player } from "@/store/player";
 
 export type PlayerGameResult27 = {
   rounds: number[];
@@ -106,6 +108,7 @@ for (let i = 1; i < 21; i++) {
 export default defineComponent({
   components: {
     PlayerTable,
+    // eslint-disable-next-line vue/no-unused-components
     Turn27,
   },
   props: {
@@ -126,7 +129,7 @@ export default defineComponent({
     //     return o;
     //   }, {} as { [k: string]: U }) as { [K in keyof T]: U };
     // }
-    const scores = computed(() => iterPlayers(props.players).reduce((m, { id }) => {
+    const scores = computed(() => props.players.reduce((m, { id }) => {
       if (props.playerGameHits) {
         let s = [27];
         for (let i = 1; i < 21; i++) {
@@ -139,7 +142,7 @@ export default defineComponent({
       }
       return m;
     }, {} as { [k: string]: number[] }));
-    const gameHits = computed(() => iterPlayers(props.players).reduce((o, { id }) => {
+    const gameHits = computed(() => props.players.reduce((o, { id }) => {
       o[id] = ref(props.playerGameHits ? props.playerGameHits[id] : new Array(20).fill(-1));
       return o;
     }, {} as { [k: string]: Ref<number[]> }));
@@ -147,18 +150,19 @@ export default defineComponent({
       o[id] = hits.value.every(h => h >= 0);
       return o;
     }, {} as { [k: string]: boolean }));
-    const winner = computed(() => Object.values(completed.value).every(b => b)
-      ? Object.entries(scores.value)
-        .reduce(([hp, hs]: [string[], number], [p, s]: [string, number[]]) => {
-          let endScore = s[20];
-          return endScore > hs
-            ? [[p], endScore]
-            : endScore === hs
-              ? [[...hp, p], hs]
-              : [hp, hs];
-        }, [[], -394] as [string[], number])[0]
-        .map(id => asPlayerObj(props.players.find(p => getPlayerId(p) === id)!))
-      : null);
+    const winner = computed(() =>
+      props.players.length > 0 && Object.values(completed.value).every(b => b)
+        ? Object.entries(scores.value)
+          .reduce(([hp, hs]: [string[], number], [p, s]: [string, number[]]) => {
+            let endScore = s[20];
+            return endScore > hs
+              ? [[p], endScore]
+              : endScore === hs
+                ? [[...hp, p], hs]
+                : [hp, hs];
+          }, [[], -394] as [string[], number])[0]
+          .map(pid => props.players.find(({ id }) => id === pid)!)
+        : null);
     function setHits(player: string, round: number, hits: number): void {
       const prevHits = gameHits.value[player].value[round - 1];
       const deltaScore = 2 * round *
@@ -193,6 +197,43 @@ export default defineComponent({
         }
       }
     };
+    async function focusTurn(playerIndex: number, round: number): Promise<void> {
+      const xMax = props.players.length - 1;
+      let x = playerIndex;
+      let y = round;
+      if (playerIndex < 0) {
+        if (round < 1) {
+          x = 0;
+          y = 0;
+        } else {
+          x = xMax;
+          y = Math.max(0, y - 1);
+        }
+      } else if (playerIndex > xMax) {
+        if (round >= 20) {
+          let query = "div.completed > input[type=button]";
+          let el;
+          for (let i = 0; i < 2; i++) {
+            el = document.querySelector(query);
+            // console.log("Completed: moving focus to:", el);//XXX
+            if (el && el instanceof HTMLInputElement) {
+              el.focus();
+              break;
+            }
+            await nextTick();
+          }
+        } else {
+          x = 0;
+          y = Math.min(0, y + 1);
+        }
+      }
+      let el = document.querySelectorAll(".turnHits input")
+        .item(y * (xMax + 1) + x);
+      // console.log("Moving focus to:", el);//XXX
+      if (el && el instanceof HTMLInputElement) {
+        el.focus();
+      }
+    };
     watch(() => props.players, () => focusNext());
     onMounted(() => focusNext());
     const submitted = ref(false);
@@ -202,6 +243,7 @@ export default defineComponent({
       winner,
       setHits,
       focusNext,
+      focusTurn,
       deltaScore: (player: string, round: number): number => {
         const hits = gameHits.value[player].value[round];
         return 2 * (hits > 0 ? hits * round : -round);
@@ -216,7 +258,7 @@ export default defineComponent({
               tie: winner.value!.map(({ id }) => id),
               tiebreak: {},//TODO: implement tiebreak saving
             },
-          game: iterPlayers(props.players).reduce((o, { id }) => {
+          game: props.players.reduce((o, { id }) => {
             const hits = toRaw(gameHits.value[id].value);
             const cliffs = hits.filter(c => c == 3).length;
             const score = scores.value[id];

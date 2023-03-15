@@ -1,9 +1,10 @@
 import { createApp } from "vue";
+import { createPinia } from "pinia";
 import App from "./App.vue";
 import "./registerServiceWorker";
 import router from "./router";
 
-createApp(App).use(router).mount("#app");
+createApp(App).use(router).use(createPinia()).mount("#app");
 
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";

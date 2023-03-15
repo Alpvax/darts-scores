@@ -41,7 +41,7 @@ export default defineComponent({
     hits: { type: Number, default: -1 },
     autofocus: Boolean,
   },
-  emits: ["update:hits", "focusNext"],
+  emits: ["update:hits", "focusNext", "focusPrev"],
   setup (props, { emit }) {
     const hitsInternal = computed({
       get: () => props.hits < 1 ? 0 : props.hits,
@@ -87,6 +87,15 @@ export default defineComponent({
           case "Tab":
           case "Enter":
             setHits(hitsInternal.value < 0 ? 0 : hitsInternal.value, true);
+            break;
+          case "ArrowLeft":
+          case "Left":
+          case "Backspace":
+            emit("focusPrev");
+            break;
+          case "ArrowRight":
+          case "Right":
+            emit("focusNext");
             break;
           // default:
           //   return;
