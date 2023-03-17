@@ -19,6 +19,7 @@
       <tr
         v-for="row in rows"
         :key="row.slotId"
+        :class="row.additionalClass"
         @click="onClick(row.slotId, $event)"
       >
         <td class="rowLabel">
@@ -55,6 +56,7 @@ export type RowMetadata = {
   label: string;
   slotId: string;
   width?: number;
+  additionalClass?: string[];
   onClick?: (event: MouseEvent) => any;
 };
 

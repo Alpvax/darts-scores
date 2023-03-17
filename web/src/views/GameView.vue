@@ -3,6 +3,7 @@
     <PlayerSelection
       legend="Select who is playing:"
       :available="all_players"
+      :selected="players"
       @players="p => players = p"
     />
     <input
@@ -32,8 +33,9 @@ export default defineComponent({
   },
   async setup() {
     const playerStore = usePlayerStore();
-    const all_players = await playerStore.loadDefaultPlayers("twentyseven");
-    const players = ref(all_players.map(({ id }) => id));
+    await playerStore.loadAllPlayers();
+    const all_players = playerStore.availablePlayers;
+    const players = ref((await playerStore.getDefaultPlayers("twentyseven")).map(({ id }) => id));
     return {
       players,
       all_players,

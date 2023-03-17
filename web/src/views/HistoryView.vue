@@ -15,7 +15,7 @@
       >
     </div>
     <PlayerSelection
-      legend="Select players"
+      legend="Select players to filter &quot;Real Wins&quot;"
       :available="allPlayers"
       :selected="playerIds"
       @players="p => playerIds = p"
@@ -205,7 +205,8 @@ export default defineComponent({
 
     return {
       playerIds,
-      allPlayers: computed(() => playerStore.allPlayersOrdered),
+      allPlayers: computed(() => playerStore.allPlayersOrdered
+        .filter(p => scores.value[p.id].filter(s => s).length > 0)),
       toDate, fromDate,
       games,
       gamesRowMeta: computed(() => games.value.map(g => ({

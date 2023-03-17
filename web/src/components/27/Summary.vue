@@ -1,7 +1,7 @@
 <template>
   <PlayerTable
     id="playerSummary"
-    :players="players"
+    :players="players.filter(p => !p.disabled)"
     :rows="rowMeta"
   >
     <template #pb="{player}">
@@ -26,8 +26,8 @@
       #filteredW="{player}"
     >
       <td>
-        {{ gameWinners[player]
-          .filter(opponents => filtered.every(p => opponents.includes(p))).length }}
+        {{ gameWinners[player]?.filter(
+          opponents => filtered.every(p => opponents.includes(p))).length || 0 }}
       </td>
     </template>
     <template
@@ -35,13 +35,12 @@
       #filteredW_tooltip
     >
       <div class="tooltip">
-        Wins where the following players all played:<br>
-        {{ filteredNames.join(", ") }}
+        Wins where {{ filteredNames }} played
       </div>
     </template>
     <template #wins="{player}">
       <td>
-        {{ gameWinners[player].length }}
+        {{ gameWinners[player]?.length || 0 }}
       </td>
     </template>
     <template #gameCount="{player}">
@@ -51,7 +50,7 @@
     </template>
     <template #winR="{player}">
       <td>
-        {{ asRate(player, gameWinners[player].length) }}
+        {{ asRate(player, gameWinners[player]?.length || 0) }}
       </td>
     </template>
     <template #fn="{player}">
@@ -116,7 +115,7 @@ export default defineComponent({
     SummaryTooltip,
   },
   props: {
-    players: { type: Array as PropType<(Player | string)[]>, required: true },
+    players: { type: Array as PropType<Player[]>, required: true },
     filtered: { type: Array as PropType<string[]>, required: true },
     games: { type: Array as PropType<Result27[]>, required: true },
     scores: {
@@ -208,6 +207,7 @@ export default defineComponent({
       rowMeta.push({
         label: r.toString(),
         slotId: r.toString(),
+        additionalClass: ["specificRound"],
       });
     }
     const asFixed = (num: number, precision = 2): number => parseFloat(num.toFixed(precision));
@@ -217,8 +217,20 @@ export default defineComponent({
       rowMeta,
       numGames,
       sumScores,
-      isFiltered: computed(() => props.filtered.length != props.players.length),
-      filteredNames: computed(() => props.filtered.map(p => playerStore.getName(p))),
+      isFiltered: computed(() =>
+        props.filtered.length > 0 && props.filtered.length != props.players.length),
+      filteredNames: computed(() => {
+        const arr = props.filtered.map(p => playerStore.getName(p));
+        switch (arr.length) {
+          case 0:
+            return "";
+          case 1:
+            return arr[0];
+          default:
+            const l = arr.length - 1;
+            return `${arr.slice(0, l).join(", ")} and ${arr[l]} all`;
+        }
+      }),
       gameWinners,
       asFixed,
       asRate,
@@ -270,5 +282,8 @@ td:hover > .tooltip:hover {
 }
 #playerSummary {
   margin-bottom: 4.5em;
+}
+.specificRound {
+  font-size: small;
 }
 </style>
