@@ -32,7 +32,7 @@ export const usePlayerStore = defineStore("players", () => {
   const onData = (data: DocumentSnapshot): LoadedPlayer => {
     const disabled = data.get("disabled") || false;
     const p: LoadedPlayer = {
-      name: data.get("funName") as string,
+      name: data.get("funName") as string ?? data.get("name") as string ?? data.id,
       id: data.id,
       defaultOrder: data.get("defaultOrder") as number + (disabled ? 100 : 0),
       disabled,

@@ -274,11 +274,8 @@ export default defineComponent({
   margin-left: -4em;
   margin-top: 1em;
 }
-td:hover > .tooltip {
+td:hover > .tooltip:not(:hover) {
   display: inline-block;
-}
-td:hover > .tooltip:hover {
-  display: none;
 }
 #playerSummary {
   margin-bottom: 4.5em;
