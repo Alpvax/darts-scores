@@ -167,7 +167,7 @@ export default defineComponent({
         const td = new Date(toDate.value);
         td.setDate(td.getDate() + 1);
         (await getDocs(query(gamesRef,
-          orderBy("date", "asc"),
+          orderBy("date", "desc"),
           where("date", ">=", fromDate.value),
           where("date", "<=", td.toISOString().slice(0, 10)),
         ))).forEach(async (d) => {
@@ -180,7 +180,7 @@ export default defineComponent({
       }
     });
     const playerIds = ref(await Promise.all(((await getDoc(doc(db, "game/twentyseven")))
-      .get("defaultplayers") as DocumentReference[]).map(d => d.id)));
+      .get("defaultrequired") as DocumentReference[]).map(d => d.id)));
 
     const scores = computed(() => games.value.reduce((scores, game) => {
       for (const id in scores) {
@@ -246,6 +246,7 @@ export default defineComponent({
   display: flex;
   width: 100%;
   align-items: flex-start;
+  font-size: small;
 }
 #gameResults {
   order: 1

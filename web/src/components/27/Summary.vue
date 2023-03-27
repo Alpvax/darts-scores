@@ -80,6 +80,28 @@
           : t + s.rounds.filter(h => h == 2).length, 0) / 20) }}
       </td>
     </template>
+    <template
+      #hans="{player}"
+    >
+      <td>
+        {{ scores[player].reduce((t, s) => s == null ? t
+          : t + s.rounds.reduce(([hans, count], hits) => {
+            if (hits > 1) {
+              count += 1;
+              return count >= 3 ? [hans + 1, count] : [hans, count];
+            } else {
+              return [hans, 0];
+            }
+          }, [0, 0])[0], 0) }}
+      </td>
+    </template>
+    <template
+      #hans_tooltip
+    >
+      <div class="tooltip">
+        Three double doubles in a row
+      </div>
+    </template>
     <template #ap="{player}">
       <td>
         {{ scores[player].reduce((t, s) => s != null && s.allPositive ? t + 1 : t, 0) }}
@@ -199,6 +221,10 @@ export default defineComponent({
         slotId: "ddR",
       },
       {
+        label: "Hans",
+        slotId: "hans",
+      },
+      {
         label: "All Positive",
         slotId: "ap",
       },
@@ -272,7 +298,7 @@ export default defineComponent({
   padding: 0.2em;
   border: 2px lightslategrey solid;
   margin-left: -4em;
-  margin-top: 1em;
+  margin-top: 1.2em;
 }
 td:hover > .tooltip:not(:hover) {
   display: inline-block;

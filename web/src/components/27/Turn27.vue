@@ -5,7 +5,10 @@
       taken: hits >= 0,
       cliff: hits == 3,
       doubledouble: hits == 2,
+      miss: !editable && hits == 0,
       editable: editable,
+      winner: !editable && targetNo === 20 && isWinner != 'none',
+      tie: !editable && targetNo === 20 && isWinner == 'tie',
     }"
   >
     {{ score }}
@@ -31,7 +34,9 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, Ref, ref } from "vue";
+import { computed, defineComponent, PropType, Ref, ref } from "vue";
+
+type WinState = "none" | "win" | "tie";
 
 export default defineComponent({
   props: {
@@ -39,6 +44,7 @@ export default defineComponent({
     targetNo: { type: Number, required: true },
     score: { type: Number, required: true },
     hits: { type: Number, default: -1 },
+    isWinner: { type: String as PropType<WinState>, default: "none" },
     autofocus: Boolean,
   },
   emits: ["update:hits", "focusNext", "focusPrev"],
@@ -62,6 +68,7 @@ export default defineComponent({
         }
       }
     }
+    console.log(props.isWinner);//XXX
     return {
       hitsInternal,
       deltaScore,
@@ -139,6 +146,15 @@ tbody > tr:has(.turnHits.empty) {
 }
 tbody > tr:has(.turnHits.empty) ~ tr:has(.turnHits.empty) {
   background-color: inherit;
+}
+td.miss {
+  color: #a82828;
+}
+td.turnScore.tie.winner {
+  background-color: #bbff66;
+}
+td.turnScore.winner {
+  background-color: #00ff00;
 }
 /* .turnDelta {
   font-size: smaller;

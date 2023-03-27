@@ -25,10 +25,23 @@
         :target-no="round"
         :hits="gameHits[player].value[round - 1]"
         :score="scores[player][round]"
+        :is-winner="!editable && round === 20 && winner ? (
+          winner.length === 1 && winner[0].id == player
+            ? 'win'
+            : winner.some(({id}) => id === player)
+              ? 'tie'
+              : 'none'
+        ) : 'none'"
         @focus-prev="focusTurn(index - 1, round - 1)"
         @focus-next="focusNext"
         @update:hits="h => setHits(player, round, h)"
       />
+    </template>
+    <template #totalHits="{player}">
+      <td>
+        {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}
+        ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }})
+      </td>
     </template>
   </PlayerTable>
   <div
@@ -56,7 +69,7 @@ import {
 } from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
-import PlayerTable from "@/components/PlayerTable.vue";
+import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
 // import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
 import Turn27 from "./Turn27.vue";
 import { Player } from "@/store/player";
@@ -237,6 +250,19 @@ export default defineComponent({
     watch(() => props.players, () => focusNext());
     onMounted(() => focusNext());
     const submitted = ref(false);
+    const rowMeta: RowMetadata[] = (new Array(20)).fill(0).map((_, n) => {
+      const roundNum = (n + 1).toString();
+      return {
+        label: roundNum,
+        slotId: roundNum,
+      };
+    });
+    rowMeta.push({
+      label: "Hits",
+      slotId: "totalHits",
+      additionalClass: ["totalHitsRow"],
+      showIf: computed(() => !props.editable),
+    });
     return {
       gameHits,
       scores,
@@ -273,13 +299,7 @@ export default defineComponent({
         addDoc(collection(db, "game/twentyseven/games"), result);
         submitted.value = true;
       },
-      rowMeta: (new Array(20)).fill(0).map((_, n) => {
-        const roundNum = (n + 1).toString();
-        return {
-          label: roundNum,
-          slotId: roundNum,
-        };
-      }),
+      rowMeta,
       deltaNumfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
       dateDayMonthFmt: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }),
     };
@@ -300,5 +320,8 @@ export default defineComponent({
 }
 input[type=button] {
   font-size: 2.2vh;
+}
+tr.totalHitsRow > td {
+  border-top: 1px dashed black;
 }
 </style>

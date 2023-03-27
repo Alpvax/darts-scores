@@ -17,7 +17,7 @@
     </thead>
     <tbody>
       <tr
-        v-for="row in rows"
+        v-for="row in rows.filter(r => r.showIf === undefined || r.showIf.value)"
         :key="row.slotId"
         :class="row.additionalClass"
         @click="onClick(row.slotId, $event)"
@@ -50,13 +50,14 @@
 <script lang="ts">
 // import { getPlayerIds, iterPlayers, Player } from "@/util/player";
 import { Player, usePlayerStore } from "@/store/player";
-import { computed, defineComponent, PropType } from "vue";
+import { computed, defineComponent, PropType, Ref } from "vue";
 
 export type RowMetadata = {
   label: string;
   slotId: string;
   width?: number;
   additionalClass?: string[];
+  showIf?: Ref;
   onClick?: (event: MouseEvent) => any;
 };
 
