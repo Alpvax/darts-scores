@@ -267,7 +267,6 @@ export default defineComponent({
         hans:  { min: 0, max: 0 },
         allPos:  { min: 0, max: 0 },
       }));
-    console.log(scoreStats, statLimits);//XXX
     const rowMeta: RowMetadata[] = [
       {
         label: "Personal Best",

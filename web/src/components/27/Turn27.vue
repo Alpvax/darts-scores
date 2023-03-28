@@ -68,7 +68,6 @@ export default defineComponent({
         }
       }
     }
-    console.log(props.isWinner);//XXX
     return {
       hitsInternal,
       deltaScore,
