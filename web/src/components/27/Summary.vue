@@ -17,7 +17,7 @@
     <template #pw="{player}">
       <td
         :class="{
-          worst: statLimits.worst.max == scoreStats[player].worst
+          worst: statLimits.worst.min == scoreStats[player].worst
         }"
       >
         {{ scoreStats[player].worst }}
