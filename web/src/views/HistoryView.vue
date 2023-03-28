@@ -26,7 +26,7 @@
     @click.prevent="selectedGame = null"
   >
     <Summary27
-      :players="allPlayers"
+      :players="allPlayers.filter(({disabled}) => !disabled)"
       :filtered="playerIds"
       :games="games"
       :scores="scores"
