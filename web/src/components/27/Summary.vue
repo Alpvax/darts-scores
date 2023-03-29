@@ -227,7 +227,7 @@ export default defineComponent({
           mean: sum / num,
           fn: acc.fn + (s.score == -393 ? 1 : 0),
           cliffs: acc.cliffs + s.cliffs,
-          dd: acc.cliffs + s.rounds.filter(h => h === 2).length,
+          dd: acc.dd + s.rounds.filter(h => h === 2).length,
           hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
             if (hits > 1) {
               count += 1;
