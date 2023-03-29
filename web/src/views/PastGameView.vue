@@ -28,7 +28,7 @@ export default defineComponent({
     const game = ref((await getDoc(doc(db, "game/twentyseven/games", props.gameId)))
       .data() as Result27);
     const playerScores = computed(() => game.value.game);
-    const players = ref(await Promise.all(Object.keys(playerScores)
+    const players = ref(await Promise.all(Object.keys(playerScores.value)
       .map(playerStore.getPlayerAsync)));
     return {
       game,
