@@ -8,7 +8,7 @@
       <!-- {{ best(player, "best") }} -->
       <td
         :class="{
-          best: statLimits.best.max == scoreStats[player].best
+          best: statLimits.best.max == scoreStats[player].best,
         }"
       >
         {{ scoreStats[player].best }}
@@ -17,7 +17,7 @@
     <template #pw="{player}">
       <td
         :class="{
-          worst: statLimits.worst.min == scoreStats[player].worst
+          worst: statLimits.worst.min == scoreStats[player].worst,
         }"
       >
         {{ scoreStats[player].worst }}
@@ -26,23 +26,22 @@
     <template #mean="{player}">
       <td
         :class="{
-          best: statLimits.mean.max == scoreStats[player].mean
+          best: statLimits.mean.max == scoreStats[player].mean,
         }"
       >
         {{ asFixed(scoreStats[player].mean) }}
       </td>
     </template>
-    <template
-      v-if="isFiltered"
-      #filteredW="{player}"
-    >
+    <template #filteredW="{player}">
       <td
         :class="{
-          best: mostWins.filtered.includes(player)
+          best: isFiltered && mostWins.filtered.includes(player),
         }"
       >
-        {{ gameWinners[player]?.filter(
-          opponents => filtered.every(p => opponents.includes(p))).length || 0 }}
+        {{ isFiltered
+          ? gameWinners[player]?.filter(
+            opponents => filtered.every(p => opponents.includes(p))).length || 0
+          : "&nbsp;" }}
       </td>
     </template>
     <template
@@ -79,7 +78,7 @@
     <template #fn="{player}">
       <td
         :class="{
-          worst: scoreStats[player].fn > 0 && statLimits.fn.max == scoreStats[player].fn
+          worst: scoreStats[player].fn > 0 && statLimits.fn.max == scoreStats[player].fn,
         }"
       >
         {{ scoreStats[player].fn }}
@@ -88,7 +87,7 @@
     <template #cliff="{player}">
       <td
         :class="{
-          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs
+          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs,
         }"
       >
         {{ scoreStats[player].cliffs }}
@@ -97,7 +96,7 @@
     <template #cliffR="{player}">
       <td
         :class="{
-          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs
+          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs,
         }"
       >
         {{ asRate(player, scoreStats[player].cliffs / 20) }}
@@ -106,7 +105,7 @@
     <template #dd="{player}">
       <td
         :class="{
-          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd
+          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd,
         }"
       >
         {{ scoreStats[player].dd }}
@@ -115,7 +114,7 @@
     <template #ddR="{player}">
       <td
         :class="{
-          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd
+          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd,
         }"
       >
         {{ asRate(player, scoreStats[player].dd / 20) }}
@@ -126,7 +125,7 @@
     >
       <td
         :class="{
-          best: scoreStats[player].hans > 0 && statLimits.hans.max == scoreStats[player].hans
+          best: scoreStats[player].hans > 0 && statLimits.hans.max == scoreStats[player].hans,
         }"
       >
         {{ scoreStats[player].hans }}
@@ -142,7 +141,7 @@
     <template #ap="{player}">
       <td
         :class="{
-          best: scoreStats[player].allPos > 0 && statLimits.allPos.max == scoreStats[player].allPos
+          best: scoreStats[player].allPos > 0 && statLimits.allPos.max == scoreStats[player].allPos,
         }"
       >
         {{ scoreStats[player].allPos }}
@@ -340,7 +339,7 @@ export default defineComponent({
       numGames,
       sumScores,
       isFiltered: computed(() =>
-        props.filtered.length > 0 && props.filtered.length != props.players.length),
+        props.filtered.length > 0 && props.players.some(p => !props.filtered.includes(p.id))),
       filteredNames: computed(() => {
         const arr = props.filtered.map(p => playerStore.getName(p));
         switch (arr.length) {
