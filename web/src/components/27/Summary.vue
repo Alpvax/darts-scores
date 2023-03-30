@@ -69,7 +69,7 @@
     <template #winR="{player}">
       <td
         :class="{
-          best: mostWins.all.includes(player)
+          best: (gameWinners[player]?.length || 0) / numGames[player] == mostWins.all_rate
         }"
       >
         {{ asRate(player, gameWinners[player]?.length || 0) }}
@@ -96,7 +96,7 @@
     <template #cliffR="{player}">
       <td
         :class="{
-          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs,
+          best: scoreStats[player].cliffs > 0 && statLimits.cliffR.max == scoreStats[player].cliffR,
         }"
       >
         {{ asRate(player, scoreStats[player].cliffs / 20) }}
@@ -114,7 +114,7 @@
     <template #ddR="{player}">
       <td
         :class="{
-          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd,
+          best: scoreStats[player].dd > 0 && statLimits.ddR.max == scoreStats[player].ddR,
         }"
       >
         {{ asRate(player, scoreStats[player].dd / 20) }}
@@ -201,8 +201,6 @@ export default defineComponent({
       }, {} as { [K: string]: T }));
     }
     const numGames = computedPlayers(p => props.scores[p].filter(s => s != null).length);
-    const sumScores = computedPlayers(p =>
-      props.scores[p].reduce((t, s) => s == null ? t : t + s.score, 0));
     const gameWinners = computed(() => props.games.reduce((acc, game) => {
       const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
       if (!Object.hasOwn(acc, winner)) {
@@ -218,6 +216,8 @@ export default defineComponent({
         }
         const num = acc.num + 1;
         const sum = acc.sum + s.score;
+        const cliffs = acc.cliffs + s.cliffs;
+        const dd = acc.dd + s.rounds.filter(h => h === 2).length;
         return {
           num,
           best: Math.max(acc.best, s.score),
@@ -225,8 +225,10 @@ export default defineComponent({
           sum,
           mean: sum / num,
           fn: acc.fn + (s.score == -393 ? 1 : 0),
-          cliffs: acc.cliffs + s.cliffs,
-          dd: acc.dd + s.rounds.filter(h => h === 2).length,
+          cliffs,
+          cliffR: cliffs / num,
+          dd,
+          ddR: dd / num,
           hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
             if (hits > 1) {
               count += 1;
@@ -245,7 +247,9 @@ export default defineComponent({
         mean: 0,
         fn: 0,
         cliffs: 0,
+        cliffR: 0,
         dd: 0,
+        ddR: 0,
         hans: 0,
         allPos: 0,
       }));
@@ -262,7 +266,9 @@ export default defineComponent({
         mean: { min: 1288, max: -394 },
         fn: { min: 0, max: 0 },
         cliffs:  { min: 0, max: 0 },
+        cliffR: { min: 0, max: 0 },
         dd:  { min: 0, max: 0 },
+        ddR: { min: 0, max: 0 },
         hans:  { min: 0, max: 0 },
         allPos:  { min: 0, max: 0 },
       }));
@@ -337,7 +343,6 @@ export default defineComponent({
     return {
       rowMeta,
       numGames,
-      sumScores,
       isFiltered: computed(() =>
         props.filtered.length > 0 && props.players.some(p => !props.filtered.includes(p.id))),
       filteredNames: computed(() => {
@@ -354,10 +359,11 @@ export default defineComponent({
       }),
       gameWinners,
       mostWins: computed(() => Object.entries(gameWinners.value).reduce(
-        ({ all, all_count, filtered, filtered_count }, [p, wins]) => {
+        ({ all, all_count, all_rate, filtered, filtered_count, filtered_rate }, [p, wins]) => {
           const a_wins = wins.length;
           const f_wins = wins.filter(
             opponents => props.filtered.every(p => opponents.includes(p))).length;
+          const num = numGames.value[p];
           const a = a_wins > all_count
             ? { all: [p], all_count: a_wins }
             : a_wins == all_count
@@ -368,8 +374,15 @@ export default defineComponent({
             : f_wins == filtered_count
               ? { filtered: [...filtered, p], filtered_count }
               : { filtered, filtered_count };
-          return { ...a, ...f };
-        }, { all_count: 0, all: [] as string[], filtered_count: 0, filtered: [] as string[] })),
+          return {
+            ...a, ...f,
+            all_rate: num ? Math.max(all_rate, a_wins / num) : all_rate,
+            filtered_rate: num ? Math.max(filtered_rate, f_wins / num) : filtered_rate,
+          };
+        }, {
+          all: [] as string[], all_count: 0, all_rate: 0,
+          filtered: [] as string[], filtered_count: 0, filtered_rate: 0,
+        })),
       scoreStats,
       statLimits,
       asFixed,
