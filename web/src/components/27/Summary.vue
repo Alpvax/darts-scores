@@ -17,6 +17,7 @@
     <template #pw="{player}">
       <td
         :class="{
+          best: statLimits.worst.max == scoreStats[player].worst,
           worst: statLimits.worst.min == scoreStats[player].worst,
         }"
       >
@@ -62,7 +63,11 @@
       </td>
     </template>
     <template #gameCount="{player}">
-      <td>
+      <td
+        :class="{
+          best: Math.max(...Object.values(numGames)) == numGames[player],
+        }"
+      >
         {{ numGames[player] }}
       </td>
     </template>
@@ -152,10 +157,15 @@
       :key="round"
       #[round.toString()]="{player}"
     >
-      <td class="roundSummaryCell">
-        {{ asRate(player, roundData(player, round).gamesWithHits) }}
+      <td
+        class="roundSummaryCell"
+        :class="{
+          favourite: roundData[player].favourites.includes(round),
+        }"
+      >
+        {{ asRate(player, roundData[player][round].gamesWithHits) }}
         <SummaryTooltip
-          v-bind="roundData(player, round)"
+          v-bind="roundData[player][round]"
           :player="player"
           :num-games="numGames[player]"
         />
@@ -387,40 +397,79 @@ export default defineComponent({
       statLimits,
       asFixed,
       asRate,
-      roundData: (player: string, round: number) => {
-        const [totalHits, dd, c, g] = props.scores[player].reduce(([t, d, c, g], s) => {
-          if (s == null) {
-            return [t, d, c, g];
+      roundData: computed(() => Object.entries(props.scores).reduce(
+        (obj, [player, scores]) => {
+          let roundData = scores.reduce(
+            (roundData, s) => {
+              if (s) {
+                for (const [rIdx, hits] of s.rounds.entries()) {
+                  if (!roundData[rIdx]) {
+                    roundData[rIdx] = {
+                      totalHits: 0,
+                      gamesWithHits: 0,
+                      doubleDoubles: 0,
+                      cliffs: 0,
+                    };
+                  }
+                  roundData[rIdx].totalHits += hits;
+                  if (hits > 0) {
+                    roundData[rIdx].gamesWithHits += 1;
+                  }
+                  if (hits == 2) {
+                    roundData[rIdx].doubleDoubles += 1;
+                  }
+                  if (hits == 3) {
+                    roundData[rIdx].cliffs += 1;
+                  }
+                }
+              }
+              return roundData;
+            },
+            [] as {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            }[],
+          );
+          let playerRoundData: {
+            [r: number]: {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            };
+            favourites: number[];
+          } = {
+            favourites: roundData.reduce(({ h, f }, { gamesWithHits }, rIdx) => {
+              if (gamesWithHits > h) {
+                return { h: gamesWithHits, f: [rIdx + 1]};
+              }
+              if (gamesWithHits == h) {
+                return { h, f: [...f, rIdx + 1]};
+              }
+              return { h, f };
+            }, { h: 0, f: [] as number[] }).f,
+          };
+          for (const [i, r] of roundData.entries()) {
+            playerRoundData[i + 1] = r;
           }
-          switch (s.rounds[round - 1]) {
-            case 1:
-              return [t + 1, d, c, g + 1];
-            case 2:
-              return [t + 2, d + 1, c, g + 1];
-            case 3:
-              return [t + 3, d, c + 1, g + 1];
-            default:
-              return [t, d, c, g];
-          }
-        }, [0, 0, 0, 0]);
-        // const num = numGames.value[player] * 3;
-        return {
-          totalHits,
-          gamesWithHits: g,
-          doubleDoubles: dd,
-          cliffs: c,
-        };
-      },
-      // best: (player: string,
-      //   key: keyof typeof statLimits.value,
-      //   format?: (value: number) => string) => {
-      //   const value = scoreStats.value[player][key];
-      //   const best = statLimits.value[key].max == value;
-      //   const valF = format ? format(value) : value;
-      //   return best
-      //     ? <td class="best"> { valF } </td>
-      //     : <td> { valF } </td>;
-      // },
+          return Object.assign(obj, {
+            [player]: playerRoundData,
+          });
+        },
+        {} as {
+          [k: keyof typeof props.scores]: {
+            [r: number]: {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            };
+            favourites: number[];
+          };
+        },
+      )),
     };
   },
 });
@@ -451,6 +500,9 @@ td:hover > .tooltip:not(:hover) {
 }
 #playerSummary td.worst {
   background-color: #ff7e7e;
+}
+#playerSummary td.favourite {
+  background-color: #ceff7e;
 }
 
 </style>
