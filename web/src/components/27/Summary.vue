@@ -181,6 +181,7 @@
         class="roundSummaryCell"
         :class="{
           favourite: roundData[player].favourites.includes(round),
+          best: roundData[player].favourites.includes(round) && roundBest[1] === player,
         }"
       >
         {{ asRate(player, roundData[player][round].gamesWithHits) }}
@@ -290,7 +291,89 @@ export default defineComponent({
         hans: 0,
         allPos: 0,
         farDream: 0,
-      }));
+      },
+    ));
+    const roundData = computed(() => Object.entries(props.scores).reduce(
+      ({ best, obj }, [player, scores]) => {
+        let roundData = scores.reduce(
+          (roundData, s) => {
+            if (s) {
+              for (const [rIdx, hits] of s.rounds.entries()) {
+                if (!roundData[rIdx]) {
+                  roundData[rIdx] = {
+                    totalHits: 0,
+                    gamesWithHits: 0,
+                    doubleDoubles: 0,
+                    cliffs: 0,
+                  };
+                }
+                roundData[rIdx].totalHits += hits;
+                if (hits > 0) {
+                  roundData[rIdx].gamesWithHits += 1;
+                }
+                if (hits == 2) {
+                  roundData[rIdx].doubleDoubles += 1;
+                }
+                if (hits == 3) {
+                  roundData[rIdx].cliffs += 1;
+                }
+              }
+            }
+            return roundData;
+          },
+          [] as {
+            totalHits: number;
+            gamesWithHits: number;
+            doubleDoubles: number;
+            cliffs: number;
+          }[],
+        );
+        let { h: bestN, f: favourites } = roundData.reduce(({ h, f }, { gamesWithHits }, rIdx) => {
+          if (gamesWithHits > h) {
+            return { h: gamesWithHits, f: [rIdx + 1]};
+          }
+          if (gamesWithHits == h) {
+            return { h, f: [...f, rIdx + 1]};
+          }
+          return { h, f };
+        }, { h: 0, f: [] as number[] });
+        let playerRoundData: {
+          [r: number]: {
+            totalHits: number;
+            gamesWithHits: number;
+            doubleDoubles: number;
+            cliffs: number;
+          };
+          favourites: number[];
+        } = {
+          favourites,
+        };
+        for (const [i, r] of roundData.entries()) {
+          playerRoundData[i + 1] = r;
+        }
+        bestN /= numGames.value[player];
+        return {
+          best: (bestN > best[0] ? [bestN, player] : best) as [number, string | null],
+          obj: Object.assign(obj, {
+            [player]: playerRoundData,
+          }),
+        };
+      },
+      {
+        best: [0, null] as [number, string | null],
+        obj: {} as {
+          [k: keyof typeof props.scores]: {
+            [r: number]: {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            };
+            favourites: number[];
+          };
+        },
+      },
+    ));
     const statLimits = computed(() => Object.values(scoreStats.value).reduce(
       (acc, s) => {
         for (const k of Object.keys(acc).map(k => k as keyof typeof acc)) {
@@ -435,79 +518,8 @@ export default defineComponent({
       statLimits,
       asFixed,
       asRate,
-      roundData: computed(() => Object.entries(props.scores).reduce(
-        (obj, [player, scores]) => {
-          let roundData = scores.reduce(
-            (roundData, s) => {
-              if (s) {
-                for (const [rIdx, hits] of s.rounds.entries()) {
-                  if (!roundData[rIdx]) {
-                    roundData[rIdx] = {
-                      totalHits: 0,
-                      gamesWithHits: 0,
-                      doubleDoubles: 0,
-                      cliffs: 0,
-                    };
-                  }
-                  roundData[rIdx].totalHits += hits;
-                  if (hits > 0) {
-                    roundData[rIdx].gamesWithHits += 1;
-                  }
-                  if (hits == 2) {
-                    roundData[rIdx].doubleDoubles += 1;
-                  }
-                  if (hits == 3) {
-                    roundData[rIdx].cliffs += 1;
-                  }
-                }
-              }
-              return roundData;
-            },
-            [] as {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            }[],
-          );
-          let playerRoundData: {
-            [r: number]: {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            };
-            favourites: number[];
-          } = {
-            favourites: roundData.reduce(({ h, f }, { gamesWithHits }, rIdx) => {
-              if (gamesWithHits > h) {
-                return { h: gamesWithHits, f: [rIdx + 1]};
-              }
-              if (gamesWithHits == h) {
-                return { h, f: [...f, rIdx + 1]};
-              }
-              return { h, f };
-            }, { h: 0, f: [] as number[] }).f,
-          };
-          for (const [i, r] of roundData.entries()) {
-            playerRoundData[i + 1] = r;
-          }
-          return Object.assign(obj, {
-            [player]: playerRoundData,
-          });
-        },
-        {} as {
-          [k: keyof typeof props.scores]: {
-            [r: number]: {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            };
-            favourites: number[];
-          };
-        },
-      )),
+      roundData: roundData.value.obj,
+      roundBest: roundData.value.best,
     };
   },
 });
@@ -539,7 +551,7 @@ td:hover > .tooltip:not(:hover) {
 #playerSummary td.worst {
   background-color: #ff7e7e;
 }
-#playerSummary td.favourite {
+#playerSummary td.favourite:not(.best) {
   background-color: #ceff7e;
 }
 
