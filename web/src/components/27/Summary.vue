@@ -143,6 +143,16 @@
         Three double doubles in a row
       </div>
     </template>
+    <template #goblins="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].goblins > 0
+            && statLimits.goblins.max == scoreStats[player].goblins,
+        }"
+      >
+        {{ scoreStats[player].goblins }}
+      </td>
+    </template>
     <template #ap="{player}">
       <td
         :class="{
@@ -150,6 +160,16 @@
         }"
       >
         {{ scoreStats[player].allPos }}
+      </td>
+    </template>
+    <template #farDream="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].farDream > 0
+            && statLimits.farDream.max == scoreStats[player].farDream,
+        }"
+      >
+        {{ scoreStats[player].farDream }}
       </td>
     </template>
     <template
@@ -239,6 +259,11 @@ export default defineComponent({
           cliffR: cliffs / num,
           dd,
           ddR: dd / num,
+          goblins: acc.goblins +
+            ((s.rounds.filter(h => h === 2).length + s.cliffs) > 0
+              && s.rounds.filter(h => h === 1).length < 1
+              ? 1
+              : 0),
           hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
             if (hits > 1) {
               count += 1;
@@ -248,6 +273,7 @@ export default defineComponent({
             }
           }, [0, 0])[0],
           allPos: acc.allPos + (s.allPositive ? 1 : 0),
+          farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
         };
       }, {
         num: 0,
@@ -260,8 +286,10 @@ export default defineComponent({
         cliffR: 0,
         dd: 0,
         ddR: 0,
+        goblins: 0,
         hans: 0,
         allPos: 0,
+        farDream: 0,
       }));
     const statLimits = computed(() => Object.values(scoreStats.value).reduce(
       (acc, s) => {
@@ -280,7 +308,9 @@ export default defineComponent({
         dd:  { min: 0, max: 0 },
         ddR: { min: 0, max: 0 },
         hans:  { min: 0, max: 0 },
+        goblins:  { min: 0, max: 0 },
         allPos:  { min: 0, max: 0 },
+        farDream:  { min: 0, max: 0 },
       }));
     const rowMeta: RowMetadata[] = [
       {
@@ -336,8 +366,16 @@ export default defineComponent({
         slotId: "hans",
       },
       {
+        label: "Goblins",
+        slotId: "goblins",
+      },
+      {
         label: "All Positive",
         slotId: "ap",
+      },
+      {
+        label: "Furthest Dream",
+        slotId: "farDream",
       },
     ];
     for (let r = 1; r <= 20; r++) {
