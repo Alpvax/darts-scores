@@ -153,6 +153,26 @@
         {{ scoreStats[player].goblins }}
       </td>
     </template>
+    <template #goblins_tooltip>
+      <div class="tooltip">
+        Games where only double doubles were hit
+      </div>
+    </template>
+    <template #piranhas="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].piranhas > 0
+            && statLimits.piranhas.max == scoreStats[player].piranhas,
+        }"
+      >
+        {{ scoreStats[player].piranhas }}
+      </td>
+    </template>
+    <template #piranhas_tooltip>
+      <div class="tooltip">
+        Games where only double 1 was hit (so the score was -389)
+      </div>
+    </template>
     <template #ap="{player}">
       <td
         :class="{
@@ -170,6 +190,36 @@
         }"
       >
         {{ scoreStats[player].farDream }}
+      </td>
+    </template>
+    <template #mostHits="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].bestHits > 0
+            && statLimits.bestHits.max == scoreStats[player].bestHits,
+        }"
+      >
+        {{ scoreStats[player].bestHits }}
+      </td>
+    </template>
+    <template #leastHits="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].worstHits > 0
+            && statLimits.worstHits.max == scoreStats[player].worstHits,
+        }"
+      >
+        {{ scoreStats[player].worstHits }}
+      </td>
+    </template>
+    <template #meanHits="{player}">
+      <td
+        :class="{
+          best: scoreStats[player].meanHits > 0
+            && statLimits.meanHits.max == scoreStats[player].meanHits,
+        }"
+      >
+        {{ asFixed(scoreStats[player].meanHits) }}
       </td>
     </template>
     <template
@@ -249,6 +299,8 @@ export default defineComponent({
         const sum = acc.sum + s.score;
         const cliffs = acc.cliffs + s.cliffs;
         const dd = acc.dd + s.rounds.filter(h => h === 2).length;
+        const hits = s.rounds.reduce((a, b) => a + b);
+        const sumHits = acc.sumHits + hits;
         return {
           num,
           best: Math.max(acc.best, s.score),
@@ -265,6 +317,7 @@ export default defineComponent({
               && s.rounds.filter(h => h === 1).length < 1
               ? 1
               : 0),
+          piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
           hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
             if (hits > 1) {
               count += 1;
@@ -275,6 +328,10 @@ export default defineComponent({
           }, [0, 0])[0],
           allPos: acc.allPos + (s.allPositive ? 1 : 0),
           farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
+          bestHits: Math.max(acc.bestHits, hits),
+          worstHits: Math.min(acc.worstHits, hits),
+          meanHits: sumHits / num,
+          sumHits,
         };
       }, {
         num: 0,
@@ -288,9 +345,14 @@ export default defineComponent({
         dd: 0,
         ddR: 0,
         goblins: 0,
+        piranhas: 0,
         hans: 0,
         allPos: 0,
         farDream: 0,
+        bestHits: 0,
+        worstHits: 60,
+        meanHits: 0,
+        sumHits: 0,
       },
     ));
     const roundData = computed(() => Object.entries(props.scores).reduce(
@@ -386,14 +448,18 @@ export default defineComponent({
         worst: { min: 1288, max: -394 },
         mean: { min: 1288, max: -394 },
         fn: { min: 0, max: 0 },
-        cliffs:  { min: 0, max: 0 },
+        cliffs: { min: 0, max: 0 },
         cliffR: { min: 0, max: 0 },
-        dd:  { min: 0, max: 0 },
+        dd: { min: 0, max: 0 },
         ddR: { min: 0, max: 0 },
-        hans:  { min: 0, max: 0 },
-        goblins:  { min: 0, max: 0 },
-        allPos:  { min: 0, max: 0 },
-        farDream:  { min: 0, max: 0 },
+        hans: { min: 0, max: 0 },
+        goblins: { min: 0, max: 0 },
+        piranhas: { min: 0, max: 0 },
+        allPos: { min: 0, max: 0 },
+        farDream: { min: 0, max: 0 },
+        bestHits: { min: 0, max: 0 },
+        worstHits: { min: 0, max: 0 },
+        meanHits: { min: 0, max: 0 },
       }));
     const rowMeta: RowMetadata[] = [
       {
@@ -453,12 +519,28 @@ export default defineComponent({
         slotId: "goblins",
       },
       {
+        label: "Piranhas",
+        slotId: "piranhas",
+      },
+      {
         label: "All Positive",
         slotId: "ap",
       },
       {
         label: "Furthest Dream",
         slotId: "farDream",
+      },
+      {
+        label: "Most Hits",
+        slotId: "mostHits",
+      },
+      {
+        label: "Least Hits",
+        slotId: "leastHits",
+      },
+      {
+        label: "Average Hits",
+        slotId: "meanHits",
       },
     ];
     for (let r = 1; r <= 20; r++) {
