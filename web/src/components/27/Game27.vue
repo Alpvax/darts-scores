@@ -38,7 +38,7 @@
       />
     </template>
     <template #totalHits="{player}">
-      <td>
+      <td :colspan="editable ? 2 : 1">
         {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}
         ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }})
       </td>
@@ -69,10 +69,12 @@ import {
 } from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
-import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
+import PlayerTable from "@/components/PlayerTable.vue";
+import { RowMetadata } from "@/utils/display";
 // import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
 import Turn27 from "./Turn27.vue";
 import { Player } from "@/store/player";
+import { usePrefs } from "@/clientPreferences";
 
 export type PlayerGameResult27 = {
   rounds: number[];
@@ -136,6 +138,7 @@ export default defineComponent({
     displayWinner: { type: Boolean, default: true },
   },
   setup (props) {
+    const preferences = usePrefs();
     // function unwrapRefObj<T extends { [k: string]: Ref<U> }, U>(obj: T): { [K in keyof T]: U } {
     //   return Object.entries(obj).reduce((o, [p, r]) => {
     //     o[p] = toRaw(r.value);
@@ -156,7 +159,10 @@ export default defineComponent({
       return m;
     }, {} as { [k: string]: number[] }));
     const gameHits = computed(() => props.players.reduce((o, { id }) => {
-      o[id] = ref(props.playerGameHits ? props.playerGameHits[id] : new Array(20).fill(-1));
+      o[id] = ref(props.playerGameHits
+        ? props.playerGameHits[id]
+        : JSON.parse(window.sessionStorage.getItem(`activeGame[${id}]`) ?? "null")
+          ?? new Array(20).fill(-1));
       return o;
     }, {} as { [k: string]: Ref<number[]> }));
     const completed = computed(() => Object.entries(gameHits.value).reduce((o, [id, hits]) => {
@@ -193,6 +199,8 @@ export default defineComponent({
         toRaw(gameHits.value[player].value),
         completed.value[player],
       );
+      window.sessionStorage.setItem(`activeGame[${player}]`,
+        JSON.stringify(toRaw(gameHits.value[player].value)));
     }
     async function focusNext(next = true): Promise<void> {
       let el = document.querySelector(".turnHits.empty input");
@@ -247,8 +255,8 @@ export default defineComponent({
         el.focus();
       }
     };
-    watch(() => props.players, () => focusNext());
-    onMounted(() => focusNext());
+    watch(() => props.players, () => nextTick().then(() => focusNext()));
+    onMounted(() => nextTick().then(() => focusNext()));
     const submitted = ref(false);
     const rowMeta: RowMetadata[] = (new Array(20)).fill(0).map((_, n) => {
       const roundNum = (n + 1).toString();
@@ -261,7 +269,7 @@ export default defineComponent({
       label: "Hits",
       slotId: "totalHits",
       additionalClass: ["totalHitsRow"],
-      showIf: computed(() => !props.editable),
+      showIf: computed(() => !props.editable || preferences.twentyseven.ingameHits),
     });
     return {
       gameHits,
@@ -298,6 +306,7 @@ export default defineComponent({
         const db = getFirestore();
         addDoc(collection(db, "game/twentyseven/games"), result);
         submitted.value = true;
+        window.sessionStorage.clear(); //TODO: only clear relevant?
       },
       rowMeta,
       deltaNumfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),

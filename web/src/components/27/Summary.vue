@@ -245,12 +245,13 @@
   </PlayerTable>
 </template>
 
-<script lang="tsx">
+<script lang="ts">
 import { computed, ComputedRef, defineComponent, PropType } from "vue";
-import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
+import PlayerTable from "@/components/PlayerTable.vue";
 import SummaryTooltip from "./SummaryTooltip.vue";
 import { PlayerGameResult27, Result27 } from "./Game27.vue";
 import { Player, usePlayerStore } from "@/store/player";
+import { summaryFields } from "@/games/27";
 
 export default defineComponent({
   components: {
@@ -461,88 +462,7 @@ export default defineComponent({
         worstHits: { min: 0, max: 0 },
         meanHits: { min: 0, max: 0 },
       }));
-    const rowMeta: RowMetadata[] = [
-      {
-        label: "Personal Best",
-        slotId: "pb",
-      },
-      {
-        label: "Personal Worst",
-        slotId: "pw",
-      },
-      {
-        label: "Average score",
-        slotId: "mean",
-      },
-      {
-        label: "Real Wins",
-        slotId: "filteredW",
-      },
-      {
-        label: "Total Wins",
-        slotId: "wins",
-      },
-      {
-        label: "Total games played",
-        slotId: "gameCount",
-      },
-      {
-        label: "Win rate",
-        slotId: "winR",
-      },
-      {
-        label: "Fat Nicks",
-        slotId: "fn",
-      },
-      {
-        label: "Cliffs",
-        slotId: "cliff",
-      },
-      {
-        label: "Cliff Rate",
-        slotId: "cliffR",
-      },
-      {
-        label: "Double Doubles",
-        slotId: "dd",
-      },
-      {
-        label: "Double Double Rate",
-        slotId: "ddR",
-      },
-      {
-        label: "Hans",
-        slotId: "hans",
-      },
-      {
-        label: "Goblins",
-        slotId: "goblins",
-      },
-      {
-        label: "Piranhas",
-        slotId: "piranhas",
-      },
-      {
-        label: "All Positive",
-        slotId: "ap",
-      },
-      {
-        label: "Furthest Dream",
-        slotId: "farDream",
-      },
-      {
-        label: "Most Hits",
-        slotId: "mostHits",
-      },
-      {
-        label: "Least Hits",
-        slotId: "leastHits",
-      },
-      {
-        label: "Average Hits",
-        slotId: "meanHits",
-      },
-    ];
+    const rowMeta = [...summaryFields];
     for (let r = 1; r <= 20; r++) {
       rowMeta.push({
         label: r.toString(),

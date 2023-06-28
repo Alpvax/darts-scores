@@ -1,18 +1,21 @@
+import { usePrefs } from "@/clientPreferences";
 import {
   collection, doc, DocumentReference, DocumentSnapshot,
   getDoc, getDocs, getFirestore,
 } from "firebase/firestore";
 import { defineStore } from "pinia";
-import { computed, ComputedRef, reactive } from "vue";
+import { computed, ComputedRef, reactive, ref, Ref } from "vue";
 
 export type LoadedPlayer = {
-  name: string;
+  name: Ref<string>;
   id: string;
   defaultOrder: number;
   disabled: boolean;
+  guest: boolean;
   loaded: true;
 }
 type PartialPlayer = {
+  name: Ref<string>;
   id: string;
   loaded: false;
 } & Partial<Omit<LoadedPlayer, "id" | "loaded">>;
@@ -26,18 +29,35 @@ const isLoadedPlayer = (p?: Player | Promise<Player>): p is LoadedPlayer =>
 
 export const usePlayerStore = defineStore("players", () => {
   const db = getFirestore();
+  const preferences = usePrefs();
   const playerRef = (pid: string): DocumentReference => doc(db, "players", pid);
 
   const players = reactive(new Map<string, LoadedPlayer | Promise<LoadedPlayer>>());
   const onData = (data: DocumentSnapshot): LoadedPlayer => {
     const disabled = data.get("disabled") || false;
-    const p: LoadedPlayer = {
-      name: data.get("funName") as string ?? data.get("name") as string ?? data.id,
-      id: data.id,
-      defaultOrder: data.get("defaultOrder") as number + (disabled ? 100 : 0),
-      disabled,
-      loaded: true,
-    };
+    const __trueName = data.get("name") as string ?? data.id;
+    const funNames = data.get("funNames") as string[]
+      ?? [data.get("funName") as string ?? __trueName];
+    const funIdx = computed(() => funNames.length > 1
+      ? Math.floor(Math.random() * funNames.length)
+      : 0);
+    const p: LoadedPlayer = Object.assign(
+      {
+        __trueName,
+        funIdx,
+        funNames,
+        name: computed(() => preferences.useFunNames ? funNames[funIdx.value] : __trueName),
+      }, {
+        id: data.id,
+        defaultOrder: data.get("defaultOrder") as number + (disabled ? 100 : 0),
+        disabled,
+        guest: data.get("guest") ?? false,
+        loaded: true as true,
+      },
+    );
+    if (preferences.debug.debugLoadedPlayers) {
+      console.log("Loaded player:", p, __trueName, funNames);
+    }
     players.set(p.id, p);
     return p;
   };
@@ -54,7 +74,7 @@ export const usePlayerStore = defineStore("players", () => {
       players.set(pid, loadPlayer(pid));
     }
     const p = players.get(pid);
-    return isLoadedPlayer(p) ? p : { id: pid, loaded: false };
+    return isLoadedPlayer(p) ? p : { id: pid, loaded: false, name: ref(pid) };
   };
   const allPlayersOrdered = computed(() => {
     const arr = [...players.values()].filter(isLoadedPlayer);
@@ -67,10 +87,7 @@ export const usePlayerStore = defineStore("players", () => {
       const p = getPlayer(pid, true);
       return isLoadedPlayer(p) ? p : await (players.get(pid) as Promise<LoadedPlayer>);
     },
-    getName: (pid: string) => {
-      const p = getPlayer(pid);
-      return p.name ?? pid;
-    },
+    getName: (pid: string) => getPlayer(pid).name,
     loadAllPlayers: async (): Promise<ComputedRef<LoadedPlayer[]>> => {
       (await getDocs(collection(db, "players"))).forEach(onData);
       return allPlayersOrdered;

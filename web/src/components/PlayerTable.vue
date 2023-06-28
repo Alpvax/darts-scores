@@ -5,14 +5,14 @@
         <slot name="__column0header">
           <td>&nbsp;</td>
         </slot>
-        <td
+        <th
           v-for="{name, id} in playersIter"
           :key="id"
           class="playerName"
           :colspan="width"
         >
           {{ name ?? id }}
-        </td>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -50,16 +50,8 @@
 <script lang="ts">
 // import { getPlayerIds, iterPlayers, Player } from "@/util/player";
 import { Player, usePlayerStore } from "@/store/player";
-import { computed, defineComponent, PropType, Ref } from "vue";
-
-export type RowMetadata = {
-  label: string;
-  slotId: string;
-  width?: number;
-  additionalClass?: string[];
-  showIf?: Ref;
-  onClick?: (event: MouseEvent) => any;
-};
+import { RowMetadata } from "@/utils/display";
+import { computed, defineComponent, PropType } from "vue";
 
 export default defineComponent({
   props: {

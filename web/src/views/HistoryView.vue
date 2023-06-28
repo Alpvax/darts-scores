@@ -126,7 +126,8 @@
 <script lang="ts">
 import { computed, defineComponent, ref, watchEffect } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
-import PlayerTable, { RowMetadata } from "@/components/PlayerTable.vue";
+import PlayerTable from "@/components/PlayerTable.vue";
+import { RowMetadata } from "@/utils/display";
 import Summary27 from "@/components/27/Summary.vue";
 import Game27 from "@/components/27/Game27.vue";
 import {

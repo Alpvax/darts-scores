@@ -11,7 +11,7 @@
         :id="'select_' + id"
         v-model="players"
         type="checkbox"
-        :name="name"
+        :name="name.value"
         :value="id"
         @change="e => onCheckboxChange(id, (e.target! as HTMLInputElement).checked)"
       >

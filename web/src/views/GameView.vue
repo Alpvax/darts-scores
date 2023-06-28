@@ -21,10 +21,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { computed, defineComponent, ref } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import Game27 from "@/components/27/Game27.vue";
 import { usePlayerStore } from "@/store/player";
+import { usePrefs } from "@/clientPreferences";
 
 export default defineComponent({
   components: {
@@ -33,8 +34,10 @@ export default defineComponent({
   },
   async setup() {
     const playerStore = usePlayerStore();
+    const preferences = usePrefs();
     await playerStore.loadAllPlayers();
-    const all_players = playerStore.availablePlayers;
+    const all_players = computed(() =>
+      playerStore.availablePlayers.filter(p => preferences.displayGuestSelection || !p.guest));
     const players = ref((await playerStore.getDefaultPlayers("twentyseven")).map(({ id }) => id));
     return {
       players,

@@ -15,6 +15,16 @@
   </Suspense>
 </template>
 
+<script lang="ts">
+import { defineComponent } from "vue";
+import initialiseAPI from "./utils/consoleAPI";
+export default defineComponent({
+  setup() {
+    initialiseAPI();
+  },
+});
+</script>
+
 <style>
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
