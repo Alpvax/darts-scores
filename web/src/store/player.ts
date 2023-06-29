@@ -1,4 +1,4 @@
-import { usePrefs } from "@/clientPreferences";
+import { usePrefs } from "@/store/clientPreferences";
 import {
   collection, doc, DocumentReference, DocumentSnapshot,
   getDoc, getDocs, getFirestore,

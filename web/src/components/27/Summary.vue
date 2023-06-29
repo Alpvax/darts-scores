@@ -249,9 +249,8 @@
 import { computed, ComputedRef, defineComponent, PropType } from "vue";
 import PlayerTable from "@/components/PlayerTable.vue";
 import SummaryTooltip from "./SummaryTooltip.vue";
-import { PlayerGameResult27, Result27 } from "./Game27.vue";
 import { Player, usePlayerStore } from "@/store/player";
-import { summaryFields } from "@/games/27";
+import { PlayerGameResult27, Result27, summaryFields } from "@/games/27";
 
 export default defineComponent({
   components: {

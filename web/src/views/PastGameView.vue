@@ -11,9 +11,10 @@
 
 <script lang="ts">
 import { computed, defineComponent, ref } from "vue";
-import Game27, { Result27 } from "@/components/27/Game27.vue";
+import Game27 from "@/components/27/Game27.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/store/player";
+import { Result27 } from "@/games/27";
 
 export default defineComponent({
   components: {
@@ -28,8 +29,8 @@ export default defineComponent({
     const game = ref((await getDoc(doc(db, "game/twentyseven/games", props.gameId)))
       .data() as Result27);
     const playerScores = computed(() => game.value.game);
-    const players = ref(await Promise.all(Object.keys(playerScores.value)
-      .map(playerStore.getPlayerAsync)));
+    const players = await Promise.all(Object.keys(playerScores.value)
+      .map(playerStore.getPlayerAsync));
     return {
       game,
       date: computed(() => new Date(game.value.date)),

@@ -95,9 +95,9 @@ import {
   getDoc, getDocs, getFirestore,
   orderBy, query, where,
 } from "firebase/firestore";
-import { PlayerGameResult27, Result27 } from "@/components/27/Game27.vue";
 import { usePlayerStore } from "@/store/player";
-import { usePrefs } from "@/clientPreferences";
+import { usePrefs } from "@/store/clientPreferences";
+import { PlayerGameResult27, Result27 } from "@/games/27";
 
 export default defineComponent({
   components: {

@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { Ref, WritableComputedRef, computed, reactive, ref, watch } from "vue";
 import { z } from "zod";
 import { summaryFields } from "@/games/27";
-import { bitFieldProp } from "./utils/consoleAPI";
+import { bitFieldProp } from "../utils/consoleAPI";
 
 
 export namespace DisplayState {

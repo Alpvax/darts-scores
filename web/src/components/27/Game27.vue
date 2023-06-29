@@ -74,27 +74,8 @@ import { RowMetadata } from "@/utils/display";
 // import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
 import Turn27 from "./Turn27.vue";
 import { Player } from "@/store/player";
-import { usePrefs } from "@/clientPreferences";
-
-export type PlayerGameResult27 = {
-  rounds: number[];
-  cliffs: number;
-  score: number;
-  allPositive: boolean;
-};
-export type Result27 = {
-  date: string;
-  winner: string | {
-    tie: string[];
-    tiebreak: { //TODO: implement tiebreak
-      winner?: string;
-      // [k: string | number]: any;
-    };
-  };
-  game: {
-    [player: string]: PlayerGameResult27;
-  };
-}
+import { usePrefs } from "@/store/clientPreferences";
+import { Result27, PlayerGameResult27 } from "@/games/27";
 
 // class PlayerScore {
 //   private readonly hits: number[] = [];
@@ -123,7 +104,6 @@ for (let i = 1; i < 21; i++) {
 export default defineComponent({
   components: {
     PlayerTable,
-    // eslint-disable-next-line vue/no-unused-components
     Turn27,
   },
   props: {

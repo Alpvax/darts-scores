@@ -82,3 +82,23 @@ export const summaryFields: RowMetadata[] = [
     slotId: "meanHits",
   },
 ];
+
+export type PlayerGameResult27 = {
+  rounds: number[];
+  cliffs: number;
+  score: number;
+  allPositive: boolean;
+};
+export type Result27 = {
+  date: string;
+  winner: string | {
+    tie: string[];
+    tiebreak: { //TODO: implement tiebreak
+      winner?: string;
+      // [k: string | number]: any;
+    };
+  };
+  game: {
+    [player: string]: PlayerGameResult27;
+  };
+}

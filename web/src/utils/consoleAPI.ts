@@ -1,4 +1,4 @@
-import { ClientPreferences, DisplayState, rawInterface, usePrefs } from "@/clientPreferences";
+import { ClientPreferences, DisplayState, rawInterface, usePrefs } from "@/store/clientPreferences";
 
 export const bitFieldGetter = (rawGetter: () => number, mask: number) =>
   () => (rawGetter() & mask) !== 0;

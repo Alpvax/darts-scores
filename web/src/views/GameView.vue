@@ -25,7 +25,7 @@ import { computed, defineComponent, ref } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import Game27 from "@/components/27/Game27.vue";
 import { usePlayerStore } from "@/store/player";
-import { usePrefs } from "@/clientPreferences";
+import { usePrefs } from "@/store/clientPreferences";
 
 export default defineComponent({
   components: {
