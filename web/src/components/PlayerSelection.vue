@@ -13,7 +13,7 @@
         type="checkbox"
         :name="name.value"
         :value="id"
-        @change="e => onCheckboxChange(id, (e.target! as HTMLInputElement).checked)"
+        @change="e => onCheckboxChange(id, (e.target! as HTMLInputElement).checked, e as InputEvent)"
       >
       <label :for="'select_' + id">{{ name ?? id }}</label>
     </div>
@@ -35,12 +35,14 @@ export default defineComponent({
     const playerStore = usePlayerStore();
     const players = ref(props.selected
       ?? props.available.map(p => typeof p === "object" ? p.id :p));
+    console.log("selected:", players.value);//XXX
     return {
       availablePlayers: computed(() =>
         props.available.map(p => typeof p === "object" ? p : playerStore.getPlayer(p))),
       players,
       date: ref((new Date()).toISOString().slice(0, 16)),
-      onCheckboxChange(playerId: string, checked: boolean): void {
+      onCheckboxChange(playerId: string, checked: boolean, e: InputEvent): void {
+        console.log("Selection", playerId, checked, (e.target! as any).checked);//XXX
         emit("update:player", playerId, checked);
         emit("players", players.value);
       },

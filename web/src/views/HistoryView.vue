@@ -83,21 +83,16 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, ref, watchEffect } from "vue";
+import { computed, defineComponent, ref } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import PlayerTable from "@/components/PlayerTable.vue";
 import { RowMetadata } from "@/utils/display";
 import Summary27 from "@/components/27/Summary.vue";
 import Game27 from "@/components/27/Game27.vue";
-import {
-  collection, doc,
-  DocumentReference,
-  getDoc, getDocs, getFirestore,
-  orderBy, query, where,
-} from "firebase/firestore";
-import { usePlayerStore } from "@/store/player";
 import { usePrefs } from "@/store/clientPreferences";
-import { PlayerGameResult27, Result27 } from "@/games/27";
+import { use27History } from "@/store/history27";
+import { Result27 } from "@/games/27";
+import { getDoc, doc, DocumentReference, getFirestore } from "firebase/firestore";
 
 export default defineComponent({
   components: {
@@ -107,49 +102,12 @@ export default defineComponent({
     Game27,
   },
   async setup() {
-    const db = getFirestore();
-    const gamesRef = collection(db, "game/twentyseven/games");
-
-    const playerStore = usePlayerStore();
     const preferences = usePrefs();
+    const history = use27History();
 
-    const today = new Date();
-    const toDate = ref(today.toISOString().slice(0, 10));
-    const fromDate = ref(`${today.getFullYear()}-01-01`);
-    const games = ref([] as (Result27 & { gameId: string })[]);
-    watchEffect(async (): Promise<void> => {
-      games.value = [];
-      if (fromDate.value <= toDate.value && new Date(fromDate.value) <= today) {
-        const td = new Date(toDate.value);
-        td.setDate(td.getDate() + 1);
-        (await getDocs(query(gamesRef,
-          orderBy("date", "desc"),
-          where("date", ">=", fromDate.value),
-          where("date", "<=", td.toISOString().slice(0, 10)),
-        ))).forEach(async (d) => {
-          const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
-          games.value.push(gameData);
-          await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
-        });
-      } else {
-        //TODO display error
-      }
-    });
-    const playerIds = ref(await Promise.all(((await getDoc(doc(db, "game/twentyseven")))
+    const allPlayers = computed(() => history.allPlayers);
+    const playerIds = ref(await Promise.all(((await getDoc(doc(getFirestore(), "game/twentyseven")))
       .get("defaultrequired") as DocumentReference[]).map(d => d.id)));
-
-    const scores = computed(() => games.value.reduce((scores, game) => {
-      for (const id in scores) {
-        scores[id].push(Object.hasOwn(game.game, id) ? game.game[id] : null);
-      }
-      return scores;
-    }, playerStore.allPlayerIds.reduce((o, pid) => {
-      o[pid] = [];
-      return o;
-    }, {} as { [k: string]: (PlayerGameResult27 | null)[] })));
-
-    const allPlayers = computed(() => playerStore.allPlayersOrdered
-      .filter(p => scores.value[p.id].filter(s => s).length > 0));
 
     const selectedGame = ref(null as (Result27 & { gameId: string }) | null);
 
@@ -169,9 +127,15 @@ export default defineComponent({
         }
         return res;
       }),
-      toDate, fromDate,
-      games,
-      gamesRowMeta: computed(() => games.value.map(g => ({
+      toDate: computed({
+        get: () => history.toDate,
+        set: history.setToDate,
+      }), fromDate: computed({
+        get: () => history.fromDate,
+        set: history.setFromDate,
+      }),
+      games: computed(() => history.games),
+      gamesRowMeta: computed(() => history.games.map(g => ({
         label: (new Date(g.date)).toLocaleDateString(),
         slotId: g.gameId,
         onClick: (e) => {
@@ -180,7 +144,7 @@ export default defineComponent({
           selectedGame.value = g;
         },
       } as RowMetadata))),
-      scores,
+      scores: computed(() => history.scores),
       selectedGame,
       selectedRounds: computed(() => Object.entries(selectedGame.value!.game)
         .reduce((o, [p, { rounds }]) => {

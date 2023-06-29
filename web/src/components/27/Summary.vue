@@ -1,7 +1,7 @@
 <template>
   <PlayerTable
     id="playerSummary"
-    :players="players.filter(p => !p.disabled)"
+    :players="players.filter(p => numGames[p.id] > 0)"
     :rows="rowMeta"
   >
     <template #pb="{player}">
@@ -275,9 +275,18 @@ export default defineComponent({
     //   }, {} as { [K: string]: ComputedRef<T> });
     // }
     function computedPlayers<T>(f: (player: string) => T): ComputedRef<{ [K: string]: T }> {
-      return computed(() => props.players.reduce((obj, p) => {
-        const id = typeof p === "object" ? p.id : p;
+      return computed(() => props.players.reduce((obj, { id }) => {
         obj[id] = f(id);
+        return obj;
+      }, {} as { [K: string]: T }));
+    }
+    function computedPlayersOpt<T>(f: (player: string) => T | undefined):
+    ComputedRef<{ [K: string]: T }> {
+      return computed(() => props.players.reduce((obj, { id }) => {
+        const res = f(id);
+        if (res !== undefined) {
+          obj[id] = res;
+        }
         return obj;
       }, {} as { [K: string]: T }));
     }
@@ -290,71 +299,73 @@ export default defineComponent({
       acc[winner].push(Object.keys(game.game));
       return acc;
     }, {} as { [k: string]: string[][] }));
-    const scoreStats = computedPlayers(p => props.scores[p].reduce(
-      (acc, s) => {
-        if (s == null) {
-          return acc;
-        }
-        const num = acc.num + 1;
-        const sum = acc.sum + s.score;
-        const cliffs = acc.cliffs + s.cliffs;
-        const dd = acc.dd + s.rounds.filter(h => h === 2).length;
-        const hits = s.rounds.reduce((a, b) => a + b);
-        const sumHits = acc.sumHits + hits;
-        return {
-          num,
-          best: Math.max(acc.best, s.score),
-          worst: Math.min(acc.worst, s.score),
-          sum,
-          mean: sum / num,
-          fn: acc.fn + (s.score == -393 ? 1 : 0),
-          cliffs,
-          cliffR: cliffs / num,
-          dd,
-          ddR: dd / num,
-          goblins: acc.goblins +
+    const scoreStats = computedPlayersOpt((p) => {
+      const scores = props.scores[p].filter(s => s != null) as PlayerGameResult27[];
+      return scores.length < 1
+        ? undefined
+        : scores.reduce(
+          (acc, s) => {
+            const num = acc.num + 1;
+            const sum = acc.sum + s.score;
+            const cliffs = acc.cliffs + s.cliffs;
+            const dd = acc.dd + s.rounds.filter(h => h === 2).length;
+            const hits = s.rounds.reduce((a, b) => a + b);
+            const sumHits = acc.sumHits + hits;
+            return {
+              num,
+              best: Math.max(acc.best, s.score),
+              worst: Math.min(acc.worst, s.score),
+              sum,
+              mean: sum / num,
+              fn: acc.fn + (s.score == -393 ? 1 : 0),
+              cliffs,
+              cliffR: cliffs / num,
+              dd,
+              ddR: dd / num,
+              goblins: acc.goblins +
             ((s.rounds.filter(h => h === 2).length + s.cliffs) > 0
               && s.rounds.filter(h => h === 1).length < 1
               ? 1
               : 0),
-          piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
-          hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
-            if (hits > 1) {
-              count += 1;
-              return count >= 3 ? [hans + 1, count] : [hans, count];
-            } else {
-              return [hans, 0];
-            }
-          }, [0, 0])[0],
-          allPos: acc.allPos + (s.allPositive ? 1 : 0),
-          farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
-          bestHits: Math.max(acc.bestHits, hits),
-          worstHits: Math.min(acc.worstHits, hits),
-          meanHits: sumHits / num,
-          sumHits,
-        };
-      }, {
-        num: 0,
-        best: -394,
-        worst: 1288,
-        sum: 0,
-        mean: 0,
-        fn: 0,
-        cliffs: 0,
-        cliffR: 0,
-        dd: 0,
-        ddR: 0,
-        goblins: 0,
-        piranhas: 0,
-        hans: 0,
-        allPos: 0,
-        farDream: 0,
-        bestHits: 0,
-        worstHits: 60,
-        meanHits: 0,
-        sumHits: 0,
-      },
-    ));
+              piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
+              hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
+                if (hits > 1) {
+                  count += 1;
+                  return count >= 3 ? [hans + 1, count] : [hans, count];
+                } else {
+                  return [hans, 0];
+                }
+              }, [0, 0])[0],
+              allPos: acc.allPos + (s.allPositive ? 1 : 0),
+              farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
+              bestHits: Math.max(acc.bestHits, hits),
+              worstHits: Math.min(acc.worstHits, hits),
+              meanHits: sumHits / num,
+              sumHits,
+            };
+          }, {
+            num: 0,
+            best: -394,
+            worst: 1288,
+            sum: 0,
+            mean: 0,
+            fn: 0,
+            cliffs: 0,
+            cliffR: 0,
+            dd: 0,
+            ddR: 0,
+            goblins: 0,
+            piranhas: 0,
+            hans: 0,
+            allPos: 0,
+            farDream: 0,
+            bestHits: 0,
+            worstHits: 60,
+            meanHits: 0,
+            sumHits: 0,
+          },
+        );
+    });
     const roundData = computed(() => Object.entries(props.scores).reduce(
       ({ best, obj }, [player, scores]) => {
         let { roundData, numGames } = scores.reduce(
@@ -403,6 +414,9 @@ export default defineComponent({
           }
           return { h, f };
         }, { h: 0, f: [] as number[] });
+        if (numGames < 1) {
+          return { best, obj };
+        }
         bestN /= numGames;
         let playerRoundData: {
           [r: number]: {
@@ -553,9 +567,9 @@ export default defineComponent({
 td:hover > .tooltip:not(:hover) {
   display: inline-block;
 }
-#playerSummary {
+/* #playerSummary {
   margin-bottom: 4.5em;
-}
+} */
 .specificRound {
   font-size: small;
 }

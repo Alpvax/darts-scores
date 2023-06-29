@@ -13,14 +13,14 @@ export namespace DisplayState {
 };
 
 const schemaSummary27 = z.object({
-  players: z.enum(["current", "playing", "all"]).default("playing"),
+  players: z.enum(["none", "current", "playing", "all"]).default("none"),
   display: z.object({
     rounds: z.boolean().default(true),
     ...summaryFields.reduce((obj, { slotId }) => {
       obj[slotId] = z.boolean().default(true);
       return obj;
     }, {} as { [k: string]: z.ZodDefault<z.ZodBoolean> }),
-  }).required(),
+  }),
 });
 
 const prefsSchema = z.object({
@@ -30,7 +30,7 @@ const prefsSchema = z.object({
   subscribePlayers: z.boolean().default(false),
   debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
   ingameHits27: z.boolean().default(true),
-  ingameSummary27: schemaSummary27.optional(),
+  ingameSummary27: schemaSummary27,
 });
 
 export type ClientPreferences = z.infer<typeof prefsSchema>;
@@ -47,6 +47,7 @@ function getValue<K extends keyof ClientPreferences>(key: K): ClientPreferences[
     .parse(val !== null ? JSON.parse(val) : undefined) as ClientPreferences[K];
 }
 function setValue<K extends keyof ClientPreferences>(key: K, value: ClientPreferences[K]): void {
+  console.debug(`Setting value for "${key}" = "${JSON.stringify(value)}";\n\tRaw value:`, value);
   localStorage.setItem("darts." + key, JSON.stringify(value));
 }
 

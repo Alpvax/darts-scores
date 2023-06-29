@@ -74,7 +74,9 @@ export default defineComponent({
       numfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
       turnHitsEl,
       onKey: (event: KeyboardEvent) => {
-        if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+        if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || [
+          ...Array.from({ length: 20 }, (_, n) => `F${n + 1}`), // F-keys
+        ].includes(event.key)) {
           return;
         }
         switch (event.key) {
