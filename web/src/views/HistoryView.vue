@@ -16,7 +16,7 @@
     </div>
     <PlayerSelection
       legend="Select players to filter &quot;Real Wins&quot;"
-      :available="allPlayers"
+      :available="allPlayers.filter(({disabled, guest}) => !disabled && !guest)"
       :selected="playerIds"
       @players="p => playerIds = p"
     />
@@ -26,14 +26,14 @@
     @click.prevent="selectedGame = null"
   >
     <Summary27
-      :players="allPlayers.filter(({disabled}) => !disabled)"
+      :players="summaryPlayers"
       :filtered="playerIds"
       :games="games"
       :scores="scores"
     />
     <PlayerTable
       id="gameResults"
-      :players="allPlayers"
+      :players="gamesPlayers"
       :rows="gamesRowMeta"
     >
       <template #__column0header>
@@ -60,47 +60,6 @@
           {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
         </td>
       </template>
-    <!-- <table id="gameResults">
-      <thead>
-        <tr>
-          <td class="tableHeader">
-            Date
-          </td>
-          <td
-            v-for="{ id, name } in allPlayers"
-            :key="id"
-            class="playerName"
-          >
-            {{ name }}
-          </td>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="game in games"
-          :key="game.date"
-          @click.stop.prevent="selectedGame = game"
-        >
-          <td class="date">
-            {{ (new Date(game.date)).toLocaleDateString() }}
-          </td>
-          <td
-            v-for="player in allPlayerIds"
-            :key="player"
-            class="gameScore"
-            :class="{
-              winner: typeof game.winner === 'string'
-                ? game.winner == player
-                : game.winner.tie.includes(player),
-              tie: typeof game.winner === 'object',
-              allPos: Object.hasOwn(game.game, player) && game.game[player].allPositive,
-            }"
-          >
-            {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
-          </td>
-        </tr>
-      </tbody>
-    </table> -->
     </PlayerTable>
     <div
       v-if="selectedGame != null"
@@ -138,12 +97,12 @@ import {
 } from "firebase/firestore";
 import { PlayerGameResult27, Result27 } from "@/components/27/Game27.vue";
 import { usePlayerStore } from "@/store/player";
+import { usePrefs } from "@/clientPreferences";
 
 export default defineComponent({
   components: {
     PlayerSelection,
     PlayerTable,
-    // eslint-disable-next-line vue/no-unused-components
     Summary27,
     Game27,
   },
@@ -152,16 +111,12 @@ export default defineComponent({
     const gamesRef = collection(db, "game/twentyseven/games");
 
     const playerStore = usePlayerStore();
+    const preferences = usePrefs();
 
     const today = new Date();
     const toDate = ref(today.toISOString().slice(0, 10));
     const fromDate = ref(`${today.getFullYear()}-01-01`);
     const games = ref([] as (Result27 & { gameId: string })[]);
-    // const allPlayersPartial = ref(new Map<string, OrderedPlayer | null>());
-    // const scores = ref({} as { [pid: string]: Map<Date, PlayerGameResult27> });
-    // function addScore(date: Date | string, playerId: string, score: PlayerGameResult27): void {
-    //   scores[playerId]
-    // }
     watchEffect(async (): Promise<void> => {
       games.value = [];
       if (fromDate.value <= toDate.value && new Date(fromDate.value) <= today) {
@@ -193,21 +148,27 @@ export default defineComponent({
       return o;
     }, {} as { [k: string]: (PlayerGameResult27 | null)[] })));
 
-    // const wins = computed(() => games.value.reduce((acc, game) => {
-    //  const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
-    //   acc[winner].push(Object.keys(game.game));
-    //   return acc;
-    // }, [...allPlayers.value].reduce((o, p) => {
-    //   o[p.id] = [];
-    //   return o;
-    // }, {} as { [k: string]: string[][] })));
+    const allPlayers = computed(() => playerStore.allPlayersOrdered
+      .filter(p => scores.value[p.id].filter(s => s).length > 0));
 
     const selectedGame = ref(null as (Result27 & { gameId: string }) | null);
 
     return {
       playerIds,
-      allPlayers: computed(() => playerStore.allPlayersOrdered
-        .filter(p => scores.value[p.id].filter(s => s).length > 0)),
+      allPlayers,
+      summaryPlayers: computed(() => preferences.displayGuestSummary
+        ? allPlayers.value.filter(({ disabled }) => !disabled)
+        : allPlayers.value.filter(({ disabled, guest }) => !disabled && !guest)),
+      gamesPlayers: computed(() => {
+        let res = allPlayers.value;
+        if (!preferences.displayDisabledPlayerGames) {
+          res = res.filter(({ disabled }) => !disabled);
+        }
+        if (!preferences.displayGuestGames) {
+          res = res.filter(({ guest }) => !guest);
+        }
+        return res;
+      }),
       toDate, fromDate,
       games,
       gamesRowMeta: computed(() => games.value.map(g => ({

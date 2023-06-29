@@ -24,7 +24,8 @@ const schemaSummary27 = z.object({
 });
 
 const prefsSchema = z.object({
-  displayGuests: z.number().int().min(0).max(7).default(DisplayState.GAMES & DisplayState.SUMMARY),
+  displayGuests: z.number().int().min(0).max(7).default(DisplayState.GAMES | DisplayState.SUMMARY),
+  displayDisabledPlayerGames: z.boolean().default(true),
   useFunNames: z.boolean().default(true),
   subscribePlayers: z.boolean().default(false),
   debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
@@ -38,6 +39,10 @@ export type ClientPreferences = z.infer<typeof prefsSchema>;
 
 function getValue<K extends keyof ClientPreferences>(key: K): ClientPreferences[K] {
   const val = localStorage.getItem("darts." + key);
+  console.debug(
+    `Getting value for "${key}" = "${val}";\n\tResult:`,
+    prefsSchema.shape[key].parse(val !== null ? JSON.parse(val) : undefined),
+  );
   return prefsSchema.shape[key]
     .parse(val !== null ? JSON.parse(val) : undefined) as ClientPreferences[K];
 }
@@ -89,6 +94,7 @@ export const usePrefs = defineStore("preferences", () => {
     /** Whether to allow selecting guests when starting a game */
     displayGuestSelection: displayFlagRef(guestDisplay, DisplayState.SELECTION),
     guestDisplay,
+    displayDisabledPlayerGames: prefsRef("displayDisabledPlayerGames"),
     useFunNames: prefsRef("useFunNames"),
     twentyseven: prefsObjRef({
       ingameHits: "ingameHits27",
