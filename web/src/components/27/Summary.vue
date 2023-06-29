@@ -231,7 +231,7 @@
         class="roundSummaryCell"
         :class="{
           favourite: roundData[player].favourites.includes(round),
-          best: roundData[player].favourites.includes(round) && roundBest[1] === player,
+          best: roundData[player].favourites.includes(round) && roundBest[1].includes(player),
         }"
       >
         {{ asRate(player, roundData[player][round].gamesWithHits) }}
@@ -357,9 +357,10 @@ export default defineComponent({
     ));
     const roundData = computed(() => Object.entries(props.scores).reduce(
       ({ best, obj }, [player, scores]) => {
-        let roundData = scores.reduce(
-          (roundData, s) => {
+        let { roundData, numGames } = scores.reduce(
+          ({ roundData, numGames }, s) => {
             if (s) {
+              numGames += 1;
               for (const [rIdx, hits] of s.rounds.entries()) {
                 if (!roundData[rIdx]) {
                   roundData[rIdx] = {
@@ -381,14 +382,17 @@ export default defineComponent({
                 }
               }
             }
-            return roundData;
+            return { roundData, numGames };
           },
-          [] as {
-            totalHits: number;
-            gamesWithHits: number;
-            doubleDoubles: number;
-            cliffs: number;
-          }[],
+          {
+            roundData: [] as {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            }[],
+            numGames: 0,
+          },
         );
         let { h: bestN, f: favourites } = roundData.reduce(({ h, f }, { gamesWithHits }, rIdx) => {
           if (gamesWithHits > h) {
@@ -399,6 +403,7 @@ export default defineComponent({
           }
           return { h, f };
         }, { h: 0, f: [] as number[] });
+        bestN /= numGames;
         let playerRoundData: {
           [r: number]: {
             totalHits: number;
@@ -407,22 +412,30 @@ export default defineComponent({
             cliffs: number;
           };
           favourites: number[];
+          bestRate: number;
         } = {
           favourites,
+          bestRate: bestN,
         };
         for (const [i, r] of roundData.entries()) {
           playerRoundData[i + 1] = r;
         }
-        bestN /= numGames.value[player];
+        let [bestRate, bestPlayers] = best;
+        if (bestN > bestRate) {
+          bestRate = bestN;
+          bestPlayers = [player];
+        } else if (bestN === bestRate) {
+          bestPlayers.push(player);
+        }
         return {
-          best: (bestN > best[0] ? [bestN, player] : best) as [number, string | null],
+          best: [bestRate, bestPlayers] as [number, string[]],
           obj: Object.assign(obj, {
             [player]: playerRoundData,
           }),
         };
       },
       {
-        best: [0, null] as [number, string | null],
+        best: [0, []] as [number, string[]],
         obj: {} as {
           [k: keyof typeof props.scores]: {
             [r: number]: {
