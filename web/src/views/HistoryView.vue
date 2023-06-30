@@ -114,9 +114,7 @@ export default defineComponent({
     return {
       playerIds,
       allPlayers,
-      summaryPlayers: computed(() => preferences.displayGuestSummary
-        ? allPlayers.value.filter(({ disabled }) => !disabled)
-        : allPlayers.value.filter(({ disabled, guest }) => !disabled && !guest)),
+      summaryPlayers: computed(() => history.summaryPlayers),
       gamesPlayers: computed(() => {
         let res = allPlayers.value;
         if (!preferences.displayDisabledPlayerGames) {
@@ -196,14 +194,6 @@ export default defineComponent({
 }
 .playerName, .tableHeader {
   font-weight: bold;
-}
-.rowLabel {
-  font-weight: bold;
-  text-align: right;
-  white-space: nowrap;
-}
-.summaryValue {
-  text-align: center;
 }
 #historyFilter, .dateFilters {
   width: fit-content;

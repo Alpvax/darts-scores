@@ -6,6 +6,7 @@ import { defineStore } from "pinia";
 import { ref, watchEffect, computed } from "vue";
 import { usePlayerStore } from "./player";
 import { PlayerGameResult27, Result27 } from "@/games/27";
+import { usePrefs } from "./clientPreferences";
 
 export const use27History = defineStore("history27", () => {
   const db = getFirestore();
@@ -51,6 +52,9 @@ export const use27History = defineStore("history27", () => {
 
   return {
     allPlayers,
+    summaryPlayers: computed(() => usePrefs().displayGuestSummary
+      ? allPlayers.value.filter(({ disabled }) => !disabled)
+      : allPlayers.value.filter(({ disabled, guest }) => !disabled && !guest)),
     toDate, fromDate,
     setToDate: (date: string) => toDate.value = date,
     setFromDate: (date: string) => fromDate.value = date,

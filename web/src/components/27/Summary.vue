@@ -368,6 +368,10 @@ export default defineComponent({
     });
     const roundData = computed(() => Object.entries(props.scores).reduce(
       ({ best, obj }, [player, scores]) => {
+        // Skip players not displayed
+        if (props.players.every(({ id }) => id !== player)) {
+          return { best, obj };
+        }
         let { roundData, numGames } = scores.reduce(
           ({ roundData, numGames }, s) => {
             if (s) {
@@ -572,6 +576,14 @@ td:hover > .tooltip:not(:hover) {
 } */
 .specificRound {
   font-size: small;
+}
+#playerSummary .rowLabel {
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+}
+.summaryValue {
+  text-align: center;
 }
 #playerSummary td.best {
   background-color: #7eff7e;

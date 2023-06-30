@@ -1,35 +1,41 @@
 <template>
-  <div class="gameArea">
-    <div class="gameAreaLeft">
-      <div class="playerSelect">
-        <PlayerSelection
-          legend="Select who is playing:"
-          :available="all_players"
-          :selected="players"
-          @players="p => players = p"
-        />
-        <input
-          id="dateInput"
-          v-model="date"
-          type="datetime-local"
+  <div class="gameViewBody">
+    <PlayerSelection
+      legend="Select who is playing:"
+      :available="all_players"
+      :selected="players"
+      @players="p => players = p"
+    />
+    <input
+      id="dateInput"
+      v-model="date"
+      type="datetime-local"
+    >
+    <span id="summarySelect">
+      <label for="summaryDisplaySelect">Display summary:</label>
+      <select
+        id="summaryDisplaySelect"
+        v-model="summaryDisplay"
+        name="summaryDisplay"
+      >
+        <option
+          v-for="[opt, desc] in summaryPlayersOptions.filter(([k, _v]) => k !== 'current')"
+          :key="opt"
+          :value="opt"
         >
-        <input
-          id="enableSummary"
-          v-model="summaryEnabled"
-          type="checkbox"
-        >
-        <label for="enableSummary">{{ summaryEnabled ? "Disable" : "Enable" }} Summary view</label>
-      </div>
-      <div class="game">
-        <Game27
-          :players="all_players.filter(({ id }) => players.includes(id))"
-          :date="new Date(date)"
-        />
-      </div>
+          {{ desc }}
+        </option>
+      </select>
+    </span>
+    <div class="game">
+      <Game27
+        :players="all_players.filter(({ id }) => players.includes(id))"
+        :date="new Date(date)"
+      />
     </div>
     <Summary27
       v-if="summaryEnabled"
-      :players="all_players.filter(({ id }) => players.includes(id) && id in history.scores)"
+      :players="summaryPlayers"
       :filtered="[]"
       :games="history.games"
       :scores="history.scores"
@@ -43,7 +49,7 @@ import PlayerSelection from "@/components/PlayerSelection.vue";
 import Game27 from "@/components/27/Game27.vue";
 import Summary27 from "@/components/27/Summary.vue";
 import { usePlayerStore } from "@/store/player";
-import { usePrefs } from "@/store/clientPreferences";
+import { usePrefs, SUMMARY_INGAME_OPTIONS } from "@/store/clientPreferences";
 import { use27History } from "@/store/history27";
 import { toRaw } from "vue";//XXX
 
@@ -56,7 +62,11 @@ export default defineComponent({
   async setup() {
     const playerStore = usePlayerStore();
     const preferences = usePrefs();
-    let history = use27History();
+    const history = use27History();
+
+    preferences.$subscribe((m, s) => {
+      console.log("subs.players:", s.twentyseven.ingameSummary.players);//XXX
+    });
 
     await playerStore.loadAllPlayers();
     const all_players = computed(() =>
@@ -68,22 +78,26 @@ export default defineComponent({
       all_players,
       date: ref((new Date()).toISOString().slice(0, 16)),
       ingameSummary: computed(() => preferences.twentyseven.ingameSummary),
-      summaryEnabled: computed({
-        get: () => preferences.twentyseven.ingameSummary.players !== "none",
-        set: enabled => preferences.$patch(state => state.twentyseven.ingameSummary = {
+      summaryEnabled: computed(() => preferences.twentyseven.ingameSummary.players !== "none"),
+      summaryDisplay: computed({
+        get: () => preferences.twentyseven.ingameSummary.players,
+        set: val => preferences.$patch(state => state.twentyseven.ingameSummary = {
           ...state.twentyseven.ingameSummary,
-          players: enabled ? "playing" : "none",
+          players: val,
         }),
       }),
       summaryPlayers: computed(() => {
+        console.log("players:", preferences.twentyseven.ingameSummary.players);//XXX
         switch (preferences.twentyseven.ingameSummary.players) {
           default:
           case "none": return [];
-          case "all": return playerStore.allPlayerIds;
           case "current": return [];//TODO
-          case "playing": return players.value;
+          case "playing": return players.value.map(id => playerStore.getPlayer(id));
+          case "common": return history.summaryPlayers.filter(({ guest }) => !guest);
+          case "all": return history.summaryPlayers;
         }
       }),
+      summaryPlayersOptions: Object.entries(SUMMARY_INGAME_OPTIONS),
       history,
     };
   },
@@ -91,33 +105,42 @@ export default defineComponent({
 </script>
 
 <style>
-.playerSelect {
-  width: fit-content;
+.gameViewBody {
+  position: relative;
+  display: grid;
+  min-width: 100%;
+  grid-template-areas:
+    "players date a b summary"
+    "players sumOpt a b summary"
+    "game game game b summary"
+  ;
+  grid-template-columns: max-content max-content auto 1fr min-content;
+  grid-template-rows: min-content min-content auto;
+  align-items: center;
+  justify-content: stretch;
 }
-.playerCheckbox {
-  display: inline;
-  padding: 0px 10px;
-}
-.game {
-  font-size: 2.5vh;
-}
-.playerSelect fieldset {
-  display: inline-block;
+.gameViewBody .playerSelection {
+  grid-area: players;
 }
 #dateInput {
-  font-size: 2vh;
+  margin-top: 0.45rem;
+  width: fit-content;
+  grid-area: date;
+  justify-self: start;
 }
-.gameArea {
-  position: relative;
-  display: flex;
-  min-width: 100%;
-  align-items: flex-start;
-  justify-content: space-between;
+#summarySelect {
+  grid-area: sumOpt;
 }
-.gameAreaLeft {
-  width: max-content;
+#summarySelect > label {
+  margin-right: 0.5ch;
 }
-/* .gameArea > table {
-  margin: 2%;
-} */
+.gameViewBody .game {
+  font-size: 2.5vh;
+  grid-area: game;
+  min-width: max-content;
+}
+.gameViewBody #playerSummary {
+  grid-area: summary;
+  margin-right: 2.5%;
+}
 </style>

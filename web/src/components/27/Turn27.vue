@@ -119,6 +119,7 @@ export default defineComponent({
 .turnScore {
   padding-left: 10px;
   width: 5em;
+  white-space: nowrap;
 }
 .turnScore.editable {
   text-align: right;

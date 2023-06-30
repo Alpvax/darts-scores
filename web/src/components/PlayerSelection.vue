@@ -1,5 +1,5 @@
 <template>
-  <fieldset>
+  <fieldset class="playerSelection">
     <legend>{{ legend }}</legend>
 
     <div
@@ -52,7 +52,11 @@ export default defineComponent({
 </script>
 
 <style scoped>
-fieldset {
+fieldset.playerSelection {
   display: inline-block;
+}
+.playerSelection > .playerCheckbox {
+  display: inline;
+  padding: 0px 10px;
 }
 </style>

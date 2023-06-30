@@ -12,8 +12,18 @@ export namespace DisplayState {
   export const SELECTION = 4;
 };
 
+export const SUMMARY_INGAME_OPTIONS = {
+  none: "None",
+  current: "Current player",
+  playing: "Players in the current game",
+  common: "Non guest players",
+  all: "All players",
+};
+
 const schemaSummary27 = z.object({
-  players: z.enum(["none", "current", "playing", "all"]).default("none"),
+  players: z.enum(
+    Object.keys(SUMMARY_INGAME_OPTIONS) as unknown as (readonly [string, ...string[]]),
+  ).default("none"),
   display: z.object({
     rounds: z.boolean().default(true),
     ...summaryFields.reduce((obj, { slotId }) => {

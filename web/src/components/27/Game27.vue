@@ -1,5 +1,6 @@
 <template>
   <PlayerTable
+    id="game27"
     :players="players"
     :rows="rowMeta"
     :width="editable ? 2 : 1"
@@ -39,8 +40,8 @@
     </template>
     <template #totalHits="{player}">
       <td :colspan="editable ? 2 : 1">
-        {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}
-        ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }})
+        {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}/20
+        ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }}/60)
       </td>
     </template>
   </PlayerTable>
@@ -297,7 +298,7 @@ export default defineComponent({
 </script>
 
 <style>
-.playerName, .rowLabel {
+#game27 .playerName, #game27 .rowLabel {
   font-weight: bold;
 }
 .gameDate {
@@ -312,5 +313,6 @@ input[type=button] {
 }
 tr.totalHitsRow > td {
   border-top: 1px dashed black;
+  font-size: 0.95em;
 }
 </style>
