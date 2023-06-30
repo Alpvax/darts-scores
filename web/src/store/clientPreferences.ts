@@ -20,7 +20,7 @@ const schemaSummary27 = z.object({
       obj[slotId] = z.boolean().default(true);
       return obj;
     }, {} as { [k: string]: z.ZodDefault<z.ZodBoolean> }),
-  }),
+  }).default({}),
 });
 
 const prefsSchema = z.object({
@@ -30,7 +30,7 @@ const prefsSchema = z.object({
   subscribePlayers: z.boolean().default(false),
   debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
   ingameHits27: z.boolean().default(true),
-  ingameSummary27: schemaSummary27,
+  ingameSummary27: schemaSummary27.default(schemaSummary27.parse({})),
 });
 
 export type ClientPreferences = z.infer<typeof prefsSchema>;
