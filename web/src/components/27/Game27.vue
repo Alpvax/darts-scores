@@ -264,7 +264,7 @@ export default defineComponent({
         return 2 * (hits > 0 ? hits * round : -round);
       },
       submitted,
-      submitScores: () => {
+      submitScores: async () => {
         let result: Result27 = {
           date: props.date.toISOString(),
           winner: winner.value!.length == 1
@@ -285,7 +285,7 @@ export default defineComponent({
         };
         console.log(result);
         const db = getFirestore();
-        addDoc(collection(db, "game/twentyseven/games"), result);
+        await addDoc(collection(db, "game/twentyseven/games"), result);
         submitted.value = true;
         window.sessionStorage.clear(); //TODO: only clear relevant?
       },
