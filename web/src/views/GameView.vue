@@ -51,7 +51,6 @@ import Summary27 from "@/components/27/Summary.vue";
 import { usePlayerStore } from "@/store/player";
 import { usePrefs, SUMMARY_INGAME_OPTIONS } from "@/store/clientPreferences";
 import { use27History } from "@/store/history27";
-import { toRaw } from "vue";//XXX
 
 export default defineComponent({
   components: {
@@ -64,15 +63,10 @@ export default defineComponent({
     const preferences = usePrefs();
     const history = use27History();
 
-    preferences.$subscribe((m, s) => {
-      console.log("subs.players:", s.twentyseven.ingameSummary.players);//XXX
-    });
-
     await playerStore.loadAllPlayers();
     const all_players = computed(() =>
       playerStore.availablePlayers.filter(p => preferences.displayGuestSelection || !p.guest));
     const players = ref((await playerStore.getDefaultPlayers("twentyseven")).map(({ id }) => id));
-    console.log(toRaw(players.value));//XXX
     return {
       players,
       all_players,
@@ -87,7 +81,6 @@ export default defineComponent({
         }),
       }),
       summaryPlayers: computed(() => {
-        console.log("players:", preferences.twentyseven.ingameSummary.players);//XXX
         switch (preferences.twentyseven.ingameSummary.players) {
           default:
           case "none": return [];

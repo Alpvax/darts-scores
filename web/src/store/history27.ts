@@ -1,6 +1,6 @@
 import {
-  collection, getDocs, getFirestore,
-  orderBy, query, where,
+  collection, getFirestore, onSnapshot,
+  orderBy, query, Unsubscribe, where,
 } from "firebase/firestore";
 import { defineStore } from "pinia";
 import { ref, watchEffect, computed } from "vue";
@@ -17,21 +17,42 @@ export const use27History = defineStore("history27", () => {
   const today = new Date();
   const toDate = ref(today.toISOString().slice(0, 10));
   const fromDate = ref(`${today.getFullYear()}-01-01`);
+  let subscription: Unsubscribe | null = null;
   const games = ref([] as (Result27 & { gameId: string })[]);
   watchEffect(async (): Promise<void> => {
     games.value = [];
+    if (subscription) {
+      subscription();
+    }
     if (fromDate.value <= toDate.value && new Date(fromDate.value) <= today) {
       const td = new Date(toDate.value);
       td.setDate(td.getDate() + 1);
-      (await getDocs(query(gamesRef,
-        orderBy("date", "desc"),
-        where("date", ">=", fromDate.value),
-        where("date", "<=", td.toISOString().slice(0, 10)),
-      ))).forEach(async (d) => {
-        const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
-        games.value.push(gameData);
-        await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
-      });
+      subscription = onSnapshot(
+        query(
+          gamesRef,
+          orderBy("date", "desc"),
+          where("date", ">=", fromDate.value),
+          where("date", "<=", td.toISOString().slice(0, 10)),
+        ),
+        snapshot => snapshot.docChanges().forEach(async (change) => {
+          if (change.type === "removed") {
+            games.value.splice(change.oldIndex, 1);
+          } else {
+            const d = change.doc;
+            const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
+            if (change.type == "added") {
+              games.value.push(gameData);
+            } else {
+              if (change.oldIndex !== change.newIndex) {
+                games.value.splice(change.oldIndex, 1).splice(change.newIndex, 0, gameData);
+              } else {
+                games.value[change.oldIndex] = gameData;
+              }
+            }
+            await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
+          }
+        }),
+      );
     } else {
       //TODO display error
     }

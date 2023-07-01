@@ -280,16 +280,6 @@ export default defineComponent({
         return obj;
       }, {} as { [K: string]: T }));
     }
-    function computedPlayersOpt<T>(f: (player: string) => T | undefined):
-    ComputedRef<{ [K: string]: T }> {
-      return computed(() => props.players.reduce((obj, { id }) => {
-        const res = f(id);
-        if (res !== undefined) {
-          obj[id] = res;
-        }
-        return obj;
-      }, {} as { [K: string]: T }));
-    }
     const numGames = computedPlayers(p => props.scores[p].filter(s => s != null).length);
     const gameWinners = computed(() => props.games.reduce((acc, game) => {
       const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
@@ -299,78 +289,102 @@ export default defineComponent({
       acc[winner].push(Object.keys(game.game));
       return acc;
     }, {} as { [k: string]: string[][] }));
-    const scoreStats = computedPlayersOpt((p) => {
+    const scoreStats = computedPlayers((p) => {
       const scores = props.scores[p].filter(s => s != null) as PlayerGameResult27[];
-      return scores.length < 1
-        ? undefined
-        : scores.reduce(
-          (acc, s) => {
-            const num = acc.num + 1;
-            const sum = acc.sum + s.score;
-            const cliffs = acc.cliffs + s.cliffs;
-            const dd = acc.dd + s.rounds.filter(h => h === 2).length;
-            const hits = s.rounds.reduce((a, b) => a + b);
-            const sumHits = acc.sumHits + hits;
-            return {
-              num,
-              best: Math.max(acc.best, s.score),
-              worst: Math.min(acc.worst, s.score),
-              sum,
-              mean: sum / num,
-              fn: acc.fn + (s.score == -393 ? 1 : 0),
-              cliffs,
-              cliffR: cliffs / num,
-              dd,
-              ddR: dd / num,
-              goblins: acc.goblins +
+      return scores.reduce(
+        (acc, s) => {
+          const num = acc.num + 1;
+          const sum = acc.sum + s.score;
+          const cliffs = acc.cliffs + s.cliffs;
+          const dd = acc.dd + s.rounds.filter(h => h === 2).length;
+          const hits = s.rounds.reduce((a, b) => a + b);
+          const sumHits = acc.sumHits + hits;
+          return {
+            num,
+            best: Math.max(acc.best, s.score),
+            worst: Math.min(acc.worst, s.score),
+            sum,
+            mean: sum / num,
+            fn: acc.fn + (s.score == -393 ? 1 : 0),
+            cliffs,
+            cliffR: cliffs / num,
+            dd,
+            ddR: dd / num,
+            goblins: acc.goblins +
             ((s.rounds.filter(h => h === 2).length + s.cliffs) > 0
               && s.rounds.filter(h => h === 1).length < 1
               ? 1
               : 0),
-              piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
-              hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
-                if (hits > 1) {
-                  count += 1;
-                  return count >= 3 ? [hans + 1, count] : [hans, count];
-                } else {
-                  return [hans, 0];
-                }
-              }, [0, 0])[0],
-              allPos: acc.allPos + (s.allPositive ? 1 : 0),
-              farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
-              bestHits: Math.max(acc.bestHits, hits),
-              worstHits: Math.min(acc.worstHits, hits),
-              meanHits: sumHits / num,
-              sumHits,
-            };
-          }, {
-            num: 0,
-            best: -394,
-            worst: 1288,
-            sum: 0,
-            mean: 0,
-            fn: 0,
-            cliffs: 0,
-            cliffR: 0,
-            dd: 0,
-            ddR: 0,
-            goblins: 0,
-            piranhas: 0,
-            hans: 0,
-            allPos: 0,
-            farDream: 0,
-            bestHits: 0,
-            worstHits: 60,
-            meanHits: 0,
-            sumHits: 0,
-          },
-        );
+            piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
+            hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
+              if (hits > 1) {
+                count += 1;
+                return count >= 3 ? [hans + 1, count] : [hans, count];
+              } else {
+                return [hans, 0];
+              }
+            }, [0, 0])[0],
+            allPos: acc.allPos + (s.allPositive ? 1 : 0),
+            farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
+            bestHits: Math.max(acc.bestHits, hits),
+            worstHits: Math.min(acc.worstHits, hits),
+            meanHits: sumHits / num,
+            sumHits,
+          };
+        }, {
+          num: 0,
+          best: -394,
+          worst: 1288,
+          sum: 0,
+          mean: 0,
+          fn: 0,
+          cliffs: 0,
+          cliffR: 0,
+          dd: 0,
+          ddR: 0,
+          goblins: 0,
+          piranhas: 0,
+          hans: 0,
+          allPos: 0,
+          farDream: 0,
+          bestHits: 0,
+          worstHits: 60,
+          meanHits: 0,
+          sumHits: 0,
+        },
+      );
     });
     const roundData = computed(() => Object.entries(props.scores).reduce(
       ({ best, obj }, [player, scores]) => {
-        // Skip players not displayed
+        // Fill players not displayed with placeholders
         if (props.players.every(({ id }) => id !== player)) {
-          return { best, obj };
+          let playerRoundData: {
+            [r: number]: {
+              totalHits: number;
+              gamesWithHits: number;
+              doubleDoubles: number;
+              cliffs: number;
+            };
+            favourites: number[];
+            bestRate: number;
+          } = {
+            favourites: [],
+            bestRate: 0,
+          };
+          for (let r = 1; r <= 20; r++) {
+            playerRoundData[r] = {
+              totalHits: 0,
+              gamesWithHits: 0,
+              doubleDoubles: 0,
+              cliffs: 0,
+            };
+          }
+          return {
+            best,
+            obj: Object.assign(obj, {
+              [player]: playerRoundData,
+            }),
+          };
         }
         let { roundData, numGames } = scores.reduce(
           ({ roundData, numGames }, s) => {
@@ -469,7 +483,7 @@ export default defineComponent({
     ));
     const statLimits = computed(() => Object.values(scoreStats.value).reduce(
       (acc, s) => {
-        for (const k of Object.keys(acc).map(k => k as keyof typeof acc)) {
+        for (const k of Object.keys(acc) as (keyof typeof acc)[]) {
           acc[k].min = Math.min(acc[k].min, s[k]);
           acc[k].max = Math.max(acc[k].max, s[k]);
         };
