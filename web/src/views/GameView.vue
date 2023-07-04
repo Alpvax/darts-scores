@@ -19,7 +19,7 @@
         name="summaryDisplay"
       >
         <option
-          v-for="[opt, desc] in summaryPlayersOptions.filter(([k, _v]) => k !== 'current')"
+          v-for="[opt, desc] in summaryPlayersOptions"
           :key="opt"
           :value="opt"
         >
@@ -85,12 +85,22 @@ export default defineComponent({
           default:
           case "none": return [];
           case "current": return [];//TODO
-          case "playing": return players.value.map(id => playerStore.getPlayer(id));
+          case "playing": return all_players.value.filter(({ id }) => players.value.includes(id));
           case "common": return history.summaryPlayers.filter(({ guest }) => !guest);
           case "all": return history.summaryPlayers;
         }
       }),
-      summaryPlayersOptions: Object.entries(SUMMARY_INGAME_OPTIONS),
+      summaryPlayersOptions: computed(() => Object.entries(SUMMARY_INGAME_OPTIONS)
+        .filter(([k, _v]) => {
+          switch (k) {
+            case "current": // Not yet implemented
+              return false;
+            case "all": // Non functional if guest display is disabled (identical to common)
+              return preferences.displayGuestSummary;
+            default:
+              return true;
+          }
+        })),
       history,
     };
   },
@@ -103,11 +113,11 @@ export default defineComponent({
   display: grid;
   min-width: 100%;
   grid-template-areas:
-    "players date a b summary"
-    "players sumOpt a b summary"
-    "game game game b summary"
+    "players date . summary"
+    "players sumOpt . summary"
+    "game game . summary"
   ;
-  grid-template-columns: max-content max-content auto 1fr min-content;
+  grid-template-columns: max-content max-content 1fr max-content;
   grid-template-rows: min-content min-content auto;
   align-items: center;
   justify-content: stretch;

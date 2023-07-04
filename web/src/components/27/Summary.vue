@@ -8,29 +8,29 @@
       <!-- {{ best(player, "best") }} -->
       <td
         :class="{
-          best: statLimits.best.max == scoreStats[player].best,
+          best: statLimits.best.max == playerStats[player].best,
         }"
       >
-        {{ scoreStats[player].best }}
+        {{ playerStats[player].best }}
       </td>
     </template>
     <template #pw="{player}">
       <td
         :class="{
-          best: statLimits.worst.max == scoreStats[player].worst,
-          worst: statLimits.worst.min == scoreStats[player].worst,
+          best: statLimits.worst.max == playerStats[player].worst,
+          worst: statLimits.worst.min == playerStats[player].worst,
         }"
       >
-        {{ scoreStats[player].worst }}
+        {{ playerStats[player].worst }}
       </td>
     </template>
     <template #mean="{player}">
       <td
         :class="{
-          best: statLimits.mean.max == scoreStats[player].mean,
+          best: statLimits.mean.max == playerStats[player].mean,
         }"
       >
-        {{ asFixed(scoreStats[player].mean) }}
+        {{ asFixed(playerStats[player].mean) }}
       </td>
     </template>
     <template #filteredW="{player}">
@@ -83,46 +83,48 @@
     <template #fn="{player}">
       <td
         :class="{
-          worst: scoreStats[player].fn > 0 && statLimits.fn.max == scoreStats[player].fn,
+          worst: playerStats[player].fn > 0 && statLimits.fn.max == playerStats[player].fn,
         }"
       >
-        {{ scoreStats[player].fn }}
+        {{ playerStats[player].fn }}
       </td>
     </template>
     <template #cliff="{player}">
       <td
         :class="{
-          best: scoreStats[player].cliffs > 0 && statLimits.cliffs.max == scoreStats[player].cliffs,
+          best: playerStats[player].cliffs > 0
+            && statLimits.cliffs.max == playerStats[player].cliffs,
         }"
       >
-        {{ scoreStats[player].cliffs }}
+        {{ playerStats[player].cliffs }}
       </td>
     </template>
     <template #cliffR="{player}">
       <td
         :class="{
-          best: scoreStats[player].cliffs > 0 && statLimits.cliffR.max == scoreStats[player].cliffR,
+          best: playerStats[player].cliffs > 0
+            && statLimits.cliffR.max == playerStats[player].cliffR,
         }"
       >
-        {{ asRate(player, scoreStats[player].cliffs / 20) }}
+        {{ asRate(player, playerStats[player].cliffs / 20) }}
       </td>
     </template>
     <template #dd="{player}">
       <td
         :class="{
-          best: scoreStats[player].dd > 0 && statLimits.dd.max == scoreStats[player].dd,
+          best: playerStats[player].dd > 0 && statLimits.dd.max == playerStats[player].dd,
         }"
       >
-        {{ scoreStats[player].dd }}
+        {{ playerStats[player].dd }}
       </td>
     </template>
     <template #ddR="{player}">
       <td
         :class="{
-          best: scoreStats[player].dd > 0 && statLimits.ddR.max == scoreStats[player].ddR,
+          best: playerStats[player].dd > 0 && statLimits.ddR.max == playerStats[player].ddR,
         }"
       >
-        {{ asRate(player, scoreStats[player].dd / 20) }}
+        {{ asRate(player, playerStats[player].dd / 20) }}
       </td>
     </template>
     <template
@@ -130,10 +132,10 @@
     >
       <td
         :class="{
-          best: scoreStats[player].hans > 0 && statLimits.hans.max == scoreStats[player].hans,
+          best: playerStats[player].hans > 0 && statLimits.hans.max == playerStats[player].hans,
         }"
       >
-        {{ scoreStats[player].hans }}
+        {{ playerStats[player].hans }}
       </td>
     </template>
     <template
@@ -146,11 +148,11 @@
     <template #goblins="{player}">
       <td
         :class="{
-          best: scoreStats[player].goblins > 0
-            && statLimits.goblins.max == scoreStats[player].goblins,
+          best: playerStats[player].goblins > 0
+            && statLimits.goblins.max == playerStats[player].goblins,
         }"
       >
-        {{ scoreStats[player].goblins }}
+        {{ playerStats[player].goblins }}
       </td>
     </template>
     <template #goblins_tooltip>
@@ -161,11 +163,11 @@
     <template #piranhas="{player}">
       <td
         :class="{
-          best: scoreStats[player].piranhas > 0
-            && statLimits.piranhas.max == scoreStats[player].piranhas,
+          best: playerStats[player].piranhas > 0
+            && statLimits.piranhas.max == playerStats[player].piranhas,
         }"
       >
-        {{ scoreStats[player].piranhas }}
+        {{ playerStats[player].piranhas }}
       </td>
     </template>
     <template #piranhas_tooltip>
@@ -176,50 +178,51 @@
     <template #ap="{player}">
       <td
         :class="{
-          best: scoreStats[player].allPos > 0 && statLimits.allPos.max == scoreStats[player].allPos,
+          best: playerStats[player].allPos > 0
+            && statLimits.allPos.max == playerStats[player].allPos,
         }"
       >
-        {{ scoreStats[player].allPos }}
+        {{ playerStats[player].allPos }}
       </td>
     </template>
     <template #farDream="{player}">
       <td
         :class="{
-          best: scoreStats[player].farDream > 0
-            && statLimits.farDream.max == scoreStats[player].farDream,
+          best: playerStats[player].farDream > 0
+            && statLimits.farDream.max == playerStats[player].farDream,
         }"
       >
-        {{ scoreStats[player].farDream }}
+        {{ playerStats[player].farDream }}
       </td>
     </template>
     <template #mostHits="{player}">
       <td
         :class="{
-          best: scoreStats[player].bestHits > 0
-            && statLimits.bestHits.max == scoreStats[player].bestHits,
+          best: playerStats[player].bestHits > 0
+            && statLimits.bestHits.max == playerStats[player].bestHits,
         }"
       >
-        {{ scoreStats[player].bestHits }}
+        {{ playerStats[player].bestHits }}
       </td>
     </template>
     <template #leastHits="{player}">
       <td
         :class="{
-          best: scoreStats[player].worstHits > 0
-            && statLimits.worstHits.max == scoreStats[player].worstHits,
+          best: playerStats[player].worstHits > 0
+            && statLimits.worstHits.max == playerStats[player].worstHits,
         }"
       >
-        {{ scoreStats[player].worstHits }}
+        {{ playerStats[player].worstHits }}
       </td>
     </template>
     <template #meanHits="{player}">
       <td
         :class="{
-          best: scoreStats[player].meanHits > 0
-            && statLimits.meanHits.max == scoreStats[player].meanHits,
+          best: playerStats[player].meanHits > 0
+            && statLimits.meanHits.max == playerStats[player].meanHits,
         }"
       >
-        {{ asFixed(scoreStats[player].meanHits) }}
+        {{ asFixed(playerStats[player].meanHits) }}
       </td>
     </template>
     <template
@@ -230,15 +233,16 @@
       <td
         class="roundSummaryCell"
         :class="{
-          favourite: roundData[player].favourites.includes(round),
-          best: roundData[player].favourites.includes(round) && roundBest[1].includes(player),
+          favourite: playerStats[player].roundData.favourites.total.targets.includes(round),
+          best: playerStats[player].roundData.favourites.total.targets.includes(round)
+            && roundBest.bestPlayers.includes(player),
         }"
       >
-        {{ asRate(player, roundData[player][round].gamesWithHits) }}
+        {{ asRate(player, playerStats[player].roundData[round].gamesWithHits) }}
         <SummaryTooltip
-          v-bind="roundData[player][round]"
+          v-bind="playerStats[player].roundData[round]"
           :player="player"
-          :num-games="numGames[player]"
+          :num-games="playerStats[player].num"
         />
       </td>
     </template>
@@ -251,6 +255,7 @@ import PlayerTable from "@/components/PlayerTable.vue";
 import SummaryTooltip from "./SummaryTooltip.vue";
 import { Player, usePlayerStore } from "@/store/player";
 import { PlayerGameResult27, Result27, summaryFields } from "@/games/27";
+import { use27History } from "@/store/history27";
 
 export default defineComponent({
   components: {
@@ -268,19 +273,15 @@ export default defineComponent({
   },
   setup(props) {
     const playerStore = usePlayerStore();
-    // function computedPlayers<T>(f: (player: string) => T): { [K: string]: ComputedRef<T> } {
-    //   return getPlayerIds(props.players).reduce((obj, id) => {
-    //     obj[id] = computed(() => f(id));
-    //     return obj;
-    //   }, {} as { [K: string]: ComputedRef<T> });
-    // }
+    const history = use27History();
     function computedPlayers<T>(f: (player: string) => T): ComputedRef<{ [K: string]: T }> {
       return computed(() => props.players.reduce((obj, { id }) => {
         obj[id] = f(id);
         return obj;
       }, {} as { [K: string]: T }));
     }
-    const numGames = computedPlayers(p => props.scores[p].filter(s => s != null).length);
+    const playerStats = computed(() => history.playerStats);
+    const numGames = computedPlayers(p => history.scores[p].filter(s => s != null).length);
     const gameWinners = computed(() => props.games.reduce((acc, game) => {
       const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
       if (!Object.hasOwn(acc, winner)) {
@@ -289,199 +290,26 @@ export default defineComponent({
       acc[winner].push(Object.keys(game.game));
       return acc;
     }, {} as { [k: string]: string[][] }));
-    const scoreStats = computedPlayers((p) => {
-      const scores = props.scores[p].filter(s => s != null) as PlayerGameResult27[];
-      return scores.reduce(
-        (acc, s) => {
-          const num = acc.num + 1;
-          const sum = acc.sum + s.score;
-          const cliffs = acc.cliffs + s.cliffs;
-          const dd = acc.dd + s.rounds.filter(h => h === 2).length;
-          const hits = s.rounds.reduce((a, b) => a + b);
-          const sumHits = acc.sumHits + hits;
-          return {
-            num,
-            best: Math.max(acc.best, s.score),
-            worst: Math.min(acc.worst, s.score),
-            sum,
-            mean: sum / num,
-            fn: acc.fn + (s.score == -393 ? 1 : 0),
-            cliffs,
-            cliffR: cliffs / num,
-            dd,
-            ddR: dd / num,
-            goblins: acc.goblins +
-            ((s.rounds.filter(h => h === 2).length + s.cliffs) > 0
-              && s.rounds.filter(h => h === 1).length < 1
-              ? 1
-              : 0),
-            piranhas: acc.piranhas + (s.score == -389 ? 1 : 0),
-            hans: acc.hans + s.rounds.reduce(([hans, count], hits) => {
-              if (hits > 1) {
-                count += 1;
-                return count >= 3 ? [hans + 1, count] : [hans, count];
-              } else {
-                return [hans, 0];
-              }
-            }, [0, 0])[0],
-            allPos: acc.allPos + (s.allPositive ? 1 : 0),
-            farDream: Math.max(acc.farDream, s.rounds.findIndex(h => h < 1)),
-            bestHits: Math.max(acc.bestHits, hits),
-            worstHits: Math.min(acc.worstHits, hits),
-            meanHits: sumHits / num,
-            sumHits,
-          };
-        }, {
-          num: 0,
-          best: -394,
-          worst: 1288,
-          sum: 0,
-          mean: 0,
-          fn: 0,
-          cliffs: 0,
-          cliffR: 0,
-          dd: 0,
-          ddR: 0,
-          goblins: 0,
-          piranhas: 0,
-          hans: 0,
-          allPos: 0,
-          farDream: 0,
-          bestHits: 0,
-          worstHits: 60,
-          meanHits: 0,
-          sumHits: 0,
-        },
-      );
-    });
-    const roundData = computed(() => Object.entries(props.scores).reduce(
-      ({ best, obj }, [player, scores]) => {
-        // Fill players not displayed with placeholders
-        if (props.players.every(({ id }) => id !== player)) {
-          let playerRoundData: {
-            [r: number]: {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            };
-            favourites: number[];
-            bestRate: number;
-          } = {
-            favourites: [],
-            bestRate: 0,
-          };
-          for (let r = 1; r <= 20; r++) {
-            playerRoundData[r] = {
-              totalHits: 0,
-              gamesWithHits: 0,
-              doubleDoubles: 0,
-              cliffs: 0,
-            };
+    const roundData = computed(() => props.players.reduce(
+      ({ bestRate, bestPlayers }, { id: player }) => {
+        const stats = history.playerStats[player];
+        if (stats.num > 0) {
+          const pBR = stats.roundData.favourites.games.hits / stats.num;
+          if (pBR > bestRate) {
+            bestRate = pBR;
+            bestPlayers = [player];
+          } else if (pBR === bestRate) {
+            bestPlayers.push(player);
           }
-          return {
-            best,
-            obj: Object.assign(obj, {
-              [player]: playerRoundData,
-            }),
-          };
         }
-        let { roundData, numGames } = scores.reduce(
-          ({ roundData, numGames }, s) => {
-            if (s) {
-              numGames += 1;
-              for (const [rIdx, hits] of s.rounds.entries()) {
-                if (!roundData[rIdx]) {
-                  roundData[rIdx] = {
-                    totalHits: 0,
-                    gamesWithHits: 0,
-                    doubleDoubles: 0,
-                    cliffs: 0,
-                  };
-                }
-                roundData[rIdx].totalHits += hits;
-                if (hits > 0) {
-                  roundData[rIdx].gamesWithHits += 1;
-                }
-                if (hits == 2) {
-                  roundData[rIdx].doubleDoubles += 1;
-                }
-                if (hits == 3) {
-                  roundData[rIdx].cliffs += 1;
-                }
-              }
-            }
-            return { roundData, numGames };
-          },
-          {
-            roundData: [] as {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            }[],
-            numGames: 0,
-          },
-        );
-        let { h: bestN, f: favourites } = roundData.reduce(({ h, f }, { gamesWithHits }, rIdx) => {
-          if (gamesWithHits > h) {
-            return { h: gamesWithHits, f: [rIdx + 1]};
-          }
-          if (gamesWithHits == h) {
-            return { h, f: [...f, rIdx + 1]};
-          }
-          return { h, f };
-        }, { h: 0, f: [] as number[] });
-        if (numGames < 1) {
-          return { best, obj };
-        }
-        bestN /= numGames;
-        let playerRoundData: {
-          [r: number]: {
-            totalHits: number;
-            gamesWithHits: number;
-            doubleDoubles: number;
-            cliffs: number;
-          };
-          favourites: number[];
-          bestRate: number;
-        } = {
-          favourites,
-          bestRate: bestN,
-        };
-        for (const [i, r] of roundData.entries()) {
-          playerRoundData[i + 1] = r;
-        }
-        let [bestRate, bestPlayers] = best;
-        if (bestN > bestRate) {
-          bestRate = bestN;
-          bestPlayers = [player];
-        } else if (bestN === bestRate) {
-          bestPlayers.push(player);
-        }
-        return {
-          best: [bestRate, bestPlayers] as [number, string[]],
-          obj: Object.assign(obj, {
-            [player]: playerRoundData,
-          }),
-        };
+        return { bestRate, bestPlayers };
       },
       {
-        best: [0, []] as [number, string[]],
-        obj: {} as {
-          [k: keyof typeof props.scores]: {
-            [r: number]: {
-              totalHits: number;
-              gamesWithHits: number;
-              doubleDoubles: number;
-              cliffs: number;
-            };
-            favourites: number[];
-          };
-        },
+        bestRate: 0,
+        bestPlayers: [] as string[],
       },
     ));
-    const statLimits = computed(() => Object.values(scoreStats.value).reduce(
+    const statLimits = computed(() => Object.values(playerStats.value).reduce(
       (acc, s) => {
         for (const k of Object.keys(acc) as (keyof typeof acc)[]) {
           acc[k].min = Math.min(acc[k].min, s[k]);
@@ -560,12 +388,11 @@ export default defineComponent({
           all: [] as string[], all_count: 0, all_rate: 0,
           filtered: [] as string[], filtered_count: 0, filtered_rate: 0,
         })),
-      scoreStats,
       statLimits,
       asFixed,
       asRate,
-      roundData: roundData.value.obj,
-      roundBest: roundData.value.best,
+      playerStats,
+      roundBest: roundData,
     };
   },
 });
@@ -602,7 +429,7 @@ td:hover > .tooltip:not(:hover) {
 #playerSummary td.best {
   background-color: #7eff7e;
 }
-#playerSummary td.worst {
+#playerSummary td.worst:not(.best) {
   background-color: #ff7e7e;
 }
 #playerSummary td.favourite:not(.best) {
