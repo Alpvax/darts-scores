@@ -34,9 +34,9 @@ export type PlayerStats = {
   sumHits: number;
   roundData: {
     [r: number]: {
-      totalHits: number;
-      gamesWithHits: number;
-      doubleDoubles: number;
+      total: number;
+      games: number;
+      dd: number;
       cliffs: number;
     };
     favourites: {
@@ -97,9 +97,9 @@ export const use27History = defineStore("history27", () => {
           cliffs: { hits: 0, targets: []},
         },
         ...Array.from({ length: 20 }, _ => ({
-          totalHits: 0,
-          gamesWithHits: 0,
-          doubleDoubles: 0,
+          total: 0,
+          games: 0,
+          dd: 0,
           cliffs: 0,
         })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
       },
@@ -113,10 +113,10 @@ export const use27History = defineStore("history27", () => {
     const roundData = stats.roundData;
     for (let r = 1; r <= 20; r++) {
       const h = result.rounds[r - 1];
-      roundData[r].totalHits += h;
+      roundData[r].total += h;
       if (h > 0) {
-        roundData[r].gamesWithHits += 1;
-        const totalHits = roundData[r].totalHits;
+        roundData[r].games += 1;
+        const totalHits = roundData[r].total;
         if (totalHits > roundData.favourites.total.hits) {
           roundData.favourites.total = {
             hits: totalHits,
@@ -125,19 +125,19 @@ export const use27History = defineStore("history27", () => {
         } else if (totalHits === roundData.favourites.total.hits) {
           roundData.favourites.total.targets.push(r);
         }
-        const gamesWithHits = roundData[r].gamesWithHits;
-        if (gamesWithHits > roundData.favourites.games.hits) {
+        const games = roundData[r].games;
+        if (games > roundData.favourites.games.hits) {
           roundData.favourites.games = {
-            hits: gamesWithHits,
+            hits: games,
             targets: [r],
           };
-        } else if (gamesWithHits === roundData.favourites.games.hits) {
+        } else if (games === roundData.favourites.games.hits) {
           roundData.favourites.games.targets.push(r);
         }
       }
       if (h === 2) {
-        roundData[r].doubleDoubles += 1;
-        const ddH = roundData[r].doubleDoubles;
+        roundData[r].dd += 1;
+        const ddH = roundData[r].dd;
         if (ddH > roundData.favourites.dd.hits) {
           roundData.favourites.dd = {
             hits: ddH,

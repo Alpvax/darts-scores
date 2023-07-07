@@ -84,6 +84,12 @@ export const initialiseAPI = (): void => {
                   preferences.twentyseven.ingameHits = val;
                 },
               },
+              roundDisplay: {
+                get: () => preferences.twentyseven.roundDisplay,
+                set(val) {
+                  preferences.twentyseven.roundDisplay = val;
+                },
+              },
             }),
           }, {
             useFunNames: {

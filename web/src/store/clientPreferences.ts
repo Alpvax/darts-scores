@@ -39,6 +39,8 @@ const prefsSchema = z.object({
   useFunNames: z.boolean().default(true),
   subscribePlayers: z.boolean().default(false),
   debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
+  roundDisplay27: z.enum(["total", "cliffs", "dd", "games"])
+    .default("games"),
   ingameHits27: z.boolean().default(true),
   ingameSummary27: schemaSummary27.default(schemaSummary27.parse({})),
 });
@@ -110,6 +112,7 @@ export const usePrefs = defineStore("preferences", () => {
     twentyseven: prefsObjRef({
       ingameHits: "ingameHits27",
       ingameSummary: "ingameSummary27",
+      roundDisplay: "roundDisplay27",
     }),
     debug: {
       debugLoadedPlayers: getValue("debugLoadedPlayers"),

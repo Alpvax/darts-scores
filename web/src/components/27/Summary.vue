@@ -233,12 +233,18 @@
       <td
         class="roundSummaryCell"
         :class="{
-          favourite: playerStats[player].roundData.favourites.total.targets.includes(round),
-          best: playerStats[player].roundData.favourites.total.targets.includes(round)
+          favourite: playerStats[player].roundData
+            .favourites[roundFavouritesDisplay].targets.includes(round),
+          favouriteTotal: playerStats[player].roundData.favourites.total.targets.includes(round),
+          favouriteGames: playerStats[player].roundData.favourites.games.targets.includes(round),
+          favouriteCliffs: playerStats[player].roundData.favourites.cliffs.targets.includes(round),
+          favouriteDD: playerStats[player].roundData.favourites.dd.targets.includes(round),
+          best: playerStats[player].roundData
+            .favourites[roundFavouritesDisplay].targets.includes(round)
             && roundBest.bestPlayers.includes(player),
         }"
       >
-        {{ asRate(player, playerStats[player].roundData[round].gamesWithHits) }}
+        {{ asRate(player, playerStats[player].roundData[round][roundFavouritesDisplay]) }}
         <SummaryTooltip
           v-bind="playerStats[player].roundData[round]"
           :player="player"
@@ -256,6 +262,7 @@ import SummaryTooltip from "./SummaryTooltip.vue";
 import { Player, usePlayerStore } from "@/store/player";
 import { PlayerGameResult27, Result27, summaryFields } from "@/games/27";
 import { use27History } from "@/store/history27";
+import { usePrefs } from "@/store/clientPreferences";
 
 export default defineComponent({
   components: {
@@ -393,6 +400,7 @@ export default defineComponent({
       asRate,
       playerStats,
       roundBest: roundData,
+      roundFavouritesDisplay: computed(() => usePrefs().twentyseven.roundDisplay),
     };
   },
 });

@@ -22,14 +22,15 @@
         :class="row.additionalClass"
         @click="onClick(row.slotId, $event)"
       >
-        <td class="rowLabel">
-          {{ row.label }}
-        </td>
+        <slot :name="row.slotId + '_label'">
+          <td class="rowLabel">
+            {{ row.label }}
+          </td>
+        </slot>
         <slot
           v-for="(id, index) in playerIds"
           :key="id"
           class="rowValue"
-          :class="{ ['rowValue_' + id]: true }"
           :name="row.slotId"
           :player="id"
           :index="index"
