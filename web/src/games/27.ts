@@ -1,5 +1,16 @@
 import { RowMetadata } from "@/utils/display";
 
+export const summary = [
+  "pb", "pw", "mean",
+  //TODO: wins & numGames stats
+  "fn",
+  "cliff", "cliffR",
+  "dd", "ddR",
+  "hans", "goblin", "piranha",
+  "ap", "farDream",
+  "mostHits", "leastHits", "meanHits",
+];
+
 export const summaryFields: RowMetadata[] = [
   {
     label: "Personal Best",
