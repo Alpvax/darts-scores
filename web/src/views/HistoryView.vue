@@ -46,6 +46,7 @@
         :key="game.gameId"
         #[game.gameId]="{player}"
       >
+        <!-- eslint-disable vue/html-quotes -->
         <td
           class="gameScore"
           :class="{
@@ -54,10 +55,20 @@
               : game.winner.tie.includes(player),
             tie: typeof game.winner === 'object',
             allPos: Object.hasOwn(game.game, player) && game.game[player].allPositive,
-            fatNick: Object.hasOwn(game.game, player) && game.game[player].score <= -393,
+            fatNickGame: Object.hasOwn(game.game, player) && game.game[player].score <= -393,
+            cliffGame: Object.hasOwn(game.game, player) && game.game[player].cliffs > 0,
+            ddGame: Object.hasOwn(game.game, player)
+              && game.game[player].rounds.find(h => h === 2) != undefined,
           }"
+          :data-notables='Object.hasOwn(game.game, player) && (" ("
+            + (game.game[player].allPositive ? "+" : "")
+            + (game.game[player].cliffs > 0 ? "c" : "")
+            + (game.game[player].rounds.find(h => h === 2) != undefined ? "d" : "")
+            + ")"
+          )'
           @click.stop.prevent="selectedGame = game"
         >
+          <!-- eslint-enable vue/html-quotes -->
           {{ Object.hasOwn(game.game, player) ? game.game[player].score : "" }}
         </td>
       </template>
@@ -211,12 +222,12 @@ export default defineComponent({
 #gameResults td.winner {
   background-color: #00ff00;
 }
-#gameResults td.allPos::after {
-  content: " (+)";
-  color: #228b22;
-}
-#gameResults td.fatNick {
+#gameResults td.fatNickGame {
   background-color: #ff7e7e;
+}
+#gameResults td.allPos::after, #gameResults td.cliffGame::after, #gameResults td.ddGame::after {
+  content: attr(data-notables);
+  color: #228b22;
 }
 
 #pastGameOverlay {
