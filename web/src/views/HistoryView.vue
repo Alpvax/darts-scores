@@ -54,6 +54,7 @@
               : game.winner.tie.includes(player),
             tie: typeof game.winner === 'object',
             allPos: Object.hasOwn(game.game, player) && game.game[player].allPositive,
+            fatNick: Object.hasOwn(game.game, player) && game.game[player].score <= -393,
           }"
           @click.stop.prevent="selectedGame = game"
         >
@@ -213,6 +214,9 @@ export default defineComponent({
 #gameResults td.allPos::after {
   content: " (+)";
   color: #228b22;
+}
+#gameResults td.fatNick {
+  background-color: #ff7e7e;
 }
 
 #pastGameOverlay {
