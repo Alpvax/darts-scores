@@ -37,8 +37,6 @@
       v-if="summaryEnabled"
       :players="summaryPlayers"
       :filtered="[]"
-      :games="history.games"
-      :scores="history.scores"
     />
   </div>
 </template>
@@ -102,7 +100,6 @@ export default defineComponent({
               return true;
           }
         })),
-      history,
     };
   },
 });

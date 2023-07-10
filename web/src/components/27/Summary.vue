@@ -257,10 +257,11 @@
 
 <script lang="ts">
 import { computed, ComputedRef, defineComponent, PropType } from "vue";
+import { storeToRefs } from "pinia";
 import PlayerTable from "@/components/PlayerTable.vue";
 import SummaryTooltip from "./SummaryTooltip.vue";
 import { Player, usePlayerStore } from "@/store/player";
-import { PlayerGameResult27, Result27, summaryFields } from "@/games/27";
+import { summaryFields } from "@/games/27";
 import { use27History } from "@/store/history27";
 import { usePrefs } from "@/store/clientPreferences";
 
@@ -272,24 +273,23 @@ export default defineComponent({
   props: {
     players: { type: Array as PropType<Player[]>, required: true },
     filtered: { type: Array as PropType<string[]>, required: true },
-    games: { type: Array as PropType<Result27[]>, required: true },
-    scores: {
-      type: Object as PropType<{ [k: string]: (PlayerGameResult27 | null)[] }>,
-      required: true,
-    },
+    // games: { type: Array as PropType<Result27[] | null>, default: null },
+    // scores: {
+    //   type: Object as PropType<{ [k: string]: (PlayerGameResult27 | null)[] } | null>,
+    //   default: null,
+    // },
   },
   setup(props) {
     const playerStore = usePlayerStore();
-    const history = use27History();
+    const { playerStats, scores, games } = storeToRefs(use27History());
     function computedPlayers<T>(f: (player: string) => T): ComputedRef<{ [K: string]: T }> {
       return computed(() => props.players.reduce((obj, { id }) => {
         obj[id] = f(id);
         return obj;
       }, {} as { [K: string]: T }));
     }
-    const playerStats = computed(() => history.playerStats);
-    const numGames = computedPlayers(p => history.scores[p].filter(s => s != null).length);
-    const gameWinners = computed(() => props.games.reduce((acc, game) => {
+    const numGames = computedPlayers(p => scores.value[p].filter(s => s != null).length);
+    const gameWinners = computed(() => games.value.reduce((acc, game) => {
       const winner = typeof game.winner === "string" ? game.winner : game.winner.tiebreak.winner!;
       if (!Object.hasOwn(acc, winner)) {
         acc[winner] = [];
@@ -299,7 +299,7 @@ export default defineComponent({
     }, {} as { [k: string]: string[][] }));
     const roundData = computed(() => props.players.reduce(
       ({ bestRate, bestPlayers }, { id: player }) => {
-        const stats = history.playerStats[player];
+        const stats = playerStats.value[player];
         if (stats.num > 0) {
           const pBR = stats.roundData.favourites.games.hits / stats.num;
           if (pBR > bestRate) {

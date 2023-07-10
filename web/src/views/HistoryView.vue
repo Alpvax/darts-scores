@@ -28,8 +28,6 @@
     <Summary27
       :players="summaryPlayers"
       :filtered="playerIds"
-      :games="games"
-      :scores="scores"
     />
     <PlayerTable
       id="gameResults"
@@ -105,6 +103,7 @@ import { usePrefs } from "@/store/clientPreferences";
 import { use27History } from "@/store/history27";
 import { Result27 } from "@/games/27";
 import { getDoc, doc, DocumentReference, getFirestore } from "firebase/firestore";
+import { storeToRefs } from "pinia";
 
 export default defineComponent({
   components: {
@@ -115,9 +114,10 @@ export default defineComponent({
   },
   async setup() {
     const preferences = usePrefs();
-    const history = use27History();
+    const {
+      allPlayers, summaryPlayers, toDate, fromDate, games,
+    } = storeToRefs(use27History());
 
-    const allPlayers = computed(() => history.allPlayers);
     const playerIds = ref(await Promise.all(((await getDoc(doc(getFirestore(), "game/twentyseven")))
       .get("defaultrequired") as DocumentReference[]).map(d => d.id)));
 
@@ -126,7 +126,7 @@ export default defineComponent({
     return {
       playerIds,
       allPlayers,
-      summaryPlayers: computed(() => history.summaryPlayers),
+      summaryPlayers,
       gamesPlayers: computed(() => {
         let res = allPlayers.value;
         if (!preferences.displayDisabledPlayerGames) {
@@ -137,15 +137,10 @@ export default defineComponent({
         }
         return res;
       }),
-      toDate: computed({
-        get: () => history.toDate,
-        set: history.setToDate,
-      }), fromDate: computed({
-        get: () => history.fromDate,
-        set: history.setFromDate,
-      }),
-      games: computed(() => history.games),
-      gamesRowMeta: computed(() => history.games.map(g => ({
+      toDate,
+      fromDate,
+      games,
+      gamesRowMeta: computed(() => games.value.map(g => ({
         label: (new Date(g.date)).toLocaleDateString(),
         slotId: g.gameId,
         onClick: (e) => {
@@ -154,7 +149,6 @@ export default defineComponent({
           selectedGame.value = g;
         },
       } as RowMetadata))),
-      scores: computed(() => history.scores),
       selectedGame,
       selectedRounds: computed(() => Object.entries(selectedGame.value!.game)
         .reduce((o, [p, { rounds }]) => {

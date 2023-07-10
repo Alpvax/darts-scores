@@ -86,10 +86,6 @@ export const use27History = defineStore("history27", () => {
       meanHits: 0,
       sumHits: 0,
       roundData: {
-        bestHits: {
-          games: 0,
-          total: 0,
-        },
         favourites: {
           total: { hits: 0, targets: []},
           games: { hits: 0, targets: []},
@@ -196,6 +192,43 @@ export const use27History = defineStore("history27", () => {
   };
   watchEffect(async (): Promise<void> => {
     games.value = [];
+    for (const pid of Object.keys(playerStats)) {
+      playerStats[pid] = {
+        num: 0,
+        best: -394,
+        worst: 1288,
+        sum: 0,
+        mean: 0,
+        fn: 0,
+        cliffs: 0,
+        cliffR: 0,
+        dd: 0,
+        ddR: 0,
+        goblins: 0,
+        piranhas: 0,
+        hans: 0,
+        allPos: 0,
+        farDream: 0,
+        bestHits: 0,
+        worstHits: 60,
+        meanHits: 0,
+        sumHits: 0,
+        roundData: {
+          favourites: {
+            total: { hits: 0, targets: []},
+            games: { hits: 0, targets: []},
+            dd: { hits: 0, targets: []},
+            cliffs: { hits: 0, targets: []},
+          },
+          ...Array.from({ length: 20 }, _ => ({
+            total: 0,
+            games: 0,
+            dd: 0,
+            cliffs: 0,
+          })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
+        },
+      };
+    }
     if (subscription) {
       subscription();
     }
@@ -217,7 +250,7 @@ export const use27History = defineStore("history27", () => {
             const d = change.doc;
             const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
             if (change.type == "added") {
-              games.value.push(gameData);
+              games.value.splice(change.newIndex, 0, gameData);
               Object.entries(gameData.game).forEach(([pid, result]) => addPlayerStats(pid, result));
             } else {
               //TODO: adjust player Stats
