@@ -85,7 +85,8 @@ export default defineComponent({
           default:
           case "none": return [];
           case "current": return [];//TODO
-          case "playing": return all_players.value.filter(({ id }) => players.value.includes(id));
+          case "playing":
+            return history.summaryPlayers.filter(({ id }) => players.value.includes(id));
           case "common": return history.summaryPlayers.filter(({ guest }) => !guest);
           case "all": return history.summaryPlayers;
         }

@@ -142,7 +142,9 @@ export default defineComponent({
     const gameHits = computed(() => props.players.reduce((o, { id }) => {
       o[id] = ref(props.playerGameHits
         ? props.playerGameHits[id]
-        : JSON.parse(window.sessionStorage.getItem(`activeGame[${id}]`) ?? "null")
+        : (preferences.saveGamesInProgress
+          ? JSON.parse(window.sessionStorage.getItem(`activeGame[${id}]`) ?? "null")
+          : null)
           ?? new Array(20).fill(-1));
       return o;
     }, {} as { [k: string]: Ref<number[]> }));
@@ -180,8 +182,10 @@ export default defineComponent({
         toRaw(gameHits.value[player].value),
         completed.value[player],
       );
-      window.sessionStorage.setItem(`activeGame[${player}]`,
-        JSON.stringify(toRaw(gameHits.value[player].value)));
+      if (preferences.saveGamesInProgress) {
+        window.sessionStorage.setItem(`activeGame[${player}]`,
+          JSON.stringify(toRaw(gameHits.value[player].value)));
+      }
     }
     async function focusNext(next = true): Promise<void> {
       let el = document.querySelector(".turnHits.empty input");
@@ -287,7 +291,9 @@ export default defineComponent({
         const db = getFirestore();
         await addDoc(collection(db, "game/twentyseven/games"), result);
         submitted.value = true;
-        window.sessionStorage.clear(); //TODO: only clear relevant?
+        if (preferences.saveGamesInProgress) {
+          window.sessionStorage.clear(); //TODO: only clear relevant?
+        }
       },
       rowMeta,
       deltaNumfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),

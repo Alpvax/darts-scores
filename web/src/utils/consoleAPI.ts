@@ -98,6 +98,12 @@ export const initialiseAPI = (): void => {
                 preferences.useFunNames = val;
               },
             },
+            saveGamesInProgress: {
+              get: () => preferences.saveGamesInProgress,
+              set(val) {
+                preferences.saveGamesInProgress = val;
+              },
+            },
             // subscribePlayers: {
             //   get: () => preferences.,
             //   set(val) {
