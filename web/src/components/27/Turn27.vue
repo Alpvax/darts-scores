@@ -17,7 +17,10 @@
   <td
     v-if="editable"
     ref="turnHitsEl"
-    class="turnHits empty"
+    class="turnHits"
+    :class="{
+      empty: hits < 0
+    }"
   >
     <input
       v-model="hitsInternal"
@@ -59,7 +62,6 @@ export default defineComponent({
       2 * (hitsInternal.value > 0 ? hitsInternal.value * props.targetNo : -props.targetNo));
     const turnHitsEl: Ref<HTMLElement | null> = ref(null);
     function setHits(value: number, moveFocus: boolean): void {
-      turnHitsEl.value!.classList.remove("empty");
       // Required because "" == 0
       if ((value === 0 || value > 0) && value < 4) {
         emit("update:hits", value);

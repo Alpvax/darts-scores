@@ -66,36 +66,16 @@
 
 <script lang="ts">
 import {
-  computed, defineComponent, nextTick, onMounted, PropType, Ref, ref, toRaw, watch,
+  computed, defineComponent, nextTick, PropType, Ref, ref, toRaw, watchEffect,
 } from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
 import PlayerTable from "@/components/PlayerTable.vue";
 import { RowMetadata } from "@/utils/display";
-// import { asPlayerObj, getPlayerId, iterPlayers, Player } from "@/util/player";
 import Turn27 from "./Turn27.vue";
 import { Player } from "@/store/player";
 import { usePrefs } from "@/store/clientPreferences";
 import { Result27, PlayerGameResult27 } from "@/games/27";
-
-// class PlayerScore {
-//   private readonly hits: number[] = [];
-//   private readonly cumulative: number[] = [];
-//   constructor(private readonly startScore = 27) {
-//     this.cumulative.push(startScore);
-//     for (let i = 1; i < 21; i++) {
-//       this.cumulative[i] = this.cumulative[i - 1] - i * 2;
-//     }
-//   }
-
-//   getHits(round: number): number {
-//     return this.hits[round] ?? 0;
-//   }
-//   setHits(round: number, hits: number): void {
-//     this.hits[round] = hits;
-//   }
-
-// }
 
 const startScores = [27];
 for (let i = 1; i < 21; i++) {
@@ -120,12 +100,6 @@ export default defineComponent({
   },
   setup (props) {
     const preferences = usePrefs();
-    // function unwrapRefObj<T extends { [k: string]: Ref<U> }, U>(obj: T): { [K in keyof T]: U } {
-    //   return Object.entries(obj).reduce((o, [p, r]) => {
-    //     o[p] = toRaw(r.value);
-    //     return o;
-    //   }, {} as { [k: string]: U }) as { [K in keyof T]: U };
-    // }
     const scores = computed(() => props.players.reduce((m, { id }) => {
       if (props.playerGameHits) {
         let s = [27];
@@ -142,10 +116,7 @@ export default defineComponent({
     const gameHits = computed(() => props.players.reduce((o, { id }) => {
       o[id] = ref(props.playerGameHits
         ? props.playerGameHits[id]
-        : (preferences.saveGamesInProgress
-          ? JSON.parse(window.sessionStorage.getItem(`activeGame[${id}]`) ?? "null")
-          : null)
-          ?? new Array(20).fill(-1));
+        : new Array(20).fill(-1));
       return o;
     }, {} as { [k: string]: Ref<number[]> }));
     const completed = computed(() => Object.entries(gameHits.value).reduce((o, [id, hits]) => {
@@ -240,8 +211,17 @@ export default defineComponent({
         el.focus();
       }
     };
-    watch(() => props.players, () => nextTick().then(() => focusNext()));
-    onMounted(() => nextTick().then(() => focusNext()));
+    watchEffect(() => {
+      if (preferences.saveGamesInProgress) {
+        for (const { id } of props.players) {
+          ((JSON.parse(window.sessionStorage.getItem(`activeGame[${id}]`) ?? "null")
+            ?? []) as number[])
+            .filter(h => h >= 0)
+            .forEach((h, i) => setHits(id, i + 1, h));
+        }
+      }
+      nextTick().then(() => focusNext());
+    });
     const submitted = ref(false);
     const rowMeta: RowMetadata[] = (new Array(20)).fill(0).map((_, n) => {
       const roundNum = (n + 1).toString();
