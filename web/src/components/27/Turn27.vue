@@ -37,7 +37,7 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, PropType, Ref, ref } from "vue";
+import { computed, defineComponent, nextTick, PropType, Ref, ref } from "vue";
 
 type WinState = "none" | "win" | "tie";
 
@@ -66,7 +66,7 @@ export default defineComponent({
       if ((value === 0 || value > 0) && value < 4) {
         emit("update:hits", value);
         if (moveFocus) {
-          emit("focusNext");
+          nextTick(() => emit("focusNext"));
         }
       }
     }
@@ -101,11 +101,11 @@ export default defineComponent({
           case "ArrowLeft":
           case "Left":
           case "Backspace":
-            emit("focusPrev");
+            nextTick(() => emit("focusPrev"));
             break;
           case "ArrowRight":
           case "Right":
-            emit("focusNext");
+            nextTick(() => emit("focusNext"));
             break;
           // default:
           //   return;
