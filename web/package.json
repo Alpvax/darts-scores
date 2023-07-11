@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "core-js": "^3.26.1",
-    "firebase": "^9.15.0",
+    "firebase": "^10.0.0",
     "pinia": "^2.0.33",
     "register-service-worker": "^1.7.2",
     "vue": "^3.2.13",
@@ -17,8 +17,8 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.46.1",
-    "@typescript-eslint/parser": "^5.46.1",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "@vue/cli-plugin-babel": "^5.0.8",
     "@vue/cli-plugin-eslint": "^5.0.8",
     "@vue/cli-plugin-pwa": "^5.0.8",
@@ -32,6 +32,6 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.1.1",
     "eslint-plugin-vue": "^9.8.0",
-    "typescript": "^4.9.4"
+    "typescript": "^5.1.6"
   }
 }
