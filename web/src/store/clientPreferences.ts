@@ -36,6 +36,7 @@ const schemaSummary27 = z.object({
 const prefsSchema = z.object({
   displayGuests: z.number().int().min(0).max(7).default(DisplayState.GAMES | DisplayState.SUMMARY),
   displayDisabledPlayerGames: z.boolean().default(true),
+  displayPlayerPosition: z.boolean().default(true),
   useFunNames: z.boolean().default(true),
   subscribePlayers: z.boolean().default(false),
   debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
@@ -111,6 +112,7 @@ export const usePrefs = defineStore("preferences", () => {
     displayDisabledPlayerGames: prefsRef("displayDisabledPlayerGames"),
     useFunNames: prefsRef("useFunNames"),
     saveGamesInProgress: prefsRef("saveGamesInProgress"),
+    displayPlayerPosition: prefsRef("displayPlayerPosition"),
     twentyseven: prefsObjRef({
       ingameHits: "ingameHits27",
       ingameSummary: "ingameSummary27",

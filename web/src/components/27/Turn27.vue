@@ -119,8 +119,7 @@ export default defineComponent({
 
 <style>
 .turnScore {
-  padding-left: 10px;
-  width: 5em;
+  width: 4.5em;
   white-space: nowrap;
 }
 .turnScore.editable {

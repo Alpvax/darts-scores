@@ -104,6 +104,12 @@ export const initialiseAPI = (): void => {
                 preferences.saveGamesInProgress = val;
               },
             },
+            displayPlayerPosition: {
+              get: () => preferences.displayPlayerPosition,
+              set(val) {
+                preferences.displayPlayerPosition = val;
+              },
+            },
             // subscribePlayers: {
             //   get: () => preferences.,
             //   set(val) {

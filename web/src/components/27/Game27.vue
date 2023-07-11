@@ -1,50 +1,105 @@
 <template>
-  <PlayerTable
+  <table
     id="game27"
-    :players="players"
-    :rows="rowMeta"
-    :width="editable ? 2 : 1"
+    class="playerTable"
   >
-    <template
-      v-if="displayDate"
-      #__column0header
-    >
-      <span
-        class="gameDate"
-      >{{ dateDayMonthFmt.format(date) }}</span><br>
-      <span
-        class="gameDate"
-      >{{ date.getFullYear() }}</span>
-    </template>
-    <template
-      v-for="round in 20"
-      :key="round"
-      #[round.toString()]="{player, index}"
-    >
-      <Turn27
-        :editable="editable"
-        :target-no="round"
-        :hits="gameHits[player].value[round - 1]"
-        :score="scores[player][round]"
-        :is-winner="!editable && round === 20 && winner ? (
-          winner.length === 1 && winner[0].id == player
-            ? 'win'
-            : winner.some(({id}) => id === player)
-              ? 'tie'
-              : 'none'
-        ) : 'none'"
-        @focus-prev="focusTurn(index - 1, round - 1)"
-        @focus-next="focusNext"
-        @update:hits="h => setHits(player, round, h)"
-      />
-    </template>
-    <template #totalHits="{player}">
-      <td :colspan="editable ? 2 : 1">
-        {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}/20
-        ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }}/60)
-      </td>
-    </template>
-  </PlayerTable>
+    <thead>
+      <tr>
+        <td
+          v-if="displayDate"
+          class="gameDate"
+        >
+          <span>{{ dateDayMonthFmt.format(date) }}</span><br>
+          <span>{{ date.getFullYear() }}</span>
+        </td>
+        <td v-else>
+          &nbsp;
+        </td>
+        <th
+          v-for="{name, id} in players"
+          :key="id"
+          class="playerName"
+          :class="{
+            fatNick: scores[id][20] <= -393 && gameHits[id].value.some(h => h >= 0),
+            allPositive: scores[id].every(s => s > 0),
+            wide: !!colspan,
+          }"
+          :colspan="colspan"
+        >
+          {{ name }}
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        v-if="displayPlayerPosition"
+        class="positionRow"
+        :class="{
+          small: editable,
+        }"
+      >
+        <td class="rowLabel">
+          Position
+        </td>
+        <td
+          v-for="{id: player} in players"
+          :key="player"
+          :colspan="colspan"
+        >
+          {{ orderedScores.indexOf(scores[player][20]) + 1 }}<sup>{{ (() => {
+            switch (orderedScores.indexOf(scores[player][20]) + 1) {
+            case 1: return "st";
+            case 2: return "nd";
+            case 3: return "rd";
+            default: return "th";
+            }
+          })() }}</sup>
+        </td>
+      </tr>
+      <tr
+        v-for="round in 20"
+        :key="round"
+      >
+        <td class="rowLabel">
+          {{ round }}
+        </td>
+        <Turn27
+          v-for="({id: player}, index) in players"
+          :key="player"
+          :editable="editable"
+          :target-no="round"
+          :hits="gameHits[player].value[round - 1]"
+          :score="scores[player][round]"
+          :is-winner="!editable && round === 20 && winner ? (
+            winner.length === 1 && winner[0].id == player
+              ? 'win'
+              : winner.some(({id}) => id === player)
+                ? 'tie'
+                : 'none'
+          ) : 'none'"
+          @focus-prev="focusTurn(index - 1, round - 1)"
+          @focus-next="focusNext"
+          @update:hits="h => setHits(player, round, h)"
+        />
+      </tr>
+      <tr
+        v-if="displayIngameHits"
+        class="totalHitsRow"
+      >
+        <td class="rowLabel">
+          Hits
+        </td>
+        <td
+          v-for="{id: player} in players"
+          :key="player"
+          :colspan="colspan"
+        >
+          {{ gameHits[player].value.reduce((t, h) => h > 0 ? t + 1 : t, 0) }}/20
+          ({{ gameHits[player].value.reduce((t, h) => h > 0 ? t + h : t, 0) }}/60)
+        </td>
+      </tr>
+    </tbody>
+  </table>
   <div
     v-if="displayWinner && winner != null"
     class="completed"
@@ -70,7 +125,6 @@ import {
 } from "vue";
 import { addDoc, collection, getFirestore } from "firebase/firestore";
 
-import PlayerTable from "@/components/PlayerTable.vue";
 import { RowMetadata } from "@/utils/display";
 import Turn27 from "./Turn27.vue";
 import { Player } from "@/store/player";
@@ -84,7 +138,6 @@ for (let i = 1; i < 21; i++) {
 
 export default defineComponent({
   components: {
-    PlayerTable,
     Turn27,
   },
   props: {
@@ -113,6 +166,11 @@ export default defineComponent({
       }
       return m;
     }, {} as { [k: string]: number[] }));
+    const orderedScores = ref((() => {
+      let s = Object.values(scores.value).map(s => s[20]);
+      s.sort((a, b) => b - a);
+      return s;
+    })());
     const gameHits = computed(() => props.players.reduce((o, { id }) => {
       o[id] = ref(props.playerGameHits
         ? props.playerGameHits[id]
@@ -147,13 +205,16 @@ export default defineComponent({
       for (let r = round; r <= 20; r++) {
         playerScore[r] += deltaScore;
       }
+      let s = Object.values(scores.value).map(s => s[20]);
+      s.sort((a, b) => b - a);
+      orderedScores.value = s;
       console.debug(
         `${player} t${round} = (hits: ${prevHits} => ${hits}; delta = ${deltaScore});`,
         scores.value[player],
         toRaw(gameHits.value[player].value),
         completed.value[player],
       );
-      if (preferences.saveGamesInProgress) {
+      if (props.editable && preferences.saveGamesInProgress) {
         window.sessionStorage.setItem(`activeGame[${player}]`,
           JSON.stringify(toRaw(gameHits.value[player].value)));
       }
@@ -278,18 +339,44 @@ export default defineComponent({
       rowMeta,
       deltaNumfmt: new Intl.NumberFormat("en-GB", { style: "decimal",  signDisplay: "always" }),
       dateDayMonthFmt: new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }),
+      colspan: computed(() => props.editable ? 2 : undefined),
+      displayIngameHits: computed(() => !props.editable || preferences.twentyseven.ingameHits),
+      displayPlayerPosition: computed(() => preferences.displayPlayerPosition
+        && orderedScores.value[0] > -393),
+      orderedScores,
     };
   },
 });
 </script>
 
 <style>
-#game27 .playerName, #game27 .rowLabel {
+#game27 .rowLabel {
   font-weight: bold;
+}
+#game27 .playerName {
+  font-weight: bold;
+  width: 4.5em;
+  vertical-align: bottom;
+}
+#game27 .playerName.wide {
+  width: 6.1em;
+}
+#game27 .playerName.fatNick {
+  color: #ff0000;
+}
+#game27 .playerName.allPositive {
+  color: #00cc00;
 }
 .gameDate {
   width: fit-content;
   font-weight: bold;
+}
+.positionRow.small {
+  font-size: 0.7em;
+}
+.positionRow:not(.small) > td {
+  font-size: 0.85em;
+  border-bottom: 1px dashed black;
 }
 .completed {
   width: fit-content;

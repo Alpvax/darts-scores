@@ -11,6 +11,13 @@
       v-model="date"
       type="datetime-local"
     >
+    <input
+      v-if="saveGamesInProgress"
+      id="resetGameBtn"
+      type="button"
+      value="Reset Game"
+      @click.prevent="clearGame"
+    >
     <span id="summarySelect">
       <label for="summaryDisplaySelect">Display summary:</label>
       <select
@@ -100,6 +107,11 @@ export default defineComponent({
               return true;
           }
         })),
+      saveGamesInProgress: computed(() => preferences.saveGamesInProgress),
+      clearGame: () => {
+        window.sessionStorage.clear(); //TODO: only clear relevant?
+        window.location.reload();
+      },
     };
   },
 });
@@ -128,6 +140,13 @@ export default defineComponent({
   width: fit-content;
   grid-area: date;
   justify-self: start;
+}
+#resetGameBtn {
+  font-size: small;
+  margin-top: 0.45rem;
+  width: fit-content;
+  grid-area: date;
+  justify-self: end;
 }
 #summarySelect {
   grid-area: sumOpt;
