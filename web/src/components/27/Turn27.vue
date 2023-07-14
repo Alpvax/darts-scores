@@ -129,8 +129,8 @@ export default defineComponent({
   color: #b0b0b0;
 }
 .hitsInput {
-  width: 1.6em;
-  font-size: 2vh;
+  width: 2.8ch;
+  font-size: 0.8em;
 }
 .hitsInput:invalid + span::after {
   position: absolute;

@@ -123,11 +123,11 @@ export default defineComponent({
   display: grid;
   min-width: 100%;
   grid-template-areas:
-    "players date . summary"
-    "players sumOpt . summary"
-    "game game . summary"
+    "players date reset ."
+    "players sumOpt sumOpt ."
+    "game game summary summary"
   ;
-  grid-template-columns: max-content max-content 1fr max-content;
+  grid-template-columns: max-content max-content min-content 1fr;
   grid-template-rows: min-content min-content auto;
   align-items: center;
   justify-content: stretch;
@@ -145,7 +145,7 @@ export default defineComponent({
   font-size: small;
   margin-top: 0.45rem;
   width: fit-content;
-  grid-area: date;
+  grid-area: reset;
   justify-self: end;
 }
 #summarySelect {
@@ -155,12 +155,17 @@ export default defineComponent({
   margin-right: 0.5ch;
 }
 .gameViewBody .game {
-  font-size: 2.5vh;
+  font-size: 2.4vh;
   grid-area: game;
   min-width: max-content;
+  align-self: start;
 }
 .gameViewBody #playerSummary {
   grid-area: summary;
   margin-right: 2.5%;
+  font-size: 0.8em;
+}
+.gameViewBody .playerSelection label {
+  width: min-content;
 }
 </style>

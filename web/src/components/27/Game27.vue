@@ -20,7 +20,7 @@
           :key="id"
           class="playerName"
           :class="{
-            fatNick: scores[id][20] <= -393 && gameHits[id].value.some(h => h >= 0),
+            fatNick: scores[id][20] <= -393 && gameStarted.has(id),
             allPositive: scores[id].every(s => s > 0),
             wide: !!colspan,
           }"
@@ -177,6 +177,8 @@ export default defineComponent({
         : new Array(20).fill(-1));
       return o;
     }, {} as { [k: string]: Ref<number[]> }));
+    const totalPlayerHits = ref(new Map<string, number>());
+    const gameStarted = ref(new Set<string>());
     const completed = computed(() => Object.entries(gameHits.value).reduce((o, [id, hits]) => {
       o[id] = hits.value.every(h => h >= 0);
       return o;
@@ -204,6 +206,13 @@ export default defineComponent({
       const playerScore = scores.value[player];
       for (let r = round; r <= 20; r++) {
         playerScore[r] += deltaScore;
+      }
+      let totalHits = (totalPlayerHits.value.get(player) ?? -20) + hits - prevHits;
+      totalPlayerHits.value.set(player, totalHits);
+      if (hits >= 0) {
+        gameStarted.value.add(player);
+      } else if (totalHits <= -20) {
+        gameStarted.value.delete(player);
       }
       let s = Object.values(scores.value).map(s => s[20]);
       s.sort((a, b) => b - a);
@@ -342,8 +351,9 @@ export default defineComponent({
       colspan: computed(() => props.editable ? 2 : undefined),
       displayIngameHits: computed(() => !props.editable || preferences.twentyseven.ingameHits),
       displayPlayerPosition: computed(() => preferences.displayPlayerPosition
-        && orderedScores.value[0] > -393),
+        && gameStarted.value.size > 0),
       orderedScores,
+      gameStarted,
     };
   },
 });
