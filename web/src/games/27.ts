@@ -88,6 +88,7 @@ export type PlayerGameResult27 = {
   cliffs: number;
   score: number;
   allPositive: boolean;
+  jesus?: boolean;
 };
 export type Result27 = {
   date: string;

@@ -26,6 +26,7 @@ export type PlayerStats = {
   goblins: number;
   piranhas: number;
   hans: number;
+  jesus: number;
   allPos: number;
   farDream: number;
   bestHits: number;
@@ -79,6 +80,7 @@ export const use27History = defineStore("history27", () => {
       goblins: 0,
       piranhas: 0,
       hans: 0,
+      jesus: 0,
       allPos: 0,
       farDream: 0,
       bestHits: 0,
@@ -181,6 +183,7 @@ export const use27History = defineStore("history27", () => {
           return [hans, 0];
         }
       }, [0, 0])[0],
+      jesus: stats.jesus + (result.jesus ? 1 : 0),
       allPos: stats.allPos + (result.allPositive ? 1 : 0),
       farDream: Math.max(stats.farDream, result.rounds.findIndex(h => h < 1)),
       bestHits: Math.max(stats.bestHits, hits),
@@ -207,6 +210,7 @@ export const use27History = defineStore("history27", () => {
         goblins: 0,
         piranhas: 0,
         hans: 0,
+        jesus: 0,
         allPos: 0,
         farDream: 0,
         bestHits: 0,
