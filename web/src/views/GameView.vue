@@ -1,10 +1,10 @@
 <template>
   <div class="gameViewBody">
     <PlayerSelection
+      v-model="players"
       legend="Select who is playing:"
       :available="all_players"
-      :selected="players"
-      @players="p => players = p"
+      :allow-guests="allowGuestSelection"
     />
     <input
       id="dateInput"
@@ -76,6 +76,7 @@ export default defineComponent({
     return {
       players,
       all_players,
+      allowGuestSelection: computed(() => preferences.displayGuestSelection),
       date: ref((new Date()).toISOString().slice(0, 16)),
       ingameSummary: computed(() => preferences.twentyseven.ingameSummary),
       summaryEnabled: computed(() => preferences.twentyseven.ingameSummary.players !== "none"),

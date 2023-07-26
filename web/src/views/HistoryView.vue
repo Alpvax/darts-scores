@@ -15,10 +15,9 @@
       >
     </div>
     <PlayerSelection
+      v-model="playerIds"
       legend="Select players to filter &quot;Real Wins&quot;"
       :available="allPlayers.filter(({disabled, guest}) => !disabled && !guest)"
-      :selected="playerIds"
-      @players="p => playerIds = p"
     />
   </div>
   <div
