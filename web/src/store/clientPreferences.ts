@@ -23,7 +23,7 @@ export const SUMMARY_INGAME_OPTIONS = {
 const schemaSummary27 = z.object({
   players: z.enum(
     Object.keys(SUMMARY_INGAME_OPTIONS) as unknown as (readonly [string, ...string[]]),
-  ).default("none"),
+  ).default("playing"),
   display: z.object({
     rounds: z.boolean().default(true),
     ...summaryFields.reduce((obj, { slotId }) => {
