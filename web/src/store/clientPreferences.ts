@@ -39,7 +39,7 @@ const prefsSchema = z.object({
   displayPlayerPosition: z.boolean().default(true),
   useFunNames: z.boolean().default(true),
   subscribePlayers: z.boolean().default(false),
-  debugLoadedPlayers: z.boolean().default(process.env?.NODE_ENV === "development"),
+  debugLoadedPlayers: z.boolean().default(false),
   saveGamesInProgress: z.boolean().default(true),
   roundDisplay27: z.enum(["total", "cliffs", "dd", "games"])
     .default("games"),

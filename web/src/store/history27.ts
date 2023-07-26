@@ -4,7 +4,7 @@ import {
 } from "firebase/firestore";
 import { defineStore } from "pinia";
 import { ref, watchEffect, computed, reactive } from "vue";
-import { usePlayerStore } from "./player";
+import { usePlayerStore } from "./player/index";
 import { PlayerGameResult27, Result27 } from "@/games/27";
 import { usePrefs } from "./clientPreferences";
 
@@ -260,7 +260,7 @@ export const use27History = defineStore("history27", () => {
                 games.value[change.oldIndex] = gameData;
               }
             }
-            await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
+            // await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
           }
         }),
       );

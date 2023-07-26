@@ -68,10 +68,11 @@ export default defineComponent({
     const preferences = usePrefs();
     const history = use27History();
 
-    await playerStore.loadAllPlayers();
+    // await playerStore.loadAllPlayers();
     const all_players = computed(() =>
       playerStore.availablePlayers.filter(p => preferences.displayGuestSelection || !p.guest));
-    const players = ref((await playerStore.getDefaultPlayers("twentyseven")).map(({ id }) => id));
+    const players = ref((await playerStore.getDefaultPlayers("twentyseven"))
+      .map(({ value:{ id }}) => id));
     return {
       players,
       all_players,
