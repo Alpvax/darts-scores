@@ -62,12 +62,20 @@ export const summaryFields: RowMetadata[] = [
     slotId: "piranhas",
   },
   {
+    label: "Jesus",
+    slotId: "jesus",
+  },
+  {
     label: "All Positive",
     slotId: "ap",
   },
   {
     label: "Furthest Dream",
     slotId: "farDream",
+  },
+  {
+    label: "Furthest Positive",
+    slotId: "farPos",
   },
   {
     label: "Most Hits",

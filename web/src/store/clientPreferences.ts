@@ -34,7 +34,7 @@ const schemaSummary27 = z.object({
 });
 
 const prefsSchema = z.object({
-  displayGuests: z.number().int().min(0).max(7).default(DisplayState.GAMES | DisplayState.SUMMARY),
+  displayGuests: z.number().int().min(0).max(7).default(DisplayState.GAMES),
   displayDisabledPlayerGames: z.boolean().default(true),
   displayPlayerPosition: z.boolean().default(true),
   useFunNames: z.boolean().default(true),

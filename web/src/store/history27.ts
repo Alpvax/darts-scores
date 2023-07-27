@@ -3,7 +3,7 @@ import {
   orderBy, query, Unsubscribe, where,
 } from "firebase/firestore";
 import { defineStore } from "pinia";
-import { ref, watchEffect, computed, reactive } from "vue";
+import { ref, computed, reactive, watch } from "vue";
 import { usePlayerStore } from "./player/index";
 import { PlayerGameResult27, Result27 } from "@/games/27";
 import { usePrefs } from "./clientPreferences";
@@ -28,6 +28,7 @@ export type PlayerStats = {
   hans: number;
   jesus: number;
   allPos: number;
+  farPos: number;
   farDream: number;
   bestHits: number;
   worstHits: number;
@@ -82,6 +83,7 @@ export const use27History = defineStore("history27", () => {
       hans: 0,
       jesus: 0,
       allPos: 0,
+      farPos: 0,
       farDream: 0,
       bestHits: 0,
       worstHits: 60,
@@ -185,6 +187,20 @@ export const use27History = defineStore("history27", () => {
       }, [0, 0])[0],
       jesus: stats.jesus + (result.jesus ? 1 : 0),
       allPos: stats.allPos + (result.allPositive ? 1 : 0),
+      farPos: stats.allPos > 0 || result.allPositive
+        ? 20
+        : Math.max(stats.farPos, result.rounds.reduce(([score, r], hits, round) => {
+          if (score > 0) {
+            if (hits > 0) {
+              return [score + (round + 1) * hits * 2, round + 1];
+            }
+            score -= (round + 1) * 2;
+          }
+          if (score > 0) {
+            r += 1;
+          }
+          return [score, r];
+        }, [27, 0])[1]),
       farDream: Math.max(stats.farDream, result.rounds.findIndex(h => h < 1)),
       bestHits: Math.max(stats.bestHits, hits),
       worstHits: Math.min(stats.worstHits, hits),
@@ -193,85 +209,93 @@ export const use27History = defineStore("history27", () => {
       roundData,
     };
   };
-  watchEffect(async (): Promise<void> => {
-    games.value = [];
-    for (const pid of Object.keys(playerStats)) {
-      playerStats[pid] = {
-        num: 0,
-        best: -394,
-        worst: 1288,
-        sum: 0,
-        mean: 0,
-        fn: 0,
-        cliffs: 0,
-        cliffR: 0,
-        dd: 0,
-        ddR: 0,
-        goblins: 0,
-        piranhas: 0,
-        hans: 0,
-        jesus: 0,
-        allPos: 0,
-        farDream: 0,
-        bestHits: 0,
-        worstHits: 60,
-        meanHits: 0,
-        sumHits: 0,
-        roundData: {
-          favourites: {
-            total: { hits: 0, targets: []},
-            games: { hits: 0, targets: []},
-            dd: { hits: 0, targets: []},
-            cliffs: { hits: 0, targets: []},
+  watch(
+    [fromDate, toDate],
+    async ([fromDate, toDate], [_oldFromDate, _oldToDate]): Promise<void> => {
+      games.value = [];
+      for (const pid of Object.keys(playerStats)) {
+        playerStats[pid] = {
+          num: 0,
+          best: -394,
+          worst: 1288,
+          sum: 0,
+          mean: 0,
+          fn: 0,
+          cliffs: 0,
+          cliffR: 0,
+          dd: 0,
+          ddR: 0,
+          goblins: 0,
+          piranhas: 0,
+          hans: 0,
+          jesus: 0,
+          allPos: 0,
+          farPos: 0,
+          farDream: 0,
+          bestHits: 0,
+          worstHits: 60,
+          meanHits: 0,
+          sumHits: 0,
+          roundData: {
+            favourites: {
+              total: { hits: 0, targets: []},
+              games: { hits: 0, targets: []},
+              dd: { hits: 0, targets: []},
+              cliffs: { hits: 0, targets: []},
+            },
+            ...Array.from({ length: 20 }, _ => ({
+              total: 0,
+              games: 0,
+              dd: 0,
+              cliffs: 0,
+            })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
           },
-          ...Array.from({ length: 20 }, _ => ({
-            total: 0,
-            games: 0,
-            dd: 0,
-            cliffs: 0,
-          })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
-        },
-      };
-    }
-    if (subscription) {
-      subscription();
-    }
-    if (fromDate.value <= toDate.value && new Date(fromDate.value) <= today) {
-      const td = new Date(toDate.value);
-      td.setDate(td.getDate() + 1);
-      subscription = onSnapshot(
-        query(
-          gamesRef,
-          orderBy("date", "desc"),
-          where("date", ">=", fromDate.value),
-          where("date", "<=", td.toISOString().slice(0, 10)),
-        ),
-        snapshot => snapshot.docChanges().forEach(async (change) => {
-          if (change.type === "removed") {
-            games.value.splice(change.oldIndex, 1);
-            //TODO: remove player Stats
-          } else {
-            const d = change.doc;
-            const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
-            if (change.type == "added") {
-              games.value.splice(change.newIndex, 0, gameData);
-              Object.entries(gameData.game).forEach(([pid, result]) => addPlayerStats(pid, result));
+        };
+      }
+      if (subscription) {
+        subscription();
+        console.log("Refreshed subscription");//XXX
+      }
+      if (fromDate <= toDate && new Date(fromDate) <= today) {
+        const td = new Date(toDate);
+        td.setDate(td.getDate() + 1);
+        subscription = onSnapshot(
+          query(
+            gamesRef,
+            orderBy("date", "desc"),
+            where("date", ">=", fromDate),
+            where("date", "<=", td.toISOString().slice(0, 10)),
+          ),
+          snapshot => snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "removed") {
+              games.value.splice(change.oldIndex, 1);
+              //TODO: remove player Stats
             } else {
-              //TODO: adjust player Stats
-              if (change.oldIndex !== change.newIndex) {
-                games.value.splice(change.oldIndex, 1).splice(change.newIndex, 0, gameData);
+              const d = change.doc;
+              const gameData = Object.assign({ gameId: d.id } , d.data() as Result27);
+              if (change.type == "added") {
+                games.value.splice(change.newIndex, 0, gameData);
+                Object.entries(gameData.game)
+                  .forEach(([pid, result]) => addPlayerStats(pid, result));
               } else {
-                games.value[change.oldIndex] = gameData;
+                //TODO: adjust player Stats
+                if (change.oldIndex !== change.newIndex) {
+                  games.value.splice(change.oldIndex, 1).splice(change.newIndex, 0, gameData);
+                } else {
+                  games.value[change.oldIndex] = gameData;
+                }
               }
             }
-            // await Promise.all(Object.keys(gameData.game).map(playerStore.getPlayerAsync));
-          }
-        }),
-      );
-    } else {
-      //TODO display error
-    }
-  });
+          }),
+        );
+      } else {
+        //TODO display error
+      }
+    },
+    {
+      immediate: true,
+    },
+  );
 
   const scores = computed(() => games.value.reduce((scores, game) => {
     for (const id in scores) {

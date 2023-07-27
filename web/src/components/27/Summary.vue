@@ -175,6 +175,21 @@
         Games where only double 1 was hit (so the score was -389)
       </div>
     </template>
+    <template #jesus="{player}">
+      <td
+        :class="{
+          best: playerStats[player].piranhas > 0
+            && statLimits.piranhas.max == playerStats[player].piranhas,
+        }"
+      >
+        {{ playerStats[player].jesus }}
+      </td>
+    </template>
+    <template #jesus_tooltip>
+      <div class="tooltip">
+        Games where the only hit was the very last dart of the game
+      </div>
+    </template>
     <template #ap="{player}">
       <td
         :class="{
@@ -183,6 +198,16 @@
         }"
       >
         {{ playerStats[player].allPos }}
+      </td>
+    </template>
+    <template #farPos="{player}">
+      <td
+        :class="{/*TODO:
+          best: playerStats[player].farPos > 0
+            && statLimits.farPos.max == playerStats[player].farPos,
+        */}"
+      >
+        {{ playerStats[player].farPos }}
       </td>
     </template>
     <template #farDream="{player}">
