@@ -54,6 +54,44 @@ export type PlayerStats = {
   };
 }
 
+const newStats = (): PlayerStats => ({
+  num: 0,
+  best: -394,
+  worst: 1288,
+  sum: 0,
+  mean: 0,
+  fn: 0,
+  cliffs: 0,
+  cliffR: 0,
+  dd: 0,
+  ddR: 0,
+  goblins: 0,
+  piranhas: 0,
+  hans: 0,
+  jesus: 0,
+  allPos: 0,
+  farPos: 0,
+  farDream: 0,
+  bestHits: 0,
+  worstHits: 60,
+  meanHits: 0,
+  sumHits: 0,
+  roundData: {
+    favourites: {
+      total: { hits: 0, targets: []},
+      games: { hits: 0, targets: []},
+      dd: { hits: 0, targets: []},
+      cliffs: { hits: 0, targets: []},
+    },
+    ...Array.from({ length: 20 }, _ => ({
+      total: 0,
+      games: 0,
+      dd: 0,
+      cliffs: 0,
+    })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
+  },
+});
+
 export const use27History = defineStore("history27", () => {
   const db = getFirestore();
   const gamesRef = collection(db, "game/twentyseven/games");
@@ -67,43 +105,7 @@ export const use27History = defineStore("history27", () => {
   const games = ref([] as (Result27 & { gameId: string })[]);
   const playerStats: { [pid: string]: PlayerStats } = reactive({});
   const addPlayerStats = (pid: string, result: PlayerGameResult27): void => {
-    const stats = playerStats[pid] ?? {
-      num: 0,
-      best: -394,
-      worst: 1288,
-      sum: 0,
-      mean: 0,
-      fn: 0,
-      cliffs: 0,
-      cliffR: 0,
-      dd: 0,
-      ddR: 0,
-      goblins: 0,
-      piranhas: 0,
-      hans: 0,
-      jesus: 0,
-      allPos: 0,
-      farPos: 0,
-      farDream: 0,
-      bestHits: 0,
-      worstHits: 60,
-      meanHits: 0,
-      sumHits: 0,
-      roundData: {
-        favourites: {
-          total: { hits: 0, targets: []},
-          games: { hits: 0, targets: []},
-          dd: { hits: 0, targets: []},
-          cliffs: { hits: 0, targets: []},
-        },
-        ...Array.from({ length: 20 }, _ => ({
-          total: 0,
-          games: 0,
-          dd: 0,
-          cliffs: 0,
-        })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
-      },
-    };
+    const stats = playerStats[pid] ?? newStats();
     const num = stats.num + 1;
     const sum = stats.sum + result.score;
     const cliffs = stats.cliffs + result.cliffs;
@@ -214,43 +216,7 @@ export const use27History = defineStore("history27", () => {
     async ([fromDate, toDate], [_oldFromDate, _oldToDate]): Promise<void> => {
       games.value = [];
       for (const pid of Object.keys(playerStats)) {
-        playerStats[pid] = {
-          num: 0,
-          best: -394,
-          worst: 1288,
-          sum: 0,
-          mean: 0,
-          fn: 0,
-          cliffs: 0,
-          cliffR: 0,
-          dd: 0,
-          ddR: 0,
-          goblins: 0,
-          piranhas: 0,
-          hans: 0,
-          jesus: 0,
-          allPos: 0,
-          farPos: 0,
-          farDream: 0,
-          bestHits: 0,
-          worstHits: 60,
-          meanHits: 0,
-          sumHits: 0,
-          roundData: {
-            favourites: {
-              total: { hits: 0, targets: []},
-              games: { hits: 0, targets: []},
-              dd: { hits: 0, targets: []},
-              cliffs: { hits: 0, targets: []},
-            },
-            ...Array.from({ length: 20 }, _ => ({
-              total: 0,
-              games: 0,
-              dd: 0,
-              cliffs: 0,
-            })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
-          },
-        };
+        playerStats[pid] = newStats();
       }
       if (subscription) {
         subscription();
