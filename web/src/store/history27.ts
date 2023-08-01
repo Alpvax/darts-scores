@@ -3,10 +3,12 @@ import {
   orderBy, query, Unsubscribe, where,
 } from "firebase/firestore";
 import { defineStore } from "pinia";
-import { ref, computed, reactive, watch } from "vue";
+import { ref, computed, reactive, watch, shallowReactive } from "vue";
 import { usePlayerStore } from "./player/index";
 import { PlayerGameResult27, Result27 } from "@/games/27";
 import { usePrefs } from "./clientPreferences";
+
+import { SUMMARY_FACTORY, PlayerStatsHolder, convertResult } from "@/games/summary/summary27";
 
 type FavouriteTargets = {
   hits: number;
@@ -104,7 +106,12 @@ export const use27History = defineStore("history27", () => {
   let subscription: Unsubscribe | null = null;
   const games = ref([] as (Result27 & { gameId: string })[]);
   const playerStats: { [pid: string]: PlayerStats } = reactive({});
+  const playerStatsV2 = shallowReactive(new Map<string, PlayerStatsHolder>());
   const addPlayerStats = (pid: string, result: PlayerGameResult27): void => {
+    if (!playerStatsV2.has(pid)) {
+      playerStatsV2.set(pid, SUMMARY_FACTORY.create());
+    }
+    playerStatsV2.get(pid)!.add(convertResult(result));
     const stats = playerStats[pid] ?? newStats();
     const num = stats.num + 1;
     const sum = stats.sum + result.score;
@@ -215,6 +222,7 @@ export const use27History = defineStore("history27", () => {
     [fromDate, toDate],
     async ([fromDate, toDate], [_oldFromDate, _oldToDate]): Promise<void> => {
       games.value = [];
+      playerStatsV2.clear();
       for (const pid of Object.keys(playerStats)) {
         playerStats[pid] = newStats();
       }
@@ -287,5 +295,6 @@ export const use27History = defineStore("history27", () => {
     games,
     scores,
     playerStats,
+    playerStatsV2,
   };
 });

@@ -17,7 +17,6 @@ import { computed, defineComponent } from "vue";
 import { use27History } from "@/store/history27";
 import SummaryTable from "@/components/Summary.vue";
 import SummaryRow from "@/components/SummaryRow.vue";
-import { usePlayerStore } from "@/store/player";
 
 export default defineComponent({
   components: {
@@ -26,7 +25,6 @@ export default defineComponent({
   },
   setup() {
     const history = use27History();
-    usePlayerStore().loadAllPlayers();
     const players = computed(() => history.allPlayers);
     return {
       players,

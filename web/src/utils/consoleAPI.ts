@@ -1,4 +1,6 @@
 import { ClientPreferences, DisplayState, rawInterface, usePrefs } from "@/store/clientPreferences";
+import { use27History } from "@/store/history27";
+import { toRaw } from "vue";
 
 export const bitFieldGetter = (rawGetter: () => number, mask: number) =>
   () => (rawGetter() & mask) !== 0;
@@ -36,6 +38,8 @@ declare global {
       twentyseven: {
         displayIngameHits: boolean;
         ingameSummary: ClientPreferences["ingameSummary27"];
+        roundDisplay: ClientPreferences["roundDisplay27"];
+        getStats: () => any;
       };
     };
   }
@@ -89,6 +93,10 @@ export const initialiseAPI = (): void => {
                 set(val) {
                   preferences.twentyseven.roundDisplay = val;
                 },
+              },
+              getStats: {
+                value: (useV2 = true) =>
+                  toRaw(useV2 ? use27History().playerStatsV2 : use27History().playerStats),
               },
             }),
           }, {

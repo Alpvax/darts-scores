@@ -108,6 +108,8 @@ export type PlayerGameResult27 = {
   score: number;
   allPositive: boolean;
   jesus?: boolean;
+  fnAmnesty?: boolean;
+  handicap?: number;
 };
 export type Result27 = {
   date: string;
