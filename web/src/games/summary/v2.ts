@@ -47,12 +47,17 @@ export type PlayerStatsHolder<S, R> = {
   add: (gameResult: R) => void;
   clear: () => void;
 }
+export type StatsType<T extends StatsCounterFactory<any, any>> =
+  T extends StatsCounterFactory<infer S, any> ? z.infer<S> : never;
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+type StatsCounterFactory<S extends z.ZodTypeAny, R> = {
+  create: () => PlayerStatsHolder<z.infer<S>, R>;
+}
+
 export const statsCounterFactory = <S extends z.ZodTypeAny, R>(
   statsSchema: S,
   accumulator: (stats: z.infer<S>, gameResult: R) => z.infer<S>,
-) => {
+): StatsCounterFactory<S, R> => {
   const statsInternalKey = Symbol("statsInternal");
   type StatsCounterInternal<S, R> = {
     defaults: S;
@@ -70,7 +75,7 @@ export const statsCounterFactory = <S extends z.ZodTypeAny, R>(
     },
     clear(this: StatsCounterInternal<z.infer<S>, R>): void {
       if (this.nonEmpty) {
-        this[statsInternalKey].value = { ...this.defaults };
+        this[statsInternalKey].value = structuredClone(this.defaults);
       }
     },
   }, {
@@ -87,9 +92,9 @@ export const statsCounterFactory = <S extends z.ZodTypeAny, R>(
     },
   });
   return {
-    create: (): PlayerStatsHolder<z.infer<S>, R> => Object.create(prot, {
+    create: () => Object.create(prot, {
       [statsInternalKey]: {
-        value: ref({ ...defaults }),
+        value: ref(structuredClone(defaults)),
         enumerable: false,
         configurable: false,
         writable: false,

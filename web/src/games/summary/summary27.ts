@@ -146,6 +146,16 @@ export const calculateResult = (
   return result;
 };
 
+const FAV_TARGETS_SCHEMA = z.object({
+  hits: z.number().int().min(0).default(0),
+  targets: z.array(z.number().int().min(1).max(20)).default([]),
+}).default({});
+const ROUND_HITS_SCHEMA = z.object({
+  total: z.number().int().min(0).default(0),
+  games: z.number().int().min(0).default(0),
+  dd: z.number().int().min(0).default(0),
+  cliffs: z.number().int().min(0).default(0),
+}).default({});
 const PLAYER_STATS_SCHEMA = z.object({
   numGames: z.number().int().default(0),
   score: highLowTotal.newSchema({
@@ -170,7 +180,21 @@ const PLAYER_STATS_SCHEMA = z.object({
   allPos: z.number().int().min(0).default(0),
   farPos: z.number().int().min(0).default(0),
   farDream: z.number().int().min(0).default(0),
-  //TODO: roundData
+  roundData: z.object({
+    favourites: z.object({
+      /** Most hit numbers, total hits (i.e. up to 3 per game) */
+      total: FAV_TARGETS_SCHEMA,
+      /** Most cliffed numbers */
+      cliffs: FAV_TARGETS_SCHEMA,
+      /** Most double doubled numbers */
+      dd: FAV_TARGETS_SCHEMA,
+      /** Most hit numbers, number of games (i.e. up to 1 per game) */
+      games: FAV_TARGETS_SCHEMA,
+    }).default({}),
+    rounds: z.record(z.string().regex(/[1-9]|1[0-9]|20/), ROUND_HITS_SCHEMA)
+      .default(Array.from({ length: 20 }, _ => ROUND_HITS_SCHEMA.parse({}))
+        .reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {})),
+  }).default({}),
 });
 
 export type PlayerStats = z.infer<typeof PLAYER_STATS_SCHEMA>;
@@ -192,7 +216,66 @@ export const addGameToStats = (
   allPos: stats.allPos + (gameResult.farPos > 19 ? 1: 0),
   farPos: Math.max(stats.farPos, gameResult.farPos),
   farDream: Math.max(stats.farDream, gameResult.farDream),
+  roundData: updateRoundData(stats.roundData, gameResult.rounds),
 });
+
+/** Caution: mutates input roundData */
+const updateRoundData = (
+  { favourites, rounds }: PlayerStats["roundData"],
+  gameRounds: ExtendedPlayerGameResult["rounds"],
+): PlayerStats["roundData"] => {
+  for (const [i, hits] of gameRounds.entries()) {
+    const r = i + 1;
+    rounds[r].total += hits;
+    if (hits > 0) {
+      rounds[r].games += 1;
+      const totalHits = rounds[r].total;
+      if (totalHits > favourites.total.hits) {
+        favourites.total = {
+          hits: totalHits,
+          targets: [r],
+        };
+      } else if (totalHits === favourites.total.hits) {
+        favourites.total.targets.push(r);
+      }
+      const games = rounds[r].games;
+      if (games > favourites.games.hits) {
+        favourites.games = {
+          hits: games,
+          targets: [r],
+        };
+      } else if (games === favourites.games.hits) {
+        favourites.games.targets.push(r);
+      }
+    }
+    if (hits === 2) {
+      rounds[r].dd += 1;
+      const ddH = rounds[r].dd;
+      if (ddH > favourites.dd.hits) {
+        favourites.dd = {
+          hits: ddH,
+          targets: [r],
+        };
+      } else if (ddH === favourites.dd.hits) {
+        favourites.dd.targets.push(r);
+      }
+    }
+    if (hits === 3) {
+      rounds[r].cliffs += 1;
+      const c = rounds[r].cliffs;
+      if (c > favourites.cliffs.hits) {
+        favourites.cliffs = {
+          hits: c,
+          targets: [r],
+        };
+      } else if (c === favourites.cliffs.hits) {
+        favourites.cliffs.targets.push(r);
+      }
+    }
+  }
+  return { favourites, rounds };
+};
 
 export type PlayerStatsHolder = StatsHolder<PlayerStats, ExtendedPlayerGameResult>;
 export const SUMMARY_FACTORY = statsCounterFactory(PLAYER_STATS_SCHEMA, addGameToStats);
+
