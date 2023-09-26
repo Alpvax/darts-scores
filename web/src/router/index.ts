@@ -30,6 +30,10 @@ const routes: RouteRecordRaw[] = [
     path: "/summaryV2",
     component: () => import(/* webpackChunkName: "summaryV2" */ "../views/SummaryView.vue"),
   },
+  {
+    path: "/summaryV3",
+    component: () => import(/* webpackChunkName: "summaryV3" */ "../views/SummaryView3.vue"),
+  },
 ];
 
 const router = createRouter({

@@ -6,7 +6,7 @@ import {
   isLoadedPlayer, isPlayer, loadedPlayer, partialPlayer,
 } from ".";
 
-export const usePlayerStore = defineStore("players", () => {
+export const usePlayerStore = defineStore("onDemandPlayers", () => {
   const db = getFirestore();
 
   const playerRef = (pid: string): DocumentReference => doc(db, "players", pid);

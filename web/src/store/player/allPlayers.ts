@@ -6,7 +6,7 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, Ref, watchEffect } from "vue";
 import { DBPlayer, isLoadedPlayer, loadedPlayer, LoadedPlayer, Player } from ".";
 
-export const usePlayerStore = defineStore("players", () => {
+export const usePlayerStore = defineStore("allPlayers", () => {
   const db = getFirestore();
   const playersRef = collection(db, "players");
 
