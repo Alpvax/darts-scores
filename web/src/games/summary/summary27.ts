@@ -2,7 +2,7 @@ import { z } from "zod";
 import { PlayerStatsHolder as StatsHolder, highLowTotal, statsCounterFactory } from "./v2";
 import { PlayerGameResult27 } from "../27";
 
-type ExtendedPlayerGameResult = {
+export type ExtendedPlayerGameResult = {
   /** Total number of hits this game */
   totalHits: number;
   /** Targets hit this game, use `.size` to get count */
@@ -32,6 +32,8 @@ type ExtendedPlayerGameResult = {
   /** The player's final score */
   score: number;
   fatNick: boolean;
+  /** The last consecutive miss; 0 = hit double 1, 20 = a fat nick */
+  fatNickUntil: number;
   piranha: boolean;
   goblin: boolean;
   jesus: boolean;
@@ -77,6 +79,7 @@ export const calculateResult = (
   let farPos = 20;
   let isDream = true;
   let farDream = 20;
+  let farFN = 20;
   let score = 27 + handicap;
   for (const [i, hits] of rounds.entries()) {
     const r = i + 1;
@@ -84,6 +87,9 @@ export const calculateResult = (
     totalHits += hits;
     if (hits > 0) {
       numsHit.add(r);
+      if (farFN === 20) {
+        farFN = i;
+      }
     }
     if (isDream && hits < 1) {
       farDream = i;
@@ -132,8 +138,9 @@ export const calculateResult = (
     farDream,
     score,
     fatNick: totalHits === 0,
+    fatNickUntil: farFN,
     piranha: totalHits === 1 && numsHit.has(1),
-    goblin: numsHit.size === dd.size,
+    goblin: numsHit.size > 0 && numsHit.size === dd.size,
     jesus,
     rounds,
   };
@@ -156,7 +163,7 @@ const ROUND_HITS_SCHEMA = z.object({
   dd: z.number().int().min(0).default(0),
   cliffs: z.number().int().min(0).default(0),
 }).default({});
-const PLAYER_STATS_SCHEMA = z.object({
+export const PLAYER_STATS_SCHEMA = z.object({
   numGames: z.number().int().default(0),
   score: highLowTotal.newSchema({
     high: Number.MIN_SAFE_INTEGER,
@@ -171,6 +178,7 @@ const PLAYER_STATS_SCHEMA = z.object({
     func: s => s.int(),
   }),
   fn: z.number().int().min(0).default(0),
+  fnUntil: z.number().int().min(0).max(20).default(0),
   cliffs: z.number().int().min(0).default(0),
   dd: z.number().int().min(0).default(0),
   hans: z.number().int().min(0).default(0),
@@ -207,6 +215,7 @@ export const addGameToStats = (
   score: highLowTotal.addStat(stats.score, gameResult.score),
   gameHits: highLowTotal.addStat(stats.gameHits, gameResult.totalHits),
   fn: stats.fn + (gameResult.fatNick ? 1 : 0),
+  fnUntil: Math.max(stats.fnUntil, gameResult.fatNickUntil),
   cliffs: stats.cliffs + gameResult.cliffs.size,
   dd: stats.dd + gameResult.dd.size,
   goblins: stats.goblins + (gameResult.goblin ? 1 : 0),
@@ -278,4 +287,33 @@ const updateRoundData = (
 
 export type PlayerStatsHolder = StatsHolder<PlayerStats, ExtendedPlayerGameResult>;
 export const SUMMARY_FACTORY = statsCounterFactory(PLAYER_STATS_SCHEMA, addGameToStats);
+
+export type SummaryFields = {
+  pb: number;
+  pw: number;
+};
+// export const summaryDisplay = (stats: PlayerStats, wins: Map<string[], number>) => ({
+//   pb: stats.score.highest,
+//   pw: stats.score.lowest,
+//   mean: stats.score.total / stats.numGames,
+//   filteredW:
+//   wins
+//   gameCount
+//   winR
+//   fn
+//   cliff
+//   cliffR
+//   dd
+//   ddR
+//   hans
+//   goblins
+//   piranhas
+//   jesus
+//   ap
+//   farDream
+//   farPos
+//   mostHits
+//   leastHits
+//   meanHits
+// });
 

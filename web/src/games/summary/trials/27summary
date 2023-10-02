@@ -1,0 +1,124 @@
+import { PlayerGameResult27 } from "./27";
+import { summaryFieldsFor } from "./summary";
+
+export const SUMMARY_FACTORY = summaryFieldsFor<PlayerGameResult27>()({
+  num: 0,
+  best: -394,
+  worst: 1288,
+  sum: 0,
+  mean: 0,
+  fn: 0,
+  cliffs: 0,
+  cliffR: 0,
+  dd: 0,
+  ddR: 0,
+  goblins: 0,
+  piranhas: 0,
+  hans: 0,
+  jesus: 0,
+  allPos: 0,
+  farPos: 0,
+  farDream: 0,
+  bestHits: 0,
+  worstHits: 60,
+  meanHits: 0,
+  sumHits: 0,
+  // roundData: {
+  //   favourites: {
+  //     total: { hits: 0, targets: []},
+  //     games: { hits: 0, targets: []},
+  //     dd: { hits: 0, targets: []},
+  //     cliffs: { hits: 0, targets: []},
+  //   },
+  //   ...Array.from({ length: 20 }, _ => ({
+  //     total: 0,
+  //     games: 0,
+  //     dd: 0,
+  //     cliffs: 0,
+  //   })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
+  // },
+}, {
+  num: {
+    calc: (_s, { num }) => num + 1,
+  },
+  best: {
+    calc: ({ score }, { best }) => Math.max(best, score),
+  },
+  worst: {
+    calc: ({ score }, { worst }) => Math.min(worst, score),
+  },
+  sum: {
+    calc: (score, { sum }) => sum + score.score,
+  },
+  mean: {
+    dependsOn: ["num", "sum"],
+    calc: (_score, { num, sum }) => sum / num,
+  },
+  fn: {
+    calc: ({ rounds }, { fn }) => fn + (rounds.every(h => h < 1) ? 1 : 0),
+  },
+  cliffs: {
+    calc: ({ cliffs }, { cliffs: c }) => cliffs + c,
+  },
+  cliffR: {
+    calc: (_s, { cliffs: c }) => cliffs + c,
+  },
+  dd: {
+    default: 0,
+  },
+  ddR: {
+    default: 0,
+  },
+  goblins: {
+    default: 0,
+  },
+  piranhas: {
+    default: 0,
+  },
+  hans: {
+    default: 0,
+  },
+  jesus: {
+    default: 0,
+  },
+  allPos: {
+    default: 0,
+  },
+  farPos: {
+    default: 0,
+  },
+  farDream: {
+    default: 0,
+  },
+  bestHits: {
+    default: 0,
+  },
+  worstHits: {
+    default: 60,
+  },
+  meanHits: {
+    default: 0,
+  },
+  sumHits: {
+    default: 0,
+  },
+  //TODO: roundData
+  // roundData: {
+  //   [r: number]: {
+  //     total: number;
+  //     games: number;
+  //     dd: number;
+  //     cliffs: number;
+  //   };
+  //   favourites: {
+  //     /** Most hit numbers, total hits (i.e. up to 3 per game) * /
+  //     total: FavouriteTargets;
+  //     /** Most cliffed numbers * /
+  //     cliffs: FavouriteTargets;
+  //     /** Most double doubled numbers * /
+  //     dd: FavouriteTargets;
+  //     /** Most hit numbers, number of games (i.e. up to 1 per game) * /
+  //     games: FavouriteTargets;
+  //   };
+  // };
+});

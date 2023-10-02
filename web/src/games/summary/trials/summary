@@ -1,0 +1,62 @@
+import { reactive } from "vue";
+
+type FieldProps<G, K extends string> = {
+  calc: (score: G, prev: { [key in K]: number }) => number;
+  dependsOn?: K[];
+}
+
+export const summaryFieldsFor = <G>() =>
+  <
+    D extends { [k: string]: number },
+    F extends { [key in Extract<keyof D, string>]: FieldProps<G, Extract<keyof D, string>> },
+  >(defaults: D, props: F) =>
+    makeSummaryFields<G, Extract<keyof D, string>, D, F>(defaults, props);
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function makeSummaryFields<
+  G,
+  K extends string,
+  D extends { [key in K]: number },
+  F extends { [key in K]: FieldProps<G, K> },
+>(defaults: D, props: F) {
+  const toProcess = new Map((Object.entries(props) as [K, F[K]][]).map(([key, field]) => {
+    const deps = new Set(field.dependsOn);
+    deps.delete(key);
+    return [ key, deps ];
+  }));
+  const orderedMap = new Map<K, K[]>();
+  while (toProcess.size > 0) {
+    for (const [ key, deps ] of toProcess.entries()) {
+      if (new Set([...deps].filter(k => !orderedMap.has(k))).size < 0) {
+        orderedMap.set(key, [key, ...deps]);
+        toProcess.delete(key);
+      } else {
+        console.log(orderedMap, toProcess);//XXX
+      }
+    }
+  }
+  const prototype = {
+    values: reactive(defaults),
+    // reset: () => {
+    //   for (const [key, def] of Object.entries(defaults)) {
+    //     this.values
+    //   }
+    // },
+  };
+  return {
+    prototype,
+    create: () => ({ ...defaults }),
+    orderedDeps: [...orderedMap.entries()].map(([key, deps]) => ({ key, deps })),
+  };
+}
+
+/** A stat with min, max and total subvalues, for summarising the best games  */
+export type PerGameStat<G, K extends string> = {
+  calc: (score: G, prev: { [key in K]: number }) => number;
+  dependsOn?: K[];
+  min: number;
+  max: number;
+  total: number;
+}
+
+export type Stat = number | PerGameStat;

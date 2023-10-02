@@ -50,13 +50,13 @@ export type PlayerStatsHolder<S, R> = {
 export type StatsType<T extends StatsCounterFactory<any, any>> =
   T extends StatsCounterFactory<infer S, any> ? z.infer<S> : never;
 
-type StatsCounterFactory<S extends z.ZodTypeAny, R> = {
+export type StatsCounterFactory<S extends z.ZodTypeAny, R> = {
   create: () => PlayerStatsHolder<z.infer<S>, R>;
 }
 
 export const statsCounterFactory = <S extends z.ZodTypeAny, R>(
   statsSchema: S,
-  accumulator: (stats: z.infer<S>, gameResult: R) => z.infer<S>,
+  accumulator: (stats: z.infer<S>, playerGameResult: R) => z.infer<S>,
 ): StatsCounterFactory<S, R> => {
   const statsInternalKey = Symbol("statsInternal");
   type StatsCounterInternal<S, R> = {
