@@ -1,4 +1,4 @@
-import { Ref, computed, ref } from "vue";
+import { computed, ref } from "vue";
 import { usePrefs } from "../clientPreferences";
 
 export { usePlayerStore as allPlayerStore, usePlayerStore } from "./allPlayers";
@@ -17,7 +17,8 @@ export type DBPlayer = {
 }
 
 export type LoadedPlayer = {
-  name: Ref<string>;
+  // name: Ref<string>;
+  name: string;
   id: string;
   defaultOrder: number;
   disabled: boolean;
@@ -27,7 +28,8 @@ export type LoadedPlayer = {
   handicap: number;
 }
 type PartialPlayer = {
-  name: Ref<string>;
+  // name: Ref<string>;
+  name: string;
   id: string;
   loaded: false;
 } & Partial<Omit<LoadedPlayer, "id" | "loaded">>;
@@ -40,7 +42,7 @@ export const isLoadedPlayer = (p?: Player | Promise<Player>): p is LoadedPlayer 
   isPlayer(p) && p.loaded;
 
 export const partialPlayer = (playerId: string): PartialPlayer =>
-  ({ id: playerId, loaded: false, name: ref(playerId) });
+  ({ id: playerId, loaded: false, name: ref(playerId).value });
 
 export const loadedPlayer = (
   playerId: string,
@@ -61,7 +63,7 @@ export const loadedPlayer = (
       __trueName,
       funIdx,
       funNames,
-      name: computed(() => preferences.useFunNames ? funNames[funIdx.value] : __trueName),
+      name: computed(() => preferences.useFunNames ? funNames[funIdx.value] : __trueName).value,
     }, {
       id: playerId,
       defaultOrder: data.defaultOrder + (disabled ? 100 : 0),

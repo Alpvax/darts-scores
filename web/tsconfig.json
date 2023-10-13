@@ -25,7 +25,8 @@
       "esnext",
       "dom",
       "dom.iterable",
-      "scripthost"
+      "scripthost",
+      "ES2023.Array"
     ]
   },
   "include": [

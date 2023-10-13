@@ -11,7 +11,7 @@
         :id="'select_' + id"
         v-model="players"
         type="checkbox"
-        :name="name.value"
+        :name="name"
         :value="id"
         @change="e => onCheckboxChange(id, (e.target! as HTMLInputElement).checked)"
       >
@@ -67,7 +67,7 @@
 
 <script lang="ts">
 import { Player, usePlayerStore } from "@/store/player";
-import { computed, customRef, defineComponent, PropType, Ref, ref } from "vue";
+import { computed, customRef, defineComponent, PropType, ref } from "vue";
 
 export default defineComponent({
   props: {
@@ -77,7 +77,7 @@ export default defineComponent({
     allowGuests: { type: Boolean, default: false },
   },
   emits: [ "update:player", "update:modelValue" ],
-  async setup(props, { emit }) {
+  setup(props, { emit }) {
     const playerStore = usePlayerStore();
     const allPlayers = computed(() =>
       props.available.map(p => typeof p === "object" ? p : playerStore.getPlayer(p)));
@@ -115,8 +115,8 @@ export default defineComponent({
           }
           return acc;
         }, {
-          groups: new Map<string, [string, Ref<string>][]>(),
-          ungrouped: [] as [string, Ref<string>][],
+          groups: new Map<string, [string, string][]>(),
+          ungrouped: [] as [string, string][],
         })),
       guests,
       addGuest: customRef((track, trigger) => ({

@@ -3,6 +3,7 @@ import { Builder } from "./stats/builder";
 import {
   GameStat, Stat, StatsDefinition, SummaryFieldDisplay, SummaryFieldKeys, summaryGenerator,
 } from "./stats/statsAccumulator";
+import { RoundNums1_20 as RoundNums, UnionToIntersection } from "@/utils/utilTypes";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _builder = Builder.create< { [k: string]: SPGameStats & MPGameStats }>();
@@ -79,12 +80,6 @@ const NUM_HITS_FORMAT = new Intl.NumberFormat(undefined, { maximumFractionDigits
 //   };
 // };
 
-type Enumerate<N extends number, Acc extends number[] = []> = Acc["length"] extends N
-  ? Acc[number]
-  : Enumerate<N, [...Acc, Acc["length"]]>;
-type UnionToIntersection<T> =
-  (T extends any ? (x: T) => any : never) extends (x: infer R) => any ? R : never;
-type RoundNums = Exclude<Enumerate<20>, 0>;
 type RoundHitsData = {
   [N in RoundNums]: {
     total: number;

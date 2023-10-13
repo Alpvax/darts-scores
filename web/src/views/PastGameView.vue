@@ -30,9 +30,9 @@ export default defineComponent({
       .data() as Result27);
     const playerScores = computed(() => game.value.game);
     const players = computed(() => {
-      let p = playerStore.getPlayers(Object.keys(playerScores.value));
-      p.value.sort((a, b) => (a.defaultOrder ?? 0) - (b.defaultOrder ?? 0));
-      return p.value;
+      let p = playerStore.getPlayers(Object.keys(playerScores.value)).value.map(p => p.value);
+      p.sort((a, b) => (a.defaultOrder ?? 0) - (b.defaultOrder ?? 0));
+      return p;
     });
     return {
       game,

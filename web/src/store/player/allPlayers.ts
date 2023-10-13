@@ -47,7 +47,7 @@ export const usePlayerStore = defineStore("allPlayers", () => {
     return arr;
   });
   const getPlayer = (pid: string): Player =>
-    players.get(pid) ?? { id: pid, loaded: false, name: ref(pid) };
+    players.get(pid) ?? { id: pid, loaded: false, name: ref(pid).value };
   return {
     getPlayer,
     getName: (pid: string) => getPlayer(pid).name,

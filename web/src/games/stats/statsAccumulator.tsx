@@ -625,7 +625,7 @@ export const summaryGenerator = <S extends StatsDefinition<R>, R>(stats: S) => {
           : [...playerStats.value.keys()]);
         const players = computed(() => props.players.length > 0
           ? props.players
-          : onDemandPlayerStore().getPlayers(playerIds.value).value);
+          : onDemandPlayerStore().getPlayers(playerIds.value).value.map(p => p.value));
 
         const playerStats = ref(new Map<string, StatsValues<S>>());
         const fieldValues = computed(() => {
@@ -741,7 +741,7 @@ export const summaryGenerator = <S extends StatsDefinition<R>, R>(stats: S) => {
           : [...playerStats.value.keys()]);
         const players = computed(() => props.players.length > 0
           ? props.players
-          : onDemandPlayerStore().getPlayers(playerIds.value).value);
+          : onDemandPlayerStore().getPlayers(playerIds.value).value.map(p => p.value));
 
         const playerStats = ref(new Map<string, StatsValues<S>>());
         const fieldValues = computed(() => {
