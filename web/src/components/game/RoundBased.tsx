@@ -143,7 +143,7 @@ export default defineAsyncComponent(<T, R extends Row<T>, Rounds extends string>
                         }),
                       }
                     : "playerName";
-                  return <th class={classes}>{playerStore.playerName(pid)}</th>;
+                  return <th class={classes}>{playerStore.playerName(pid).value}</th>;
                 })}
               </tr>
               {posRow("head")}

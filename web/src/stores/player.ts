@@ -28,7 +28,9 @@ class PlayerNames {
   public refreshName() {
     const names = this.names.get(this.theme_);
     this.cached =
-      names && names.length > 0 ? names[Math.random() * (names.length - 1)] : this.fallbackName;
+      names && names.length > 0
+        ? names[Math.floor(Math.random() * names.length)]
+        : this.fallbackName;
   }
   get name() {
     if (this.cached === null) {
@@ -159,32 +161,20 @@ export const usePlayerStore = defineStore("player", () => {
   const db = getFirestore();
 
   const loadedPlayers = ref(new Map<string, LoadedPlayer>());
-  const loadingPlayers = new Map<string, Promise<LoadedPlayer>>();
   const subscriptions = new Map<string, Unsubscribe>();
   const loadPlayer = (playerId: string) => {
     if (!subscriptions.has(playerId)) {
-      loadingPlayers.set(
+      subscriptions.set(
         playerId,
-        new Promise((resolve, reject) => {
-          subscriptions.set(
-            playerId,
-            onSnapshot(doc(db, "players", playerId), (snapshot) => {
-              if (snapshot.exists()) {
-                const p = new LoadedPlayer(playerId, snapshot.data() as DBPlayer);
-                loadedPlayers.value.set(playerId, p);
-                if (loadingPlayers.has(playerId)) {
-                  resolve(p);
-                  loadingPlayers.delete(playerId);
-                }
-              } else {
-                loadedPlayers.value.delete(playerId);
-                if (loadingPlayers.has(playerId)) {
-                  reject("nonexistent player");
-                  loadingPlayers.delete(playerId);
-                }
-              }
-            }),
-          );
+        onSnapshot(doc(db, "players", playerId), (snapshot) => {
+          if (snapshot.exists()) {
+            const p = new LoadedPlayer(playerId, snapshot.data() as DBPlayer);
+            // console.log("Loaded player:", p);//XXX
+            loadedPlayers.value.set(playerId, p);
+          } else {
+            // console.log("Unoaded player:", loadedPlayers.value.get(playerId));//XXX
+            loadedPlayers.value.delete(playerId);
+          }
         }),
       );
     }
@@ -204,19 +194,10 @@ export const usePlayerStore = defineStore("player", () => {
       () => loadedPlayers.value.get(playerId) ?? { id: playerId, loaded: false, name: playerId },
     );
   };
-  const getPlayerAsync = async (playerId: string): Promise<Ref<LoadedPlayer>> => {
-    loadPlayer(playerId);
-    let p = loadedPlayers.value.get(playerId);
-    if (!p) {
-      p = await loadingPlayers.get(playerId)!;
-    }
-    return computed(() => p!);
-  };
 
   return {
     loadPlayer,
     playerName,
     getPlayer,
-    getPlayerAsync,
   };
 });

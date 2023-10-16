@@ -16,13 +16,11 @@ const calcScore = (hits: number[]): number =>
         'k7GNyCogBy79JE4qhvAj',
       ]"
       :gameMeta="{
-        data: () => Array.from({ length: 20 }, () => {
-          const rand = Math.random()
-          return rand < 0.5 ? 0 :
-            rand < 0.8 ? 1 :
-            rand < 0.95 ? 2 :
-            3
-        }),
+        data: () =>
+          Array.from({ length: 20 }, () => {
+            const rand = Math.random();
+            return rand < 0.5 ? 0 : rand < 0.8 ? 1 : rand < 0.95 ? 2 : 3;
+          }),
         scores: (data: Map<string, number[]>) =>
           new Map([...data.entries()].map(([pid, hits]) => [pid, calcScore(hits)])),
         positionOrder: 'highestFirst',
