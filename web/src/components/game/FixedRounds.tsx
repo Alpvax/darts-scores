@@ -1,7 +1,35 @@
 import { usePlayerStore } from "@/stores/player";
-import { computed, defineComponent, ref, type PropType, type Ref, type VNodeChild } from "vue";
+import {
+  computed,
+  defineComponent,
+  ref,
+  type PropType,
+  type Ref,
+  type VNodeChild,
+  onUpdated,
+  onMounted,
+  nextTick,
+} from "vue";
 
 type ClassBindings = string | Record<string, boolean> | (string | Record<string, boolean>)[];
+
+const extendClass = (
+  bindings: ClassBindings | undefined | (() => ClassBindings | undefined),
+  ...extended: (string | Record<string, boolean>)[]
+): ClassBindings => {
+  const c = typeof bindings === "function" ? bindings() : bindings;
+  if (c !== undefined) {
+    if (typeof c === "string") {
+      return extended.join(" ") + " " + c;
+    } else if (Array.isArray(c)) {
+      return [...extended, ...c];
+    } else {
+      return [...extended, c];
+    }
+  } else {
+    return extended;
+  }
+};
 
 const RoundsType = Symbol("Map or Array values");
 
@@ -24,12 +52,33 @@ type PlayerTurnData<T> = TurnData<T> & {
 //     cellClass?: ((value: T) => ClassBindings) | ((data: PlayerTurnData<T>) => ClassBindings)
 // }
 
+type MoveFocus = {
+  /** Change focus to the next round input */
+  next: () => void;
+  /** Change focus to the previous round input */
+  prev: () => void;
+  /** Change focus to the first unentered round input */
+  empty: () => void;
+};
+
 export type Round<T> = {
-  display: (score: number, deltaScore: number, value: Ref<T>) => VNodeChild;
+  /** The html to display.
+   * @param value is a ref that can be used as a v-model value for the round input. Setting it will automatically move the focus to the next unentered input
+   */
+  display: (
+    score: number,
+    deltaScore: number,
+    value: Ref<T | undefined>,
+    focus: MoveFocus,
+  ) => VNodeChild;
   label: string;
   deltaScore: (value: T | undefined, roundIndex: number, playerId: string) => number;
-  rowClass?: (rowData: PlayerTurnData<T>[]) => ClassBindings;
-  cellClass?: ((value: T) => ClassBindings) | ((data: PlayerTurnData<T>) => ClassBindings);
+  rowClass?: (rowData: PlayerTurnData<T | undefined>[]) => ClassBindings;
+  cellClass?:
+    | ((value: T | undefined) => ClassBindings)
+    | ((data: PlayerTurnData<T | undefined>) => ClassBindings);
+  /** CSS selector to use to focus the input element of a round. Defaults to using `input` to select the `<input>` element */
+  inputFocusSelector?: string;
 };
 type KeyedRound<T, K extends string> = Round<T> & {
   key: K;
@@ -48,6 +97,12 @@ type RoundInternalObj<T> = Round<T> & {
   key: string;
 };
 type RoundInternal<T> = RoundInternalObj<T> | RoundInternalArr<T>;
+
+type TurnKey<T extends Record<string, any> | readonly [...any[]]> = string;
+const makeTurnKey = <T extends Record<string, any> | readonly [...any[]]>(
+  playerId: string,
+  round: RoundsKeys<T>,
+): TurnKey<T> => `${playerId}:${round}`;
 
 // type RoundsArray = [...RoundInternalArr<any>[]]
 // type RoundsObj = Record<string, RoundInternalMap<any>>
@@ -133,10 +188,65 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
     (r: Round<any> | KeyedRound<any, keyof T & string>, index) =>
       isKeyedRound(r) ? { ...r, [RoundsType]: "object" } : { ...r, [RoundsType]: "array", index },
   );
+  const focusSelectorBase = "td.turnInput";
+  const focusEmpty = () =>
+    nextTick(() => {
+      const el = document.querySelector(
+        focusSelectorBase + ".unplayed",
+      ) as HTMLTableCellElement | null;
+      if (el) {
+        const inputFocusSelector =
+          rounds[parseInt(el.dataset.roundIndex!)].inputFocusSelector ?? "input";
+        (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
+      } else {
+        console.log("Unable to find el!"); //XXX
+      }
+    });
   return defineComponent(
     (props, { slots }) => {
+      onMounted(() => focusEmpty());
       const playerStore = usePlayerStore();
-      const turnData = ref(new Map<{ pid: string; round: RoundsKeys<T> }, RoundsValues<T>>());
+      const makeMoveFocus = (playerIndex: number, roundIndex: number): MoveFocus => {
+        let prev = () => {};
+        if (playerIndex <= 0) {
+          if (roundIndex > 0) {
+            prev = () => focusInput(roundIndex - 1, props.players.length - 1);
+          }
+        } else {
+          prev = () => focusInput(roundIndex, playerIndex - 1);
+        }
+        const next = () => {
+          if (playerIndex >= props.players.length - 1) {
+            if (roundIndex < rounds.length - 1) {
+              focusInput(roundIndex + 1, 0);
+            }
+          } else {
+            focusInput(roundIndex, playerIndex + 1);
+          }
+        };
+        const focusInput = (row: number, col: number): void => {
+          nextTick(() => {
+            const inputFocusSelector = rounds[row].inputFocusSelector ?? "input";
+            // eslint-disable-next-line no-undef
+            const tds = document.querySelectorAll(
+              focusSelectorBase,
+            ) as NodeListOf<HTMLTableCellElement>;
+            const idx = props.players.length * (row as number) + col;
+            const el = tds.item(idx)?.querySelector(inputFocusSelector) as HTMLElement | null;
+            if (el) {
+              el.focus();
+            } else {
+              console.log("Unable to find el!"); //XXX
+            }
+          });
+        };
+        return {
+          next,
+          prev,
+          empty: focusEmpty,
+        };
+      };
+      const turnData = ref(new Map<TurnKey<T>, RoundsValues<T>>());
       const playerTurns = computed(
         () =>
           new Map(
@@ -145,7 +255,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
               new Map(
                 rounds.flatMap((r) => {
                   const round = (r[RoundsType] === "object" ? r.key : r.index) as RoundsKeys<T>;
-                  const turnKey = { pid, round };
+                  const turnKey = makeTurnKey(pid, round);
                   return turnData.value.has(turnKey) ? [[round, turnData.value.get(turnKey)!]] : [];
                 }),
               ),
@@ -161,7 +271,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
                 round,
                 new Map(
                   props.players.flatMap((pid) => {
-                    const turnKey = { pid, round };
+                    const turnKey = makeTurnKey(pid, round);
                     return turnData.value.has(turnKey) ? [[pid, turnData.value.get(turnKey)!]] : [];
                   }),
                 ),
@@ -173,7 +283,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         rounds.map((r) => {
           const round = (r[RoundsType] === "object" ? r.key : r.index) as RoundsKeys<T>;
           return props.players.flatMap((pid) => {
-            const turnKey = { pid, round };
+            const turnKey = makeTurnKey(pid, round);
             return turnData.value.has(turnKey) ? [turnData.value.get(turnKey)!] : [];
           });
         }),
@@ -283,29 +393,46 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
             <tr>
               <th>{slots.topLeftCell ? slots.topLeftCell() : <>&nbsp;</>}</th>
               {props.players.map((pid) => {
-                let classes: ClassBindings;
-                if (gameMeta.playerNameClass !== undefined) {
-                  const scores = playerScores.value.get(pid)!;
-                  const pos = playerPositions.value.playerLookup.get(pid)!;
-                  const c = gameMeta.playerNameClass({
-                    playerId: pid,
-                    score: scores.score,
-                    scores: scores.scores,
-                    deltaScores: scores.deltaScores,
-                    rounds: playerTurns.value.get(pid)!,
-                    position: pos.pos,
-                    tied: pos.players.filter((p) => pid !== p),
-                  });
-                  if (typeof c === "string") {
-                    classes = "playerName " + c;
-                  } else if (Array.isArray(c)) {
-                    classes = ["playerName", ...c];
-                  } else {
-                    classes = ["playerName", c];
-                  }
-                } else {
-                  classes = "playerName";
-                }
+                const classes = extendClass(
+                  gameMeta.playerNameClass !== undefined
+                    ? () => {
+                        const scores = playerScores.value.get(pid)!;
+                        const pos = playerPositions.value.playerLookup.get(pid)!;
+                        return gameMeta.playerNameClass!({
+                          playerId: pid,
+                          score: scores.score,
+                          scores: scores.scores,
+                          deltaScores: scores.deltaScores,
+                          rounds: playerTurns.value.get(pid)!,
+                          position: pos.pos,
+                          tied: pos.players.filter((p) => pid !== p),
+                        });
+                      }
+                    : undefined,
+                  "playerName",
+                );
+                // if (gameMeta.playerNameClass !== undefined) {
+                //   const scores = playerScores.value.get(pid)!;
+                //   const pos = playerPositions.value.playerLookup.get(pid)!;
+                //   const c = gameMeta.playerNameClass({
+                //     playerId: pid,
+                //     score: scores.score,
+                //     scores: scores.scores,
+                //     deltaScores: scores.deltaScores,
+                //     rounds: playerTurns.value.get(pid)!,
+                //     position: pos.pos,
+                //     tied: pos.players.filter((p) => pid !== p),
+                //   });
+                //   if (typeof c === "string") {
+                //     classes = "playerName " + c;
+                //   } else if (Array.isArray(c)) {
+                //     classes = ["playerName", ...c];
+                //   } else {
+                //     classes = ["playerName", c];
+                //   }
+                // } else {
+                //   classes = "playerName";
+                // }
                 return <th class={classes}>{playerStore.playerName(pid).value}</th>;
               })}
             </tr>
@@ -331,15 +458,35 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
               return (
                 <tr class={rowClass}>
                   <td class="rowLabel">{r.label}</td>
-                  {playerRowData.map(({ score, deltaScore, value }) => (
-                    <td>
-                      {r.display(
-                        score,
-                        deltaScore,
-                        computed(() => value),
-                      )}
-                    </td>
-                  ))}
+                  {playerRowData.map(({ playerId, score, deltaScore, value }, pIdx) => {
+                    const cellClass = extendClass(
+                      r.cellClass !== undefined
+                        ? () => r.cellClass!({ playerId, score, deltaScore, value })
+                        : undefined,
+                      "turnInput",
+                      { unplayed: value === undefined },
+                    );
+                    const moveFocus = makeMoveFocus(pIdx, idx);
+                    return (
+                      <td class={cellClass} data-round-index={idx}>
+                        {r.display(
+                          score,
+                          deltaScore,
+                          computed({
+                            get: () => value,
+                            set: (val) => {
+                              turnData.value.set(
+                                makeTurnKey(playerId, round),
+                                val as RoundsValues<T>,
+                              );
+                              moveFocus.empty();
+                            },
+                          }),
+                          moveFocus,
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}
