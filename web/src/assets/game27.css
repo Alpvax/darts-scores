@@ -31,9 +31,9 @@
   border-bottom: 1px dashed black;
 }
 
-tr.current,
-tr:first-child.untaken,
-tr:not(.untaken, .current) + tr.untaken {
+/* tr.current, */
+tr:first-child:is(.current, .untaken),
+tr:not(.untaken, .current) + tr:is(.current, .untaken) {
   background-color: bisque;
 }
 
