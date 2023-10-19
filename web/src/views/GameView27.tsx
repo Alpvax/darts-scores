@@ -90,21 +90,24 @@ const Game27 = createComponent<number[]>({
       ),
       deltaScore: (h, i) => 2 * (i + 1) * (h === undefined || h <= 0 ? -1 : h),
       rowClass: (data) => {
-        const values = data.map(d => d.value);
+        const values = data.map((d) => d.value);
         return {
-          current: values.some(v => v !== undefined) && values.some(v => v === undefined),
-          untaken: values.every(v => v === undefined),
-          allMissed: values.every(v => v !== undefined && v < 1),
-          allHit: values.every(v => v),
-        }
+          current: values.some((v) => v !== undefined) && values.some((v) => v === undefined),
+          untaken: values.every((v) => v === undefined),
+          allMissed: values.every((v) => v !== undefined && v < 1),
+          allHit: values.every((v) => v),
+        };
       },
       cellClass: ({ value }) => {
         switch (value) {
-          case 0: return "miss";
-          case 1: return "hit";
-          case 2: return "dd";
-          case 3: return "cliff";
-          default: return "unplayedAgain"
+          case 0:
+            return "miss";
+          case 1:
+            return "hit";
+          case 2:
+            return "dd";
+          case 3:
+            return "cliff";
         }
       },
     };

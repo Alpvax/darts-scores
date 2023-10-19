@@ -11,23 +11,54 @@ import {
   watch,
 } from "vue";
 
-type ClassBindings = string | Record<string, boolean> | (string | Record<string, boolean>)[];
+type ClassBindings = undefined | string | Record<string, boolean> | string[];
 
 const extendClass = (
-  bindings: ClassBindings | undefined | (() => ClassBindings | undefined),
-  ...extended: (string | Record<string, boolean>)[]
+  bindings: ClassBindings | (() => ClassBindings),
+  ...extended: ClassBindings[]
 ): ClassBindings => {
   const c = typeof bindings === "function" ? bindings() : bindings;
-  if (c !== undefined) {
-    if (typeof c === "string") {
-      return extended.join(" ") + " " + c;
-    } else if (Array.isArray(c)) {
-      return [...extended, ...c];
-    } else {
-      return [...extended, c];
-    }
+  if (extended === undefined || extended.length < 1) {
+    return c;
   } else {
-    return extended;
+    return extended.reduce((a, b) => {
+      if (a === undefined) {
+        return b;
+      }
+      if (b === undefined) {
+        return a;
+      }
+      const isStrB = typeof b === "string";
+      const isArrB = Array.isArray(b);
+      if (typeof a === "string") {
+        return isStrB
+          ? `${a} ${b}`
+          : isArrB
+          ? [...a.split(" "), ...b]
+          : {
+              [a]: true,
+              ...b,
+            };
+      } else if (Array.isArray(a)) {
+        return isStrB
+          ? [...a, ...b.split(" ")]
+          : isArrB
+          ? [...a, ...b]
+          : a.reduce((acc, clas) => {
+              acc[clas] = true;
+              return acc;
+            }, b);
+      } else {
+        return isStrB
+          ? { ...a, [b]: true }
+          : isArrB
+          ? b.reduce((acc, clas) => {
+              acc[clas] = true;
+              return acc;
+            }, a)
+          : { ...a, ...b };
+      }
+    }, c);
   }
 };
 
@@ -59,14 +90,13 @@ export type Round<T> = {
     score: number,
     deltaScore: number,
     value: Ref<T | undefined>,
+    editable: boolean,
     focus: MoveFocus,
   ) => VNodeChild;
   label: string;
   deltaScore: (value: T | undefined, roundIndex: number, playerId: string) => number;
   rowClass?: (rowData: PlayerTurnData<T | undefined>[]) => ClassBindings;
-  cellClass?:
-    | ((value: T | undefined) => ClassBindings)
-    | ((data: PlayerTurnData<T | undefined>) => ClassBindings);
+  cellClass?: (data: PlayerTurnData<T | undefined>) => ClassBindings;
   /** CSS selector to use to focus the input element of a round. Defaults to using `input` to select the `<input>` element */
   inputFocusSelector?: string;
 };
@@ -167,13 +197,12 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           ) as HTMLTableCellElement | null;
           if (el) {
             const row = parseInt(el.dataset.roundIndex!);
-            const inputFocusSelector =
-              rounds[row].inputFocusSelector ?? "input";
+            const inputFocusSelector = rounds[row].inputFocusSelector ?? "input";
             (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
           } else if (!allCompleted.value) {
             console.log("Unable to find el!"); //XXX
           }
-        })
+        });
       };
       onMounted(() => focusEmpty());
       const playerStore = usePlayerStore();
@@ -358,21 +387,33 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           </tr>
         ) : undefined;
 
-      const completedPlayers = computed(() => new Set([...playerTurns.value.entries()].flatMap(([pid, turns]) => turns.size === rounds.length ? [pid] : [])))
-      watch(() => completedPlayers.value, (completed, prev) => {
-        for (const pid of [...completed].filter(pid => !prev.has(pid))) {
-          emit("playerCompleted", pid, true);
-        }
-        for (const pid of [...prev].filter(pid => !completed.has(pid))) {
-          emit("playerCompleted", pid, false);
-        }
-      })
-      const allCompleted = computed(() => props.players.every(pid => completedPlayers.value.has(pid)))
+      const completedPlayers = computed(
+        () =>
+          new Set(
+            [...playerTurns.value.entries()].flatMap(([pid, turns]) =>
+              turns.size === rounds.length ? [pid] : [],
+            ),
+          ),
+      );
+      watch(
+        () => completedPlayers.value,
+        (completed, prev) => {
+          for (const pid of [...completed].filter((pid) => !prev.has(pid))) {
+            emit("playerCompleted", pid, true);
+          }
+          for (const pid of [...prev].filter((pid) => !completed.has(pid))) {
+            emit("playerCompleted", pid, false);
+          }
+        },
+      );
+      const allCompleted = computed(() =>
+        props.players.every((pid) => completedPlayers.value.has(pid)),
+      );
       watch(allCompleted, (val, prev) => {
         if (val !== prev) {
-          emit("allCompleted", val)
+          emit("allCompleted", val);
         }
-      })
+      });
 
       return () => (
         <table>
@@ -457,7 +498,11 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
               );
             })}
           </tbody>
-          <tfoot>{posRow("foot")}</tfoot>
+          {props.displayPositions === "foot" || slots.footer ? (
+            <tfoot>{[posRow("foot"), (slots.footer as () => any)()]}</tfoot>
+          ) : (
+            {}
+          )}
         </table>
       );
     },
