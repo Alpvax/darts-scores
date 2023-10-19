@@ -1,7 +1,7 @@
 import { defineComponent, type Ref } from "vue";
 // import { makeRoundBasedComponent, type GameMeta, type Row } from "../components/game/RoundBased";
 // import FixedLength, { type GameMeta, type Row } from "@/components/game/FixedLength.vue";
-import createComponent from "@/components/game/FixedRounds";
+import createComponent, { type GameData } from "@/components/game/FixedRounds";
 
 const numfmt = new Intl.NumberFormat(undefined, { style: "decimal", signDisplay: "always" });
 
@@ -101,13 +101,15 @@ const Game27 = createComponent<number[]>({
       cellClass: ({ value }) => {
         switch (value) {
           case 0:
-            return "miss";
+            return "turn27 miss";
           case 1:
-            return "hit";
+            return "turn27 hit";
           case 2:
-            return "dd";
+            return "turn27 doubledouble";
           case 3:
-            return "cliff";
+            return "turn27 cliff";
+          default:
+            return "turn27";
         }
       },
     };
@@ -122,6 +124,7 @@ export default defineComponent({
     return () => (
       <div>
         <Game27
+          class="game twentyseven"
           players={[
             "y5IM9Fi0VhqwZ6gAjil6",
             "6LuRdib3wFxhbcjjh0au",
@@ -137,7 +140,32 @@ export default defineComponent({
           onAllCompleted={(complete) =>
             console.log(`All players completion state changed: ${complete}`)
           }
-        />
+        >
+          {{
+            footer: (turns: GameData<number[]>) => (
+              <tr class="totalHitsRow">
+                <th class="rowLabel">Hits</th>
+                {[...turns.values()].map((rounds) => {
+                  const l = rounds.size;
+                  const { r, a } = [...rounds.values()].reduce(
+                    ({ r, a }, h) => {
+                      if (h > 0) {
+                        return { r: r + 1, a: a + h };
+                      }
+                      return { r, a };
+                    },
+                    { r: 0, a: 0 },
+                  );
+                  return (
+                    <td>
+                      {r}/{l} ({a}/{l * 3})
+                    </td>
+                  );
+                })}
+              </tr>
+            ),
+          }}
+        </Game27>
       </div>
     );
   },

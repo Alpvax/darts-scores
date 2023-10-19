@@ -118,6 +118,12 @@ type RoundInternalObj<T> = Round<T> & {
 };
 type RoundInternal<T> = RoundInternalObj<T> | RoundInternalArr<T>;
 
+export type GameData<T extends Record<string, any> | readonly [...any[]]> = Map<
+  string,
+  Map<RoundsKeys<T>, RoundsValues<T>>
+>;
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type TurnKey<T extends Record<string, any> | readonly [...any[]]> = string;
 const makeTurnKey = <T extends Record<string, any> | readonly [...any[]]>(
   playerId: string,
@@ -279,22 +285,15 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
             }),
           ),
       );
-      const roundData = computed(() =>
-        rounds.map((r) => {
-          const round = (r[RoundsType] === "object" ? r.key : r.index) as RoundsKeys<T>;
-          return props.players.flatMap((pid) => {
-            const turnKey = makeTurnKey(pid, round);
-            return turnData.value.has(turnKey) ? [turnData.value.get(turnKey)!] : [];
-          });
-        }),
-      );
-      // watch(() => props.players, players => {
-      //   for (const pid of players) {
-      //     if (!playerTurns.value.has(pid)) {
-      //       turnData.value.set(pid, gameMeta.startScore(pid))
-      //     }
-      //   }
-      // })
+      // const roundData = computed(() =>
+      //   rounds.map((r) => {
+      //     const round = (r[RoundsType] === "object" ? r.key : r.index) as RoundsKeys<T>;
+      //     return props.players.flatMap((pid) => {
+      //       const turnKey = makeTurnKey(pid, round);
+      //       return turnData.value.has(turnKey) ? [turnData.value.get(turnKey)!] : [];
+      //     });
+      //   }),
+      // );
       const playerScores = computed(
         () =>
           new Map(
@@ -372,7 +371,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
 
       const posRow = (displayWhen: (typeof props)["displayPositions"]) =>
         // Only display when requested, and only if everyone isn't tied
-        props.displayPositions === displayWhen && playerPositions.value.ordered.length > 1 ? (
+        props.displayPositions === displayWhen ? (
           <tr class={{ positionRow: true, small: props.editable }}>
             <td class="rowLabel">Position</td>
             {props.players.map((pid) => {
@@ -499,7 +498,9 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
             })}
           </tbody>
           {props.displayPositions === "foot" || slots.footer ? (
-            <tfoot>{[posRow("foot"), (slots.footer as () => any)()]}</tfoot>
+            <tfoot>
+              {[posRow("foot"), (slots.footer as (turns: GameData<T>) => any)(playerTurns.value)]}
+            </tfoot>
           ) : (
             {}
           )}
