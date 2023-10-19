@@ -16,7 +16,7 @@
 .playerName.fatNick {
   color: #ff0000;
 }
-.playerName.allPositive {
+.playerName.allPositive:not(.fatNick) {
   color: #00cc00;
 }
 

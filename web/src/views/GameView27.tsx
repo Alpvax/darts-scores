@@ -114,6 +114,10 @@ const Game27 = createComponent<number[]>({
       },
     };
   }),
+  playerNameClass: ({ rounds, scores }) => ({
+    fatNick: rounds.size > 0 && [...rounds.values()].reduce((a, r) => a + r) <= 0,
+    allPositive: rounds.size > 0 && !scores.filter((_, i) => rounds.has(i)).some(s => s < 0),
+  }),
 });
 
 export default defineComponent({
