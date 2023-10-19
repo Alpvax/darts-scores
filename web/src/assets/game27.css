@@ -1,82 +1,83 @@
-.game.twentyseven {
+table.game.twentyseven {
   font-size: 1.9vb;
-}
 
-.rowLabel {
-  font-weight: bold;
-  text-align: right;
-  white-space: nowrap;
-}
+  & .rowLabel {
+    font-weight: bold;
+    text-align: right;
+    white-space: nowrap;
+  }
 
-.playerName {
-  font-weight: bold;
-  width: 4.5em;
-  vertical-align: bottom;
-}
-.playerName.fatNick {
-  color: #ff0000;
-}
-.playerName.allPositive:not(.fatNick) {
-  color: #00cc00;
-}
+  & .playerName {
+    font-weight: bold;
+    width: 4.5em;
+    vertical-align: bottom;
 
-.positionRow > td {
-  text-align: center;
-}
-.positionRow.small {
-  font-size: 0.7em;
-}
-.positionRow:not(.small) > td {
-  font-size: 0.85em;
-  border-bottom: 1px dashed black;
-}
+    &.fatNick {
+      color: #ff0000;
+    }
+    &:not(.fatNick).allPositive {
+      color: #00cc00;
+    }
+  }
 
-/* tr.current, */
-tr:first-child:is(.current, .untaken),
-tr:not(.untaken, .current) + tr:is(.current, .untaken) {
-  background-color: bisque;
-}
+  & .positionRow > td {
+    text-align: center;
+  }
+  & .positionRow.small {
+    font-size: 0.7em;
+  }
+  & .positionRow:not(.small) > td {
+    font-size: 0.85em;
+    border-bottom: 1px dashed black;
+  }
 
-.game.twentyseven tr.allMissed > .rowLabel {
-  color: #ff0000;
-}
-.game.twentyseven tr.allHit > .rowLabel {
-  color: #00cc00;
-}
+  & tr:first-child:is(.current, .untaken),
+  & tr:not(.untaken, .current) + tr:is(.current, .untaken) {
+    background-color: bisque;
+  }
 
-.turn27 {
-  width: calc(4.5em + 1ch + 25px);
-  padding-bottom: 0.3em;
-  text-align: right;
-  white-space: nowrap;
-}
+  & tr.allMissed > .rowLabel {
+    color: #ff0000;
+  }
+  & tr.allHit > .rowLabel {
+    color: #00cc00;
+  }
 
-.turn27 .hitsInput {
-  margin: 0.2ch;
-  margin-left: 0.5ch;
-  width: calc(1ch + 25px);
-  font-size: 0.8em;
-}
+  & .turn27 {
+    width: calc(4.5em + 1ch + 25px);
+    padding-bottom: 0.3em;
+    padding-left: 0.5ch;
+    text-align: right;
+    white-space: nowrap;
 
-.turn27.cliff {
-  color: #00cc00;
-}
-.turn27td.doubledouble {
-  color: #0000ff;
-}
-.turn27td.miss {
-  color: #a82828;
-}
-/* .turn27td.turnScore.tie.winner {
-  background-color: #bbff66;
-}
-.turn27td.turnScore.winner {
-  background-color: #00ff00;
-} */
+    & .hitsInput {
+      margin: 0.2ch;
+      margin-left: 0.5ch;
+      width: calc(1ch + 25px);
+      font-size: 0.8em;
+    }
 
-tr.totalHitsRow > td,
-tr.totalHitsRow > th {
-  text-align: center;
-  border-top: 1px dashed black;
-  font-size: 0.95em;
+    &.cliff {
+      color: #00cc00;
+    }
+    &.doubledouble {
+      color: #0000ff;
+    }
+    &.miss {
+      color: #a82828;
+    }
+  }
+
+  /* .turn27td.turnScore.tie.winner {
+    background-color: #bbff66;
+  }
+  .turn27td.turnScore.winner {
+    background-color: #00ff00;
+  } */
+
+  & tr.totalHitsRow > *:is(td, th) {
+    text-align: center;
+    border-top: 1px dashed black;
+    font-size: 0.95em;
+  }
 }
