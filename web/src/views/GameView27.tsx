@@ -2,70 +2,8 @@ import { defineComponent, type Ref } from "vue";
 // import { makeRoundBasedComponent, type GameMeta, type Row } from "../components/game/RoundBased";
 // import FixedLength, { type GameMeta, type Row } from "@/components/game/FixedLength.vue";
 import createComponent from "@/components/game/FixedRounds";
-const deltaScore = (round: number, hits: number): number => 2 * round * (hits <= 0 ? -1 : hits);
-const calcScore = (hits: number[]): number =>
-  hits.reduce((s, h, i) => s + deltaScore(i + 1, h), 27);
 
 const numfmt = new Intl.NumberFormat(undefined, { style: "decimal", signDisplay: "always" });
-// const rounds = Array.from({ length: 20 }, (_, i) => {
-//   const r = i + 1;
-//   return [
-//     `double${r}`,
-//     {
-//       label: r.toString(),
-//       content: (data: number[]) => (
-//         <>
-//           {calcScore(data.slice(0, r))}
-//           <sup>({numfmt.format(deltaScore(r, data[i]))})</sup>
-//         </>
-//       ),
-//       // `${calcScore(data.slice(0, r))} (${data[i]} hits)`,
-//     },
-//   ] as [string, Row<number[]>];
-// }).reduce((acc, [k, v]) => Object.assign(acc, { [k]: v }), {} as Record<string, Row<number[]>>);
-
-// const gameMeta = {
-//   data: (): number[] =>
-//     Array.from({ length: 20 }, () => {
-//       const rand = Math.random();
-//       return rand < 0.5 ? 0 : rand < 0.8 ? 1 : rand < 0.95 ? 2 : 3;
-//     }),
-//   scores: (data: Map<string, number[]>) =>
-//     new Map([...data.entries()].map(([pid, hits]) => [pid, calcScore(hits)])),
-//   positionOrder: "highestFirst",
-//   rounds,
-//   rows: [
-//     "double1",
-//     "double2",
-//     "double3",
-//     "double4",
-//     "double5",
-//     "double6",
-//     "double7",
-//     "double8",
-//     "double9",
-//     "double10",
-//     "double11",
-//     "double12",
-//     "double13",
-//     "double14",
-//     "double15",
-//     "double16",
-//     "double17",
-//     "double18",
-//     "double19",
-//     "double20",
-//     {
-//       label: "finalRange for 5",
-//       content: (data: number[]) => {
-//         const score = calcScore(data.slice(0, 4));
-//         return `${score - (420 - 5 * (5 - 1))} - ${score + 3 * (420 - 5 * (5 - 1))}`;
-//       },
-//     },
-//   ],
-// } satisfies GameMeta<number[]>;
-
-// const RoundBased = makeRoundBasedComponent(gameMeta);
 
 const onKey =
   (
@@ -119,41 +57,63 @@ const onKey =
     //TODO: change focus
     event.preventDefault();
   };
-const RoundBased = createComponent<number[]>({
+const Game27 = createComponent<number[]>({
   positionOrder: "highestFirst",
   startScore: () => 27,
   rounds: Array.from({ length: 20 }, (_, i) => {
     const r = i + 1;
     return {
       label: r.toString(),
-      display: (score, delta, hits, focus) => (
+      display: (score, delta, hits, editable, focus) => (
         <>
           {score}
           <sup>({numfmt.format(delta)})</sup>
-          <input
-            class="hitsInput"
-            type="number"
-            min="0"
-            max="3"
-            placeholder="0"
-            value={hits.value}
-            onInput={(e) => {
-              const val = parseInt((e.target as HTMLInputElement).value);
-              hits.value = isNaN(val) ? undefined : val;
-              e.preventDefault();
-            }}
-            onKeydown={onKey(hits, focus)}
-          />
+          {editable ? (
+            <input
+              class="hitsInput"
+              type="number"
+              min="0"
+              max="3"
+              placeholder="0"
+              value={hits.value}
+              onInput={(e) => {
+                const val = parseInt((e.target as HTMLInputElement).value);
+                hits.value = isNaN(val) ? undefined : val;
+                e.preventDefault();
+              }}
+              onKeydown={onKey(hits, focus)}
+            />
+          ) : (
+            {}
+          )}
         </>
       ),
       deltaScore: (h, i) => 2 * (i + 1) * (h === undefined || h <= 0 ? -1 : h),
+      rowClass: (data) => {
+        const values = data.map(d => d.value);
+        return {
+          current: values.some(v => v !== undefined) && values.some(v => v === undefined),
+          untaken: values.every(v => v === undefined),
+          allMissed: values.every(v => v !== undefined && v < 1),
+          allHit: values.every(v => v),
+        }
+      },
+      cellClass: ({ value }) => {
+        switch (value) {
+          case 0: return "miss";
+          case 1: return "hit";
+          case 2: return "dd";
+          case 3: return "cliff";
+          default: return "unplayedAgain"
+        }
+      },
     };
   }),
 });
 
 export default defineComponent({
   components: {
-    Game27: RoundBased,
+    Game27,
   },
   setup() {
     return () => (
@@ -167,6 +127,13 @@ export default defineComponent({
             "jpBEiBzn9QTVN0C6Hn1m",
             "k7GNyCogBy79JE4qhvAj",
           ]}
+          editable={true}
+          onPlayerCompleted={(pid, complete) =>
+            console.log(`player "${pid}" completion state changed: ${complete}`)
+          }
+          onAllCompleted={(complete) =>
+            console.log(`All players completion state changed: ${complete}`)
+          }
         />
       </div>
     );

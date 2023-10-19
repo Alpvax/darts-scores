@@ -6,9 +6,9 @@ import {
   type PropType,
   type Ref,
   type VNodeChild,
-  onUpdated,
   onMounted,
   nextTick,
+  watch,
 } from "vue";
 
 type ClassBindings = string | Record<string, boolean> | (string | Record<string, boolean>)[];
@@ -34,7 +34,6 @@ const extendClass = (
 const RoundsType = Symbol("Map or Array values");
 
 type TurnData<T> = {
-  // playerId: string;
   score: number;
   deltaScore: number;
   value: T;
@@ -42,15 +41,6 @@ type TurnData<T> = {
 type PlayerTurnData<T> = TurnData<T> & {
   playerId: string;
 };
-
-// type Round<T> = {
-//     display: (score: number, deltaScore: number, value: Ref<T>) => VNodeChild
-//     label: string;
-//     key?: string;
-//     deltaScore: (value: T, roundIndex: number, playerId: string) => number;
-//     rowClass?: (rowData: PlayerTurnData<T>[]) => ClassBindings
-//     cellClass?: ((value: T) => ClassBindings) | ((data: PlayerTurnData<T>) => ClassBindings)
-// }
 
 type MoveFocus = {
   /** Change focus to the next round input */
@@ -104,11 +94,6 @@ const makeTurnKey = <T extends Record<string, any> | readonly [...any[]]>(
   round: RoundsKeys<T>,
 ): TurnKey<T> => `${playerId}:${round}`;
 
-// type RoundsArray = [...RoundInternalArr<any>[]]
-// type RoundsObj = Record<string, RoundInternalMap<any>>
-
-// type Rounds = RoundsArray | RoundsObj;
-
 type ObjValues<T> = T extends { [k: string]: infer U } ? U : never;
 type ObjArray<T> = ObjValues<T>[];
 
@@ -119,38 +104,12 @@ type RoundsList<R extends Record<string, any> | readonly [...any[]]> = R extends
   : ObjArray<{
       [K in keyof R & string]: KeyedRound<R[K], K>;
     }>;
-type RoundsMap<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
-  ? Map<keyof R & number, R[number]>
-  : Map<
-      keyof R & string,
-      ObjValues<{
-        [K in keyof R & string]: R[K];
-      }>
-    >;
 type RoundsKeys<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
   ? keyof R & number
   : keyof R & string;
 type RoundsValues<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
   ? R[number]
   : ObjValues<{ [K in keyof R & string]: R[K] }>;
-
-const rArr = [
-  {
-    display: (s, ds, h) => `${s} (${h.value} hits, delta score = ${ds})`,
-    label: "array round 0",
-    deltaScore: (h, i) => 2 * (i + 1) * (h <= 0 ? -1 : h),
-  },
-] as const satisfies readonly Round<any>[];
-
-type rArr = RoundsList<[1, 2]>;
-type rOArr = ObjArray<{
-  one: number;
-  two: string;
-}>;
-type rObj = RoundsList<{
-  one: number;
-  two: string;
-}>;
 
 type PlayerData<T extends Array<any> | Record<string, any>> = {
   playerId: string;
@@ -176,11 +135,6 @@ type GameMetadata<T extends readonly [...any[]] | Record<string, any>> = {
   rounds: RoundsList<T>;
 };
 
-class PlayerDataHolder<T extends readonly [...any[]] | Record<string, any>> {
-  private readonly data = new Map<RoundsKeys<T>, RoundsValues<T>>();
-  constructor(readonly startScore: (playerId: string) => number) {}
-}
-
 export const createComponent = <T extends readonly [...any[]] | Record<string, any>>(
   gameMeta: GameMetadata<T>,
 ) => {
@@ -189,21 +143,38 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       isKeyedRound(r) ? { ...r, [RoundsType]: "object" } : { ...r, [RoundsType]: "array", index },
   );
   const focusSelectorBase = "td.turnInput";
-  const focusEmpty = () =>
-    nextTick(() => {
-      const el = document.querySelector(
-        focusSelectorBase + ".unplayed",
-      ) as HTMLTableCellElement | null;
-      if (el) {
-        const inputFocusSelector =
-          rounds[parseInt(el.dataset.roundIndex!)].inputFocusSelector ?? "input";
-        (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
-      } else {
-        console.log("Unable to find el!"); //XXX
-      }
-    });
-  return defineComponent(
-    (props, { slots }) => {
+  return defineComponent({
+    props: {
+      players: { type: Array as PropType<string[]>, required: true },
+      // rounds: { type: Array as PropType<R[]>, required: true },
+      editable: { type: Boolean, default: false },
+      displayPositions: {
+        type: String as PropType<"head" | "body" | "foot" | "none">,
+        default: "head",
+      },
+    },
+    emits: {
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      playerCompleted: (playerId: string, completed: boolean) => true,
+      allCompleted: (completed: boolean) => true,
+      /* eslint-enable @typescript-eslint/no-unused-vars */
+    },
+    setup: (props, { slots, emit }) => {
+      const focusEmpty = () => {
+        nextTick(() => {
+          const el = document.querySelector(
+            focusSelectorBase + ".unplayed",
+          ) as HTMLTableCellElement | null;
+          if (el) {
+            const row = parseInt(el.dataset.roundIndex!);
+            const inputFocusSelector =
+              rounds[row].inputFocusSelector ?? "input";
+            (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
+          } else if (!allCompleted.value) {
+            console.log("Unable to find el!"); //XXX
+          }
+        })
+      };
       onMounted(() => focusEmpty());
       const playerStore = usePlayerStore();
       const makeMoveFocus = (playerIndex: number, roundIndex: number): MoveFocus => {
@@ -236,7 +207,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
             if (el) {
               el.focus();
             } else {
-              console.log("Unable to find el!"); //XXX
+              console.log("Unable to find el!");
             }
           });
         };
@@ -369,7 +340,6 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
 
         return { ordered, playerLookup };
       });
-      // const roundData = computed(() => props.players.reduce((map, pid) => {}, new Map<))
 
       const posRow = (displayWhen: (typeof props)["displayPositions"]) =>
         // Only display when requested, and only if everyone isn't tied
@@ -387,6 +357,23 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
             })}
           </tr>
         ) : undefined;
+
+      const completedPlayers = computed(() => new Set([...playerTurns.value.entries()].flatMap(([pid, turns]) => turns.size === rounds.length ? [pid] : [])))
+      watch(() => completedPlayers.value, (completed, prev) => {
+        for (const pid of [...completed].filter(pid => !prev.has(pid))) {
+          emit("playerCompleted", pid, true);
+        }
+        for (const pid of [...prev].filter(pid => !completed.has(pid))) {
+          emit("playerCompleted", pid, false);
+        }
+      })
+      const allCompleted = computed(() => props.players.every(pid => completedPlayers.value.has(pid)))
+      watch(allCompleted, (val, prev) => {
+        if (val !== prev) {
+          emit("allCompleted", val)
+        }
+      })
+
       return () => (
         <table>
           <thead>
@@ -411,28 +398,6 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
                     : undefined,
                   "playerName",
                 );
-                // if (gameMeta.playerNameClass !== undefined) {
-                //   const scores = playerScores.value.get(pid)!;
-                //   const pos = playerPositions.value.playerLookup.get(pid)!;
-                //   const c = gameMeta.playerNameClass({
-                //     playerId: pid,
-                //     score: scores.score,
-                //     scores: scores.scores,
-                //     deltaScores: scores.deltaScores,
-                //     rounds: playerTurns.value.get(pid)!,
-                //     position: pos.pos,
-                //     tied: pos.players.filter((p) => pid !== p),
-                //   });
-                //   if (typeof c === "string") {
-                //     classes = "playerName " + c;
-                //   } else if (Array.isArray(c)) {
-                //     classes = ["playerName", ...c];
-                //   } else {
-                //     classes = ["playerName", c];
-                //   }
-                // } else {
-                //   classes = "playerName";
-                // }
                 return <th class={classes}>{playerStore.playerName(pid).value}</th>;
               })}
             </tr>
@@ -482,6 +447,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
                               moveFocus.empty();
                             },
                           }),
+                          props.editable,
                           moveFocus,
                         )}
                       </td>
@@ -495,18 +461,6 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         </table>
       );
     },
-    {
-      props: {
-        players: { type: Array as PropType<string[]>, required: true },
-        // rounds: { type: Array as PropType<R[]>, required: true },
-        editable: { type: Boolean, default: false },
-        displayPositions: {
-          type: String as PropType<"head" | "body" | "foot" | "none">,
-          default: "head",
-        },
-      },
-      emits: ["playerCompleted", "allCompleted"],
-    },
-  );
+  });
 };
 export default createComponent;
