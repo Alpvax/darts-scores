@@ -18,7 +18,8 @@ const router = createRouter({
       component: () => import("../views/AboutView.vue"),
     },
     {
-      path: "/27",
+      path: "/twentyseven",
+      alias: "/27",
       name: "twentyseven",
       props: (route) => ({
         gameId: route.query.gameId,
