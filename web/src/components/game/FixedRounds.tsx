@@ -183,6 +183,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
     props: {
       players: { type: Array as PropType<string[]>, required: true },
       // rounds: { type: Array as PropType<R[]>, required: true },
+      values: { type: Object as PropType<GameData<T>>, default: () => new Map() },
       editable: { type: Boolean, default: false },
       displayPositions: {
         type: String as PropType<"head" | "body" | "foot" | "none">,
@@ -253,6 +254,11 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         };
       };
       const turnData = ref(new Map<TurnKey<T>, RoundsValues<T>>());
+      watch(() => props.values, (gameData) => {
+        gameData.forEach((rounds, pid) => rounds.forEach((val, round) => {
+          turnData.value.set(makeTurnKey(pid, round), val);
+        }))
+      }, {immediate: true})
       const playerTurns = computed(
         () =>
           new Map(

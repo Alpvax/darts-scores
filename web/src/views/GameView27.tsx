@@ -1,4 +1,4 @@
-import { defineComponent, type Ref } from "vue";
+import { defineComponent, ref, type Ref } from "vue";
 // import { makeRoundBasedComponent, type GameMeta, type Row } from "../components/game/RoundBased";
 // import FixedLength, { type GameMeta, type Row } from "@/components/game/FixedLength.vue";
 import createComponent, { type GameData } from "@/components/game/FixedRounds";
@@ -124,20 +124,27 @@ export default defineComponent({
   components: {
     Game27,
   },
-  setup() {
+  props: {
+    gameId: { type: String, default: undefined },
+  },
+  setup(props) {
+    const players = ref([
+      "y5IM9Fi0VhqwZ6gAjil6",
+      "6LuRdib3wFxhbcjjh0au",
+      "Gt8I7XPbPWiQ92FGsTtR",
+      "jcfFkGCY81brr8agA3g3",
+      "jpBEiBzn9QTVN0C6Hn1m",
+      "k7GNyCogBy79JE4qhvAj",
+    ])
+    const gameDate = ref(new Date());
+    const gameValues = ref(undefined as undefined | GameData<number[]>);
     return () => (
       <div>
         <Game27
           class="game twentyseven"
-          players={[
-            "y5IM9Fi0VhqwZ6gAjil6",
-            "6LuRdib3wFxhbcjjh0au",
-            "Gt8I7XPbPWiQ92FGsTtR",
-            "jcfFkGCY81brr8agA3g3",
-            "jpBEiBzn9QTVN0C6Hn1m",
-            "k7GNyCogBy79JE4qhvAj",
-          ]}
-          editable={true}
+          players={players.value}
+          values={gameValues.value}
+          editable={props.gameId === undefined}
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
