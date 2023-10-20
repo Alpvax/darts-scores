@@ -254,11 +254,17 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         };
       };
       const turnData = ref(new Map<TurnKey<T>, RoundsValues<T>>());
-      watch(() => props.values, (gameData) => {
-        gameData.forEach((rounds, pid) => rounds.forEach((val, round) => {
-          turnData.value.set(makeTurnKey(pid, round), val);
-        }))
-      }, {immediate: true})
+      watch(
+        () => props.values,
+        (gameData) => {
+          gameData.forEach((rounds, pid) =>
+            rounds.forEach((val, round) => {
+              turnData.value.set(makeTurnKey(pid, round), val);
+            }),
+          );
+        },
+        { immediate: true },
+      );
       const playerTurns = computed(
         () =>
           new Map(
@@ -424,7 +430,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         <table>
           <thead>
             <tr>
-              <th>{slots.topLeftCell ? slots.topLeftCell() : <>&nbsp;</>}</th>
+              {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {props.players.map((pid) => {
                 const classes = extendClass(
                   gameMeta.playerNameClass !== undefined

@@ -20,7 +20,7 @@ const router = createRouter({
     {
       path: "/27",
       name: "twentyseven",
-      props: route => ({
+      props: (route) => ({
         gameId: route.query.gameId,
       }),
       // route level code-splitting

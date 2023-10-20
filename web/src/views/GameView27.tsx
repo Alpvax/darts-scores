@@ -4,6 +4,7 @@ import { defineComponent, ref, type Ref } from "vue";
 import createComponent, { type GameData } from "@/components/game/FixedRounds";
 
 const numfmt = new Intl.NumberFormat(undefined, { style: "decimal", signDisplay: "always" });
+const dateDayMonthFmt = new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short" });
 
 const onKey =
   (
@@ -83,9 +84,7 @@ const Game27 = createComponent<number[]>({
               }}
               onKeydown={onKey(hits, focus)}
             />
-          ) : (
-            {}
-          )}
+          ) : undefined}
         </>
       ),
       deltaScore: (h, i) => 2 * (i + 1) * (h === undefined || h <= 0 ? -1 : h),
@@ -125,9 +124,10 @@ export default defineComponent({
     Game27,
   },
   props: {
-    gameId: { type: String, default: undefined },
+    gameId: { type: String, default: "" },
   },
   setup(props) {
+    console.log("gameId:", props.gameId); //XXX
     const players = ref([
       "y5IM9Fi0VhqwZ6gAjil6",
       "6LuRdib3wFxhbcjjh0au",
@@ -135,7 +135,7 @@ export default defineComponent({
       "jcfFkGCY81brr8agA3g3",
       "jpBEiBzn9QTVN0C6Hn1m",
       "k7GNyCogBy79JE4qhvAj",
-    ])
+    ]);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | GameData<number[]>);
     return () => (
@@ -144,7 +144,7 @@ export default defineComponent({
           class="game twentyseven"
           players={players.value}
           values={gameValues.value}
-          editable={props.gameId === undefined}
+          editable={props.gameId.length < 1}
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
@@ -153,6 +153,16 @@ export default defineComponent({
           }
         >
           {{
+            topLeftCell:
+              props.gameId.length > 0
+                ? () => (
+                    <th class="gameDate">
+                      <span>{dateDayMonthFmt.format(gameDate.value)}</span>
+                      <br />
+                      <span>{gameDate.value.getFullYear()}</span>
+                    </th>
+                  )
+                : undefined,
             footer: (turns: GameData<number[]>) => (
               <tr class="totalHitsRow">
                 <th class="rowLabel">Hits</th>

@@ -7,6 +7,12 @@ table.game.twentyseven {
     white-space: nowrap;
   }
 
+  & .gameDate {
+    white-space: nowrap;
+    width: fit-content;
+    font-weight: bold;
+  }
+
   & .playerName {
     font-weight: bold;
     width: 4.5em;
@@ -26,7 +32,7 @@ table.game.twentyseven {
   & .positionRow.small {
     font-size: 0.7em;
   }
-  & .positionRow:not(.small) > td {
+  & :is(thead, tbody) .positionRow:not(.small) > td {
     font-size: 0.85em;
     border-bottom: 1px dashed black;
   }
