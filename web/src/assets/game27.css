@@ -1,19 +1,21 @@
 table.game.twentyseven {
-  font-size: 1.9vb;
+  font-size: 1.8vb;
+  white-space: nowrap;
+  max-width: 100%;
+  min-width: fit-content;
 
   & .rowLabel {
     font-weight: bold;
     text-align: right;
-    white-space: nowrap;
   }
 
   & .gameDate {
-    white-space: nowrap;
     width: fit-content;
     font-weight: bold;
   }
 
   & .playerName {
+    white-space: normal;
     font-weight: bold;
     width: 4.5em;
     vertical-align: bottom;
@@ -50,14 +52,26 @@ table.game.twentyseven {
   }
 
   & .turn27 {
-    width: calc(4.5em + 1ch + 25px);
     padding-bottom: 0.3em;
     padding-left: 0.5ch;
-    text-align: right;
-    white-space: nowrap;
 
     &:not(* .hitsInput) {
-      width: 4.5em;
+      padding-right: auto;
+    }
+
+    /* score span */
+    & > span {
+      display: inline-block;
+      text-align: right;
+      width: 5ch;
+    }
+
+    /* score delta sup */
+    & > sup {
+      display: inline-block;
+      padding-left: 0.3ch;
+      padding-right: 0.3ch;
+      width: 4ch;
     }
 
     & .hitsInput {
@@ -85,13 +99,14 @@ table.game.twentyseven {
     background-color: #00ff00;
   } */
 
+  & tr.totalHitsRow > th {
+    border-top: 1px dashed black;
+    font-size: 0.95em;
+  }
   & tr.totalHitsRow > td {
     text-align: center;
     border-top: 1px dashed black;
     font-size: 0.95em;
-  }
-  & tr.totalHitsRow > th {
-    border-top: 1px dashed black;
-    font-size: 0.95em;
+    width: 13ch;
   }
 }

@@ -1,7 +1,9 @@
-import { defineComponent, ref, type Ref } from "vue";
+import { defineComponent, ref, watch, type Ref, onMounted } from "vue";
 // import { makeRoundBasedComponent, type GameMeta, type Row } from "../components/game/RoundBased";
 // import FixedLength, { type GameMeta, type Row } from "@/components/game/FixedLength.vue";
 import createComponent, { type GameData } from "@/components/game/FixedRounds";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { usePlayerStore } from "@/stores/player";
 
 const numfmt = new Intl.NumberFormat(undefined, { style: "decimal", signDisplay: "always" });
 const dateDayMonthFmt = new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short" });
@@ -67,7 +69,7 @@ const Game27 = createComponent<number[]>({
       label: r.toString(),
       display: (score, delta, hits, editable, focus) => (
         <>
-          {score}
+          <span>{score}</span>
           <sup>({numfmt.format(delta)})</sup>
           {editable ? (
             <input
@@ -119,6 +121,32 @@ const Game27 = createComponent<number[]>({
   }),
 });
 
+type PlayerGameResult27 = {
+  rounds: number[];
+  cliffs: number;
+  score: number;
+  allPositive: boolean;
+  jesus?: boolean;
+  fnAmnesty?: boolean;
+  handicap?: number;
+};
+type Result27 = {
+  date: string;
+  winner:
+    | string
+    | {
+        tie: string[];
+        tiebreak: {
+          //TODO: implement tiebreak
+          winner?: string;
+          // [k: string | number]: any;
+        };
+      };
+  game: {
+    [player: string]: PlayerGameResult27;
+  };
+};
+
 export default defineComponent({
   components: {
     Game27,
@@ -127,7 +155,8 @@ export default defineComponent({
     gameId: { type: String, default: "" },
   },
   setup(props) {
-    console.log("gameId:", props.gameId); //XXX
+    const db = getFirestore();
+    const playerStore = usePlayerStore();
     const players = ref([
       "y5IM9Fi0VhqwZ6gAjil6",
       "6LuRdib3wFxhbcjjh0au",
@@ -138,6 +167,55 @@ export default defineComponent({
     ]);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | GameData<number[]>);
+    const onGameIdUpdated = async (gameId: string | undefined, oldGameId?: string) => {
+      console.log(`gameId: ${oldGameId} -> ${gameId}`);
+      if (gameId) {
+        const data = (await getDoc(doc(db, "game/twentyseven/games", gameId))).data() as Result27;
+        if (data !== undefined) {
+          console.log(data.date, Object.keys(data.game), data.game); //XXX
+          gameDate.value = new Date(data.date);
+          console.log("parsing game:", Object.entries(data.game));
+          const values = new Map(
+            Object.entries(data.game).map(([pid, { rounds }]) => [
+              pid,
+              new Map(rounds.map((r, i) => [i, r])),
+            ]),
+          );
+          console.log("Setting values:", values);
+          gameValues.value = values;
+          const plyrs = Object.keys(data.game).map(
+            (pid) => [playerStore.defaultOrder(pid).value, pid] as [number, string],
+          );
+          plyrs.sort(([a], [b]) => (a ?? 0) - (b ?? 0));
+          players.value = plyrs.map((p) => p[1]);
+          return;
+        }
+      }
+      if (oldGameId !== undefined) {
+        gameDate.value = new Date();
+        gameValues.value = undefined;
+        players.value = [
+          //TODO: proper players
+          "y5IM9Fi0VhqwZ6gAjil6",
+          "6LuRdib3wFxhbcjjh0au",
+          "Gt8I7XPbPWiQ92FGsTtR",
+          "jcfFkGCY81brr8agA3g3",
+          "jpBEiBzn9QTVN0C6Hn1m",
+          "k7GNyCogBy79JE4qhvAj",
+        ];
+      }
+      console.log(
+        `Completed changing gameId: ${oldGameId} -> ${gameId}`,
+        "Date:",
+        gameDate.value,
+        "\nPlayers:",
+        players.value,
+        "\nValues:",
+        gameValues.value,
+      ); //XXX
+    };
+    onMounted(() => onGameIdUpdated(props.gameId));
+    watch(() => props.gameId, onGameIdUpdated);
     return () => (
       <div>
         <Game27
@@ -179,7 +257,12 @@ export default defineComponent({
                   );
                   return (
                     <td>
-                      {r}/{l} ({a}/{l * 3})
+                      <span>
+                        {r}/{l}
+                      </span>{" "}
+                      <span>
+                        ({a}/{l * 3})
+                      </span>
                     </td>
                   );
                 })}

@@ -188,6 +188,15 @@ export const usePlayerStore = defineStore("player", () => {
       }
       return playerId;
     });
+  const defaultOrder = (playerId: string) =>
+    computed(() => {
+      loadPlayer(playerId);
+      const p = loadedPlayers.value.get(playerId);
+      if (p) {
+        return p.defaultOrder;
+      }
+      return Number.MAX_SAFE_INTEGER;
+    });
   const getPlayer = (playerId: string): Ref<Player> => {
     loadPlayer(playerId);
     return computed(
@@ -198,6 +207,7 @@ export const usePlayerStore = defineStore("player", () => {
   return {
     loadPlayer,
     playerName,
+    defaultOrder,
     getPlayer,
   };
 });
