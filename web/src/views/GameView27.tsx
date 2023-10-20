@@ -1,6 +1,4 @@
-import { defineComponent, ref, watch, type Ref, onMounted } from "vue";
-// import { makeRoundBasedComponent, type GameMeta, type Row } from "../components/game/RoundBased";
-// import FixedLength, { type GameMeta, type Row } from "@/components/game/FixedLength.vue";
+import { defineComponent, ref, watch, type Ref, computed } from "vue";
 import createComponent, { type GameData } from "@/components/game/FixedRounds";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
@@ -158,6 +156,7 @@ export default defineComponent({
     const db = getFirestore();
     const playerStore = usePlayerStore();
     const players = ref([
+      //TODO: proper players
       "y5IM9Fi0VhqwZ6gAjil6",
       "6LuRdib3wFxhbcjjh0au",
       "Gt8I7XPbPWiQ92FGsTtR",
@@ -168,20 +167,16 @@ export default defineComponent({
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | GameData<number[]>);
     const onGameIdUpdated = async (gameId: string | undefined, oldGameId?: string) => {
-      console.log(`gameId: ${oldGameId} -> ${gameId}`);
       if (gameId) {
         const data = (await getDoc(doc(db, "game/twentyseven/games", gameId))).data() as Result27;
         if (data !== undefined) {
-          console.log(data.date, Object.keys(data.game), data.game); //XXX
           gameDate.value = new Date(data.date);
-          console.log("parsing game:", Object.entries(data.game));
           const values = new Map(
             Object.entries(data.game).map(([pid, { rounds }]) => [
               pid,
               new Map(rounds.map((r, i) => [i, r])),
             ]),
           );
-          console.log("Setting values:", values);
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
             (pid) => [playerStore.defaultOrder(pid).value, pid] as [number, string],
@@ -204,18 +199,40 @@ export default defineComponent({
           "k7GNyCogBy79JE4qhvAj",
         ];
       }
-      console.log(
-        `Completed changing gameId: ${oldGameId} -> ${gameId}`,
-        "Date:",
-        gameDate.value,
-        "\nPlayers:",
-        players.value,
-        "\nValues:",
-        gameValues.value,
-      ); //XXX
     };
-    onMounted(() => onGameIdUpdated(props.gameId));
-    watch(() => props.gameId, onGameIdUpdated);
+    watch(() => props.gameId, onGameIdUpdated, { immediate: true });
+
+    const completed = ref(false);
+    const positions = ref(
+      [] as {
+        pos: number;
+        posOrdinal: string;
+        players: string[];
+      }[],
+    );
+    const winners = computed(() =>
+      completed.value && positions.value.length > 0 ? positions.value[0].players : undefined,
+    );
+    const submitted = ref(false);
+
+    const submitScores = () => {
+      console.log("Submitting scores:", gameValues.value);
+      if (gameValues.value !== undefined) {
+        const game = [...gameValues.value.entries()].reduce(
+          (obj, [pid, roundsMap]) => {
+            const rounds = Array.from({ length: 20 }, (_, i) => roundsMap.get(i + 1) ?? 0);
+            obj[pid] = {
+              rounds,
+              //TODO: rest of values
+            };
+            return obj;
+          },
+          {} as Record<string, { rounds: number[] }>,
+        ); //Result27["game"])
+        console.log(game); //XXX
+      }
+    };
+
     return () => (
       <div>
         <Game27
@@ -226,9 +243,9 @@ export default defineComponent({
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
-          onAllCompleted={(complete) =>
-            console.log(`All players completion state changed: ${complete}`)
-          }
+          onAllCompleted={(complete) => (completed.value = complete)}
+          onUpdate:positions={(order) => (positions.value = order)}
+          onUpdate:values={(vals) => (gameValues.value = vals)}
         >
           {{
             topLeftCell:
@@ -270,6 +287,23 @@ export default defineComponent({
             ),
           }}
         </Game27>
+        {props.gameId.length <= 0 && completed.value && winners.value ? (
+          <div class="completed">
+            Game Completed!{" "}
+            {winners.value.length === 1
+              ? `Winner = ${playerStore.playerName(winners.value[0]).value}`
+              : `It is a tie between ${winners.value
+                  .slice(0, winners.value.length - 1)
+                  .map((pid) => playerStore.playerName(pid).value)
+                  .join(", ")} and ${
+                  playerStore.playerName(winners.value[winners.value.length - 1]).value
+                }`}
+            !
+            {!submitted.value && props.gameId.length <= 0 ? (
+              <input type="button" value="Submit Scores" onClick={submitScores} />
+            ) : undefined}
+          </div>
+        ) : undefined}
       </div>
     );
   },

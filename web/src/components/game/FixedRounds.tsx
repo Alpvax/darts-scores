@@ -194,6 +194,14 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       /* eslint-disable @typescript-eslint/no-unused-vars */
       playerCompleted: (playerId: string, completed: boolean) => true,
       allCompleted: (completed: boolean) => true,
+      ["update:positions"]: (
+        ordered: {
+          pos: number;
+          posOrdinal: string;
+          players: string[];
+        }[],
+      ) => true,
+      ["update:values"]: (values: GameData<T>) => true,
       /* eslint-enable @typescript-eslint/no-unused-vars */
     },
     setup: (props, { slots, emit }) => {
@@ -424,6 +432,16 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         if (val !== prev) {
           emit("allCompleted", val);
         }
+      });
+
+      watch(playerPositions, (positions) => {
+        //TODO: class PlayerPositions, get by index or pid
+        // Deep copy positions.ordered
+        emit("update:positions", JSON.parse(JSON.stringify(positions.ordered)));
+      });
+
+      watch(playerTurns, (turns) => {
+        emit("update:values", turns);
       });
 
       return () => (
