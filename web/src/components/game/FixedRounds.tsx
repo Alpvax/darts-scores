@@ -159,6 +159,17 @@ type PlayerData<T extends Array<any> | Record<string, any>> = {
   position: number;
   tied: string[];
 };
+export type CompletedPlayerData<T extends Array<any> | Record<string, any>> = Omit<
+  PlayerData<T>,
+  "rounds"
+> & {
+  rounds: T;
+};
+export type GameResult<T extends Array<any> | Record<string, any>> = Map<
+  string,
+  CompletedPlayerData<T>
+>;
+
 type GameMetadata<T extends readonly [...any[]] | Record<string, any>> = {
   startScore: (playerId: string) => number;
   playerNameClass?: (data: PlayerData<T>) => ClassBindings;
@@ -178,6 +189,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
     (r: Round<any> | KeyedRound<any, keyof T & string>, index) =>
       isKeyedRound(r) ? { ...r, [RoundsType]: "object" } : { ...r, [RoundsType]: "array", index },
   );
+  const roundsType = rounds[0][RoundsType];
   const focusSelectorBase = "td.turnInput";
   return defineComponent({
     props: {
@@ -194,6 +206,8 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       /* eslint-disable @typescript-eslint/no-unused-vars */
       playerCompleted: (playerId: string, completed: boolean) => true,
       allCompleted: (completed: boolean) => true,
+      /** Emitted only when the entire game is complete, then each time the result changes */
+      ["update:gameResult"]: (result: GameResult<T>) => true,
       ["update:positions"]: (
         ordered: {
           pos: number;
@@ -428,11 +442,56 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       const allCompleted = computed(() =>
         props.players.every((pid) => completedPlayers.value.has(pid)),
       );
-      watch(allCompleted, (val, prev) => {
-        if (val !== prev) {
-          emit("allCompleted", val);
-        }
-      });
+      /** Update when completed or when a turn changes, but with the completed value as a convenience */
+      watch(
+        () =>
+          [allCompleted.value, turnData.value] as [boolean, Map<string, CompletedPlayerData<T>>],
+        ([val], [prev]) => {
+          if (val !== prev) {
+            emit("allCompleted", val);
+          }
+          if (val) {
+            emit(
+              "update:gameResult",
+              props.players.reduce((result, pid) => {
+                const scores = playerScores.value.get(pid)!;
+                const pos = playerPositions.value.playerLookup.get(pid)!;
+                const common = {
+                  playerId: pid,
+                  score: scores.score,
+                  scores: scores.scores,
+                  deltaScores: scores.deltaScores,
+                  position: pos.pos,
+                  tied: pos.players.filter((p) => pid !== p),
+                };
+                const turns = playerTurns.value.get(pid)!;
+                switch (roundsType) {
+                  case "object":
+                    result.set(pid, {
+                      ...common,
+                      rounds: rounds.reduce((obj, r) => {
+                        const key = (r as RoundInternalObj<T>).key as keyof T;
+                        obj[key] = turns.get(key as RoundsKeys<T>)!;
+                        return obj;
+                      }, {} as T),
+                    });
+                    break;
+                  case "array":
+                    result.set(pid, {
+                      ...common,
+                      rounds: Array.from(
+                        { length: rounds.length },
+                        (_, i) => turns.get(i as RoundsKeys<T>)!,
+                      ) as unknown as T,
+                    });
+                    break;
+                }
+                return result;
+              }, new Map<string, CompletedPlayerData<T>>()),
+            );
+          }
+        },
+      );
 
       watch(playerPositions, (positions) => {
         //TODO: class PlayerPositions, get by index or pid

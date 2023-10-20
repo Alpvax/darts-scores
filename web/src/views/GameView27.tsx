@@ -1,5 +1,8 @@
 import { defineComponent, ref, watch, type Ref, computed } from "vue";
-import createComponent, { type GameData } from "@/components/game/FixedRounds";
+import createComponent, {
+  type GameData,
+  type GameResult,
+} from "@/components/game/FixedRounds";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
 
@@ -202,7 +205,7 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    const completed = ref(false);
+    const gameResult = ref(null as null | GameResult<number[]>);
     const positions = ref(
       [] as {
         pos: number;
@@ -211,12 +214,15 @@ export default defineComponent({
       }[],
     );
     const winners = computed(() =>
-      completed.value && positions.value.length > 0 ? positions.value[0].players : undefined,
+      gameResult.value !== null && positions.value.length > 0
+        ? positions.value[0].players
+        : undefined,
     );
     const submitted = ref(false);
 
     const submitScores = () => {
       console.log("Submitting scores:", gameValues.value);
+      console.log("Game result:", gameResult.value);
       if (gameValues.value !== undefined) {
         const game = [...gameValues.value.entries()].reduce(
           (obj, [pid, roundsMap]) => {
@@ -243,7 +249,7 @@ export default defineComponent({
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
-          onAllCompleted={(complete) => (completed.value = complete)}
+          onUpdate:gameResult={(result) => (gameResult.value = result)}
           onUpdate:positions={(order) => (positions.value = order)}
           onUpdate:values={(vals) => (gameValues.value = vals)}
         >
@@ -287,7 +293,7 @@ export default defineComponent({
             ),
           }}
         </Game27>
-        {props.gameId.length <= 0 && completed.value && winners.value ? (
+        {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
           <div class="completed">
             Game Completed!{" "}
             {winners.value.length === 1
