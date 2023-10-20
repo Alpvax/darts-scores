@@ -50,6 +50,10 @@ table.game.twentyseven {
     text-align: right;
     white-space: nowrap;
 
+    &:not(* .hitsInput) {
+      width: 4.5em;
+    }
+
     & .hitsInput {
       margin: 0.2ch;
       margin-left: 0.5ch;
@@ -75,8 +79,12 @@ table.game.twentyseven {
     background-color: #00ff00;
   } */
 
-  & tr.totalHitsRow > *:is(td, th) {
+  & tr.totalHitsRow > td {
     text-align: center;
+    border-top: 1px dashed black;
+    font-size: 0.95em;
+  }
+  & tr.totalHitsRow > th {
     border-top: 1px dashed black;
     font-size: 0.95em;
   }
