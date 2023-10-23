@@ -2,7 +2,9 @@ import { defineComponent, ref, watch, type Ref, computed } from "vue";
 import createComponent, {
   type GameData,
   type GameResult,
+  type TurnData,
 } from "@/components/game/FixedRounds";
+import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
 
@@ -151,6 +153,7 @@ type Result27 = {
 export default defineComponent({
   components: {
     Game27,
+    PlayerSelection,
   },
   props: {
     gameId: { type: String, default: "" },
@@ -239,8 +242,32 @@ export default defineComponent({
       }
     };
 
+    type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
+    type GameStats = {
+      roundStats: Map<number, RoundStats>;
+    };
+    const gameStats = ref(new Map<string, GameStats>());
+
+    const updateGameStats = (playerId: string, roundIdx: number, data: TurnData<number>) => {
+      if (!gameStats.value.has(playerId)) {
+        gameStats.value.set(playerId, {
+          roundStats: new Map(),
+        });
+      }
+      const stats = gameStats.value.get(playerId)!.roundStats;
+      stats.set(roundIdx + 1, {
+        cliff: data.value === 3,
+        dd: data.value >= 2,
+        hit: data.value >= 1,
+      });
+      console.log(gameStats.value.get(playerId)); //XXX
+    };
+
     return () => (
       <div>
+        {/* <PlayerSelection
+          available={playerStore.all}
+        /> */}
         <Game27
           class="game twentyseven"
           players={players.value}
@@ -252,6 +279,7 @@ export default defineComponent({
           onUpdate:gameResult={(result) => (gameResult.value = result)}
           onUpdate:positions={(order) => (positions.value = order)}
           onUpdate:values={(vals) => (gameValues.value = vals)}
+          onTurnTaken={updateGameStats}
         >
           {{
             topLeftCell:

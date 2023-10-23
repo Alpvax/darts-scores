@@ -14,12 +14,12 @@ import {
 
 const RoundsType = Symbol("Map or Array values");
 
-type TurnData<T> = {
+export type TurnData<T> = {
   score: number;
   deltaScore: number;
   value: T;
 };
-type PlayerTurnData<T> = TurnData<T> & {
+export type PlayerTurnData<T> = TurnData<T> & {
   playerId: string;
 };
 
@@ -96,6 +96,10 @@ type RoundsKeys<R extends Record<string, any> | readonly [...any[]]> = R extends
 type RoundsValues<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
   ? R[number]
   : ObjValues<{ [K in keyof R & string]: R[K] }>;
+type RoundValue<
+  R extends Record<string, any> | readonly [...any[]],
+  K extends string | number,
+> = K extends keyof R ? R[K] : never;
 
 type PlayerData<T extends Array<any> | Record<string, any>> = {
   playerId: string;
@@ -155,7 +159,12 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
     emits: {
       /* eslint-disable @typescript-eslint/no-unused-vars */
       playerCompleted: (playerId: string, completed: boolean) => true,
-      allCompleted: (completed: boolean) => true,
+      completed: (completed: boolean) => true,
+      turnTaken: (
+        playerId: string,
+        roundId: RoundsKeys<T>,
+        turnData: TurnData<RoundValue<T, RoundsKeys<T>>>,
+      ) => true,
       /** Emitted only when the entire game is complete, then each time the result changes */
       ["update:gameResult"]: (result: GameResult<T>) => true,
       ["update:positions"]: (
@@ -398,7 +407,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           [allCompleted.value, turnData.value] as [boolean, Map<string, CompletedPlayerData<T>>],
         ([val], [prev]) => {
           if (val !== prev) {
-            emit("allCompleted", val);
+            emit("completed", val);
           }
           if (val) {
             emit(
@@ -523,6 +532,11 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
                                 makeTurnKey(playerId, round),
                                 val as RoundsValues<T>,
                               );
+                              emit("turnTaken", playerId, round, {
+                                score,
+                                deltaScore,
+                                value: val as RoundValue<T, typeof round>,
+                              });
                               moveFocus.empty();
                             },
                           }),
