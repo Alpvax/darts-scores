@@ -81,6 +81,10 @@ table.game.twentyseven {
       font-size: 0.8em;
     }
 
+    &.unplayed {
+      color: #b0b0b0;
+    }
+
     &.cliff {
       color: #00cc00;
     }

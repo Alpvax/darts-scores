@@ -293,31 +293,64 @@ export default defineComponent({
                   )
                 : undefined,
             footer: (turns: GameData<number[]>) => (
-              <tr class="totalHitsRow">
-                <th class="rowLabel">Hits</th>
-                {[...turns.values()].map((rounds) => {
-                  const l = rounds.size;
-                  const { r, a } = [...rounds.values()].reduce(
-                    ({ r, a }, h) => {
-                      if (h > 0) {
-                        return { r: r + 1, a: a + h };
+              <>
+                <tr class="totalHitsRow">
+                  <th class="rowLabel">Hits</th>
+                  {[...turns.values()].map((rounds) => {
+                    const l = rounds.size;
+                    const { r, a } = [...rounds.values()].reduce(
+                      ({ r, a }, h) => {
+                        if (h > 0) {
+                          return { r: r + 1, a: a + h };
+                        }
+                        return { r, a };
+                      },
+                      { r: 0, a: 0 },
+                    );
+                    return (
+                      <td>
+                        <span>
+                          {r}/{l}
+                        </span>{" "}
+                        <span>
+                          ({a}/{l * 3})
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+                {[...turns.values()].some((rounds) => rounds.size < 20) ? (
+                  <tr class="finalScoreRow">
+                    <th class="rowLabel">Final score</th>
+                    {[...turns.values()].map((rounds) => {
+                      // const lastComplete = Math.max(...rounds.keys());
+                      // Score - 105 + lastComplete * lastComplete - lastComplete
+                      // Score + 315 - lastComplete * lastComplete + lastComplete
+                      let scoreMin = 27;
+                      let scoreMax = 27;
+                      for (let i = 0; i < 20; i++) {
+                        const s = rounds.get(i);
+                        if (s === undefined) {
+                          scoreMin -= 2 * (i + 1);
+                          scoreMax += 6 * (i + 1);
+                        } else {
+                          const delta = (i + 1) * (s > 0 ? 2 * s : -2);
+                          console.log("score", i, s, delta);
+                          scoreMin += delta;
+                          scoreMax += delta;
+                        }
                       }
-                      return { r, a };
-                    },
-                    { r: 0, a: 0 },
-                  );
-                  return (
-                    <td>
-                      <span>
-                        {r}/{l}
-                      </span>{" "}
-                      <span>
-                        ({a}/{l * 3})
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
+                      return scoreMin === scoreMax ? (
+                        <td>{scoreMin}</td>
+                      ) : (
+                        <td>
+                          {scoreMin} to {scoreMax}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : undefined}
+              </>
             ),
           }}
         </Game27>
