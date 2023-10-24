@@ -68,15 +68,9 @@ type RoundInternalArr<T, I extends number> = Omit<IndexedRound<T, I>, "index"> &
 type RoundInternalObj<T, K extends string> = KeyedRound<T, K> & {
   [RoundsType]: "object";
 };
-// type RoundInternal<T, K extends string | number> = RoundInternalObj<T, K & string> | RoundInternalArr<T, K & number>;
 type RoundInternal<T extends Record<string, any> | readonly [...any[]]> =
   | RoundInternalArr<any, keyof T & number>
   | RoundInternalObj<any, keyof T & string>;
-
-// export type GameData<T extends Record<string, any> | readonly [...any[]]> = Map<
-//   string,
-//   Map<RoundKey<T>, RoundsValues<T>> | { [K in keyof T]: T[K] | undefined }
-// >;
 
 type RoundKey<T extends Record<string, any> | readonly [...any[]]> = T extends [...any[]]
   ? keyof T & number
@@ -105,46 +99,37 @@ type RoundValue<
   K extends string | number,
 > = K extends keyof R ? R[K] : never;
 
-type RoundValuesPartial<T extends Record<string, any> | readonly [...any[]]> =
-  Partial<T>; /*T extends [...any[]]
-  ? { [I in keyof T & number]: T[I] | undefined }
-  : { [K in keyof T & string]?: T[K] };*/
-
-type PlayerDataBase = {
+type PlayerDataPartial<T extends Array<any> | Record<string, any>> = {
   playerId: string;
+  /** Whether the player has completed all rounds */
+  complete: false;
   /** The final score if finished, or the current score if in progress */
   score: number;
   /** The scores after each round, only including played rounds */
   scores: number[];
   /** The scores differences for each round, only including played rounds */
   deltaScores: number[];
+  /** A map of the completed rounds, with non completed rounds missing from the map */
+  rounds: Map<RoundKey<T>, RoundsValue<T>>;
   /** The player's current position */
   position: number;
   /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
   tied: string[];
 };
-type PlayerDataPartial<T extends Array<any> | Record<string, any>> = PlayerDataBase & {
-  complete: false;
-  rounds: RoundValuesPartial<T>;
-};
-type PlayerDataComplete<T extends Array<any> | Record<string, any>> = PlayerDataBase & {
+export type PlayerDataComplete<T extends Array<any> | Record<string, any>> = Omit<
+  PlayerDataPartial<T>,
+  "complete"
+> & {
   complete: true;
-  rounds: T;
+  roundsComplete: T;
 };
 export type PlayerData<T extends Array<any> | Record<string, any>> =
   | PlayerDataPartial<T>
   | PlayerDataComplete<T>;
-export type PlayerDataMap<T extends Array<any> | Record<string, any>> = PlayerDataBase & {
-  rounds: Map<RoundKey<T>, RoundsValue<T>>;
-};
-// export type GameResult<T extends Array<any> | Record<string, any>> = Map<
-//   string,
-//   CompletedPlayerData<T>
-// >;
 
 type GameMetadata<T extends readonly [...any[]] | Record<string, any>> = {
   startScore: (playerId: string) => number;
-  playerNameClass?: (data: PlayerDataMap<T>) => ClassBindings;
+  playerNameClass?: (data: PlayerData<T>) => ClassBindings;
   /**
    * Which direction to sort the positions
    * `"lowestFirst"` means the player(s) with the lowest score are in first place.
@@ -169,9 +154,6 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           [RoundsType]: "array",
           index,
         })) as RoundInternalArr<any, keyof T & number>[]);
-  //   (r: KeyedRound<any, keyof T & string> | IndexedRound<any, keyof T & number>, index) =>
-  //     isKeyedRound(r) ? { ...r, [RoundsType]: "object" } : { ...r, [RoundsType]: "array", index },
-  // );
   const roundKey = (round: RoundInternal<T>) =>
     roundsType === "object"
       ? ((round as unknown as RoundInternalObj<any, keyof T & string>).key as RoundKey<T>)
@@ -182,7 +164,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       players: { type: Array as PropType<string[]>, required: true },
       // rounds: { type: Array as PropType<R[]>, required: true },
       modelValue: {
-        type: Object as PropType<Map<string, RoundValuesPartial<T>>>,
+        type: Object as PropType<Map<string, Partial<T>>>,
         default: () => new Map(),
       },
       editable: { type: Boolean, default: false },
@@ -210,7 +192,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         }[],
       ) => true,
       ["update:playerScores"]: (result: PlayerData<T>[]) => true,
-      ["update:modelValue"]: (values: Map<string, RoundValuesPartial<T>>) => true,
+      ["update:modelValue"]: (values: Map<string, Partial<T>>) => true,
       ["update:modelValueSparse"]: (values: Map<string, Map<RoundKey<T>, RoundsValue<T>>>) => true,
       /* eslint-enable @typescript-eslint/no-unused-vars */
     },
@@ -277,7 +259,10 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         (gameData) => {
           gameData.forEach((rounds, pid) =>
             Object.entries(rounds).forEach(([round, val]) => {
-              turnData.value.set(makeTurnKey(pid, round), val);
+              if (val !== undefined) {
+                console.log("Setting round", makeTurnKey(pid, round), "to:", val); //XXX
+                turnData.value.set(makeTurnKey(pid, round), val);
+              }
             }),
           );
         },
@@ -416,6 +401,47 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           </tr>
         ) : undefined;
 
+      const mapRoundsToT = (turns: Map<RoundKey<T>, RoundsValue<T>>): T => {
+        switch (roundsType) {
+          case "object":
+            return rounds.reduce((obj, r) => {
+              const key = (r as RoundInternalObj<any, keyof T & string>).key as keyof T;
+              obj[key] = turns.get(key as RoundKey<T>)!;
+              return obj;
+            }, {} as T);
+          case "array":
+            return Array.from({ length: rounds.length }, (_, i) =>
+              turns.get(i as RoundKey<T>),
+            ) as unknown as T;
+        }
+      };
+
+      const playerData = computed(
+        () =>
+          new Map<string, PlayerData<T>>(
+            props.players.map((pid) => {
+              const scores = playerScores.value.get(pid)!;
+              const pos = playerPositions.value.playerLookup.get(pid)!;
+              const turns = playerTurns.value.get(pid)!;
+              const complete = turns.size === rounds.length;
+              const common = {
+                playerId: pid,
+                score: scores.score,
+                scores: scores.scores,
+                deltaScores: scores.deltaScores,
+                rounds: turns,
+                position: pos.pos,
+                tied: pos.players.filter((p) => pid !== p),
+              };
+              if (complete) {
+                return [pid, { complete, ...common, roundsComplete: mapRoundsToT(turns) }];
+              } else {
+                return [pid, { complete, ...common }];
+              }
+            }),
+          ),
+      );
+
       const completedPlayers = computed(
         () =>
           new Set(
@@ -428,6 +454,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         () => completedPlayers.value,
         (completed, prev) => {
           for (const pid of [...completed].filter((pid) => !prev.has(pid))) {
+            console.log(pid, playerTurns.value.get(pid)!, rounds.length); //XXX
             emit("playerCompleted", pid, true);
           }
           for (const pid of [...prev].filter((pid) => !completed.has(pid))) {
@@ -440,7 +467,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
       );
       /** Update when completed or when a turn changes, but with the completed value as a convenience */
       watch(
-        () => [allCompleted.value, turnData.value] as [boolean, Map<string, PlayerDataComplete<T>>],
+        () => [allCompleted.value, turnData.value] as [boolean, Map<string, RoundsValue<T>>],
         ([val], [prev]) => {
           if (val !== prev) {
             emit("completed", val);
@@ -448,42 +475,21 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
           if (val) {
             emit(
               "update:gameResult",
-              props.players.reduce((result, pid) => {
-                const scores = playerScores.value.get(pid)!;
-                const pos = playerPositions.value.playerLookup.get(pid)!;
-                const common = {
-                  complete: true as true,
-                  playerId: pid,
-                  score: scores.score,
-                  scores: scores.scores,
-                  deltaScores: scores.deltaScores,
-                  position: pos.pos,
-                  tied: pos.players.filter((p) => pid !== p),
-                };
-                const turns = playerTurns.value.get(pid)!;
-                switch (roundsType) {
-                  case "object":
-                    result.set(pid, {
-                      ...common,
-                      rounds: rounds.reduce((obj, r) => {
-                        const key = (r as RoundInternalObj<any, keyof T & string>).key as keyof T;
-                        obj[key] = turns.get(key as RoundKey<T>)!;
-                        return obj;
-                      }, {} as T),
-                    });
-                    break;
-                  case "array":
-                    result.set(pid, {
-                      ...common,
-                      rounds: Array.from(
-                        { length: rounds.length },
-                        (_, i) => turns.get(i as RoundKey<T>)!,
-                      ) as unknown as T,
-                    });
-                    break;
-                }
-                return result;
-              }, new Map<string, PlayerDataComplete<T>>()),
+              new Map<string, PlayerDataComplete<T>>(
+                props.players.flatMap((pid) => {
+                  const data = playerData.value.get(pid)!;
+                  if (data.complete) {
+                    return [[pid, data]];
+                  } else {
+                    console.error(
+                      `Attempted to return gameResult from an incomplete game for player: ${pid}`,
+                      "\nIgnoring playerData:",
+                      data,
+                    );
+                    return [];
+                  }
+                }),
+              ),
             );
           }
         },
@@ -495,67 +501,40 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         emit("update:positions", JSON.parse(JSON.stringify(positions.ordered)));
       });
 
-      watch(playerTurns, (turns) => {
-        emit(
-          "update:modelValue",
-          [...turns.entries()].reduce((result, [pid, playerTurns]) => {
-            switch (roundsType) {
-              case "object":
-                return result.set(
-                  pid,
-                  rounds.reduce((obj, r) => {
-                    const key = roundKey(r);
-                    obj[key] = playerTurns.get(key);
-                    return obj;
-                  }, {} as Partial<T>) as RoundValuesPartial<T>,
-                );
-              case "array":
-                return result.set(
-                  pid,
-                  Array.from({ length: rounds.length }, (_, i) =>
-                    playerTurns.get(i as RoundKey<T>),
-                  ) as unknown as RoundValuesPartial<T>,
-                );
-            }
-          }, new Map<string, RoundValuesPartial<T>>()),
-        );
-        emit("update:modelValueSparse", turns);
-        emit(
-          "update:playerScores",
-          props.players.map((pid) => {
-            const scores = playerScores.value.get(pid)!;
-            const pos = playerPositions.value.playerLookup.get(pid)!;
-            const common = {
-              complete: false as false,
-              playerId: pid,
-              score: scores.score,
-              scores: scores.scores,
-              deltaScores: scores.deltaScores,
-              position: pos.pos,
-              tied: pos.players.filter((p) => pid !== p),
-            };
-            const turns = playerTurns.value.get(pid)!;
-            switch (roundsType) {
-              case "object":
-                return {
-                  ...common,
-                  rounds: rounds.reduce((obj, r) => {
-                    const key = (r as RoundInternalObj<any, keyof T & string>).key as keyof T;
-                    obj[key] = turns.get(key as RoundKey<T>)!;
-                    return obj;
-                  }, {} as Partial<T>) as unknown as PlayerDataPartial<T>["rounds"],
-                };
-              case "array":
-                return {
-                  ...common,
-                  rounds: Array.from({ length: rounds.length }, (_, i) =>
-                    turns.get(i as RoundKey<T>),
-                  ) as unknown as PlayerDataPartial<T>["rounds"],
-                };
-            }
-          }),
-        );
-      });
+      watch(
+        playerTurns,
+        (turns) => {
+          emit(
+            "update:modelValue",
+            [...turns.entries()].reduce((result, [pid, playerTurns]) => {
+              switch (roundsType) {
+                case "object":
+                  return result.set(
+                    pid,
+                    rounds.reduce((obj, r) => {
+                      const key = roundKey(r);
+                      obj[key] = playerTurns.get(key);
+                      return obj;
+                    }, {} as Partial<T>),
+                  );
+                case "array":
+                  return result.set(
+                    pid,
+                    Array.from({ length: rounds.length }, (_, i) =>
+                      playerTurns.get(i as RoundKey<T>),
+                    ) as unknown as Partial<T>,
+                  );
+              }
+            }, new Map<string, Partial<T>>()),
+          );
+          emit("update:modelValueSparse", turns);
+          emit(
+            "update:playerScores",
+            props.players.map((pid) => playerData.value.get(pid)!),
+          );
+        },
+        { immediate: true },
+      );
 
       return () => (
         <table>
@@ -565,19 +544,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
               {props.players.map((pid) => {
                 const classes = extendClass(
                   gameMeta.playerNameClass !== undefined
-                    ? () => {
-                        const scores = playerScores.value.get(pid)!;
-                        const pos = playerPositions.value.playerLookup.get(pid)!;
-                        return gameMeta.playerNameClass!({
-                          playerId: pid,
-                          score: scores.score,
-                          scores: scores.scores,
-                          deltaScores: scores.deltaScores,
-                          rounds: playerTurns.value.get(pid)!,
-                          position: pos.pos,
-                          tied: pos.players.filter((p) => pid !== p),
-                        });
-                      }
+                    ? () => gameMeta.playerNameClass!(playerData.value.get(pid)!)
                     : undefined,
                   "playerName",
                 );

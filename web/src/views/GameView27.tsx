@@ -1,5 +1,9 @@
 import { defineComponent, ref, watch, type Ref, computed } from "vue";
-import createComponent, { type PlayerData, type TurnData } from "@/components/game/FixedRounds";
+import createComponent, {
+  type PlayerData,
+  type PlayerDataComplete,
+  type TurnData,
+} from "@/components/game/FixedRounds";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
@@ -201,7 +205,7 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    const gameResult = ref(null as null | Map<string, PlayerData<number[]>>);
+    const gameResult = ref(null as null | Map<string, PlayerDataComplete<number[]>>);
     const positions = ref(
       [] as {
         pos: number;
@@ -255,6 +259,8 @@ export default defineComponent({
       console.log(gameStats.value.get(playerId)); //XXX
     };
 
+    const playerScores = ref([] as PlayerData<number[]>[]);
+
     return () => (
       <div>
         {/* <PlayerSelection
@@ -271,6 +277,10 @@ export default defineComponent({
           onUpdate:gameResult={(result) => (gameResult.value = result)}
           onUpdate:positions={(order) => (positions.value = order)}
           onUpdate:modelValue={(vals) => (gameValues.value = vals)}
+          onUpdate:playerScores={(vals) => {
+            console.log(vals);
+            playerScores.value = vals;
+          }}
           onTurnTaken={updateGameStats}
         >
           {{
@@ -286,40 +296,35 @@ export default defineComponent({
                 : undefined,
             footer: () => (
               <>
-                {gameValues.value ? (
-                  <tr class="totalHitsRow">
-                    <th class="rowLabel">Hits</th>
-                    {[...gameValues.value.values()].map((rounds) => {
-                      const l = rounds.length;
-                      const { r, a } = rounds.reduce(
-                        ({ r, a }, h) => {
-                          if (h !== undefined && h > 0) {
-                            return { r: r + 1, a: a + h };
-                          }
-                          return { r, a };
-                        },
-                        { r: 0, a: 0 },
-                      );
-                      return (
-                        <td>
-                          <span>
-                            {r}/{l}
-                          </span>{" "}
-                          <span>
-                            ({a}/{l * 3})
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ) : undefined}
-                {gameValues.value &&
-                [...gameValues.value.values()].some(
-                  (rounds) => rounds.filter((r) => r !== undefined).length < 20,
-                ) ? (
+                <tr class="totalHitsRow">
+                  <th class="rowLabel">Hits</th>
+                  {playerScores.value.map(({ rounds }) => {
+                    const l = rounds.size;
+                    const { r, a } = [...rounds.values()].reduce(
+                      ({ r, a }, h) => {
+                        if (h > 0) {
+                          return { r: r + 1, a: a + h };
+                        }
+                        return { r, a };
+                      },
+                      { r: 0, a: 0 },
+                    );
+                    return (
+                      <td>
+                        <span>
+                          {r}/{l}
+                        </span>{" "}
+                        <span>
+                          ({a}/{l * 3})
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+                {playerScores.value.some(({ rounds }) => rounds.size > 0 && rounds.size < 20) ? (
                   <tr class="finalScoreRow">
                     <th class="rowLabel">Final score</th>
-                    {[...gameValues.value.values()].map((rounds) => {
+                    {playerScores.value.map(({ rounds }) => {
                       // const lastComplete = Math.max(...rounds.keys());
                       // const l_l2 = lastComplete - lastComplete * lastComplete
                       // Score - 105 - l_l2
@@ -327,7 +332,7 @@ export default defineComponent({
                       let scoreMin = 27;
                       let scoreMax = 27;
                       for (let i = 0; i < 20; i++) {
-                        const s = rounds[i];
+                        const s = rounds.get(i);
                         if (s === undefined) {
                           scoreMin -= 2 * (i + 1);
                           scoreMax += 6 * (i + 1);
