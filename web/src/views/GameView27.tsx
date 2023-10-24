@@ -1,7 +1,7 @@
 import { defineComponent, ref, watch, type Ref, computed } from "vue";
 import createComponent, {
-  type GameData,
-  type GameResult,
+  type PlayerData,
+  type PlayerDataComplete,
   type TurnData,
 } from "@/components/game/FixedRounds";
 import PlayerSelection from "@/components/PlayerSelection.vue";
@@ -171,17 +171,14 @@ export default defineComponent({
       "k7GNyCogBy79JE4qhvAj",
     ]);
     const gameDate = ref(new Date());
-    const gameValues = ref(undefined as undefined | GameData<number[]>);
+    const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
     const onGameIdUpdated = async (gameId: string | undefined, oldGameId?: string) => {
       if (gameId) {
         const data = (await getDoc(doc(db, "game/twentyseven/games", gameId))).data() as Result27;
         if (data !== undefined) {
           gameDate.value = new Date(data.date);
           const values = new Map(
-            Object.entries(data.game).map(([pid, { rounds }]) => [
-              pid,
-              new Map(rounds.map((r, i) => [i, r])),
-            ]),
+            Object.entries(data.game).map(([pid, { rounds }]) => [pid, rounds]),
           );
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
@@ -208,7 +205,7 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    const gameResult = ref(null as null | GameResult<number[]>);
+    const gameResult = ref(null as null | Map<string, PlayerDataComplete<number[]>>);
     const positions = ref(
       [] as {
         pos: number;
@@ -228,10 +225,9 @@ export default defineComponent({
       console.log("Game result:", gameResult.value);
       if (gameValues.value !== undefined) {
         const game = [...gameValues.value.entries()].reduce(
-          (obj, [pid, roundsMap]) => {
-            const rounds = Array.from({ length: 20 }, (_, i) => roundsMap.get(i + 1) ?? 0);
+          (obj, [pid, rounds]) => {
             obj[pid] = {
-              rounds,
+              rounds: rounds.map((r) => r ?? 0),
               //TODO: rest of values
             };
             return obj;
@@ -263,6 +259,8 @@ export default defineComponent({
       console.log(gameStats.value.get(playerId)); //XXX
     };
 
+    const playerScores = ref([] as PlayerData<number[]>[]);
+
     return () => (
       <div>
         {/* <PlayerSelection
@@ -271,14 +269,18 @@ export default defineComponent({
         <Game27
           class="game twentyseven"
           players={players.value}
-          values={gameValues.value}
+          modelValue={gameValues.value}
           editable={props.gameId.length < 1}
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
           onUpdate:gameResult={(result) => (gameResult.value = result)}
           onUpdate:positions={(order) => (positions.value = order)}
-          onUpdate:values={(vals) => (gameValues.value = vals)}
+          onUpdate:modelValue={(vals) => (gameValues.value = vals)}
+          onUpdate:playerScores={(vals) => {
+            console.log(vals);
+            playerScores.value = vals;
+          }}
           onTurnTaken={updateGameStats}
         >
           {{
@@ -292,11 +294,11 @@ export default defineComponent({
                     </th>
                   )
                 : undefined,
-            footer: (turns: GameData<number[]>) => (
+            footer: () => (
               <>
                 <tr class="totalHitsRow">
                   <th class="rowLabel">Hits</th>
-                  {[...turns.values()].map((rounds) => {
+                  {playerScores.value.map(({ rounds }) => {
                     const l = rounds.size;
                     const { r, a } = [...rounds.values()].reduce(
                       ({ r, a }, h) => {
@@ -319,13 +321,14 @@ export default defineComponent({
                     );
                   })}
                 </tr>
-                {[...turns.values()].some((rounds) => rounds.size < 20) ? (
+                {playerScores.value.some(({ rounds }) => rounds.size > 0 && rounds.size < 20) ? (
                   <tr class="finalScoreRow">
                     <th class="rowLabel">Final score</th>
-                    {[...turns.values()].map((rounds) => {
+                    {playerScores.value.map(({ rounds }) => {
                       // const lastComplete = Math.max(...rounds.keys());
-                      // Score - 105 + lastComplete * lastComplete - lastComplete
-                      // Score + 315 - lastComplete * lastComplete + lastComplete
+                      // const l_l2 = lastComplete - lastComplete * lastComplete
+                      // Score - 105 - l_l2
+                      // Score + 3 * (105 + l_l2)
                       let scoreMin = 27;
                       let scoreMax = 27;
                       for (let i = 0; i < 20; i++) {
