@@ -1,9 +1,5 @@
 import { defineComponent, ref, watch, type Ref, computed } from "vue";
-import createComponent, {
-  type GameData,
-  type GameResult,
-  type TurnData,
-} from "@/components/game/FixedRounds";
+import createComponent, { type PlayerData, type TurnData } from "@/components/game/FixedRounds";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
@@ -171,17 +167,14 @@ export default defineComponent({
       "k7GNyCogBy79JE4qhvAj",
     ]);
     const gameDate = ref(new Date());
-    const gameValues = ref(undefined as undefined | GameData<number[]>);
+    const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
     const onGameIdUpdated = async (gameId: string | undefined, oldGameId?: string) => {
       if (gameId) {
         const data = (await getDoc(doc(db, "game/twentyseven/games", gameId))).data() as Result27;
         if (data !== undefined) {
           gameDate.value = new Date(data.date);
           const values = new Map(
-            Object.entries(data.game).map(([pid, { rounds }]) => [
-              pid,
-              new Map(rounds.map((r, i) => [i, r])),
-            ]),
+            Object.entries(data.game).map(([pid, { rounds }]) => [pid, rounds]),
           );
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
@@ -208,7 +201,7 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    const gameResult = ref(null as null | GameResult<number[]>);
+    const gameResult = ref(null as null | Map<string, PlayerData<number[]>>);
     const positions = ref(
       [] as {
         pos: number;
@@ -228,10 +221,9 @@ export default defineComponent({
       console.log("Game result:", gameResult.value);
       if (gameValues.value !== undefined) {
         const game = [...gameValues.value.entries()].reduce(
-          (obj, [pid, roundsMap]) => {
-            const rounds = Array.from({ length: 20 }, (_, i) => roundsMap.get(i + 1) ?? 0);
+          (obj, [pid, rounds]) => {
             obj[pid] = {
-              rounds,
+              rounds: rounds.map((r) => r ?? 0),
               //TODO: rest of values
             };
             return obj;
@@ -271,14 +263,14 @@ export default defineComponent({
         <Game27
           class="game twentyseven"
           players={players.value}
-          values={gameValues.value}
+          modelValue={gameValues.value}
           editable={props.gameId.length < 1}
           onPlayerCompleted={(pid, complete) =>
             console.log(`player "${pid}" completion state changed: ${complete}`)
           }
           onUpdate:gameResult={(result) => (gameResult.value = result)}
           onUpdate:positions={(order) => (positions.value = order)}
-          onUpdate:values={(vals) => (gameValues.value = vals)}
+          onUpdate:modelValue={(vals) => (gameValues.value = vals)}
           onTurnTaken={updateGameStats}
         >
           {{
@@ -292,44 +284,50 @@ export default defineComponent({
                     </th>
                   )
                 : undefined,
-            footer: (turns: GameData<number[]>) => (
+            footer: () => (
               <>
-                <tr class="totalHitsRow">
-                  <th class="rowLabel">Hits</th>
-                  {[...turns.values()].map((rounds) => {
-                    const l = rounds.size;
-                    const { r, a } = [...rounds.values()].reduce(
-                      ({ r, a }, h) => {
-                        if (h > 0) {
-                          return { r: r + 1, a: a + h };
-                        }
-                        return { r, a };
-                      },
-                      { r: 0, a: 0 },
-                    );
-                    return (
-                      <td>
-                        <span>
-                          {r}/{l}
-                        </span>{" "}
-                        <span>
-                          ({a}/{l * 3})
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-                {[...turns.values()].some((rounds) => rounds.size < 20) ? (
+                {gameValues.value ? (
+                  <tr class="totalHitsRow">
+                    <th class="rowLabel">Hits</th>
+                    {[...gameValues.value.values()].map((rounds) => {
+                      const l = rounds.length;
+                      const { r, a } = rounds.reduce(
+                        ({ r, a }, h) => {
+                          if (h !== undefined && h > 0) {
+                            return { r: r + 1, a: a + h };
+                          }
+                          return { r, a };
+                        },
+                        { r: 0, a: 0 },
+                      );
+                      return (
+                        <td>
+                          <span>
+                            {r}/{l}
+                          </span>{" "}
+                          <span>
+                            ({a}/{l * 3})
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : undefined}
+                {gameValues.value &&
+                [...gameValues.value.values()].some(
+                  (rounds) => rounds.filter((r) => r !== undefined).length < 20,
+                ) ? (
                   <tr class="finalScoreRow">
                     <th class="rowLabel">Final score</th>
-                    {[...turns.values()].map((rounds) => {
+                    {[...gameValues.value.values()].map((rounds) => {
                       // const lastComplete = Math.max(...rounds.keys());
-                      // Score - 105 + lastComplete * lastComplete - lastComplete
-                      // Score + 315 - lastComplete * lastComplete + lastComplete
+                      // const l_l2 = lastComplete - lastComplete * lastComplete
+                      // Score - 105 - l_l2
+                      // Score + 3 * (105 + l_l2)
                       let scoreMin = 27;
                       let scoreMax = 27;
                       for (let i = 0; i < 20; i++) {
-                        const s = rounds.get(i);
+                        const s = rounds[i];
                         if (s === undefined) {
                           scoreMin -= 2 * (i + 1);
                           scoreMax += 6 * (i + 1);
