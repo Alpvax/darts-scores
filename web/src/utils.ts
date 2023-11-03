@@ -48,3 +48,12 @@ export const extendClass = (
     }, c);
   }
 };
+
+export type MoveFocus = {
+  /** Change focus to the next round input */
+  next: () => void;
+  /** Change focus to the previous round input */
+  prev: () => void;
+  /** Change focus to the first unentered round input */
+  empty: () => void;
+};

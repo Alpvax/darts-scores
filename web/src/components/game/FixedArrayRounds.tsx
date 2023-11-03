@@ -22,12 +22,6 @@ export type TurnData<T> = {
 export type PlayerTurnData<T> = TurnData<T> & {
   playerId: string;
 };
-export type PlayerTurnDataStats<
-  T,
-  S extends Record<string, boolean | number>,
-> = PlayerTurnData<T> & {
-  stats: S;
-};
 
 type MoveFocus = {
   /** Change focus to the next round input */
@@ -38,7 +32,7 @@ type MoveFocus = {
   empty: () => void;
 };
 
-export type RoundBase<T, S extends Record<string, boolean | number>> = {
+export type Round<T> = {
   /** The html to display.
    * @param value is a ref that can be used as a v-model value for the round input. Setting it will automatically move the focus to the next unentered input
    */
@@ -51,79 +45,18 @@ export type RoundBase<T, S extends Record<string, boolean | number>> = {
   ) => VNodeChild;
   label: string;
   deltaScore: (value: T | undefined, roundIndex: number, playerId: string) => number;
-  stats?: (data: PlayerTurnData<T | undefined>) => S;
-  rowClass?: (rowData: PlayerTurnDataStats<T | undefined, S>[]) => ClassBindings;
-  cellClass?: (data: PlayerTurnDataStats<T | undefined, S>) => ClassBindings;
+  rowClass?: (rowData: PlayerTurnData<T | undefined>[]) => ClassBindings;
+  cellClass?: (data: PlayerTurnData<T | undefined>) => ClassBindings;
   /** CSS selector to use to focus the input element of a round. Defaults to using `input` to select the `<input>` element */
   inputFocusSelector?: string;
 };
-export type KeyedRound<T, S extends Record<string, boolean | number>, K extends string> = RoundBase<
-  T,
-  S
-> & {
-  key: K;
-};
-export type IndexedRound<
-  T,
-  S extends Record<string, boolean | number>,
-  I extends number,
-> = RoundBase<T, S> & {
-  index?: I;
-};
-export type Round<T, S extends Record<string, boolean | number>> =
-  | KeyedRound<T, S, string>
-  | IndexedRound<T, S, number>;
 
-const isKeyedRound = <K extends string>(round: Round<any, any>): round is KeyedRound<any, any, K> =>
-  Object.hasOwn(round, "key");
+const makeTurnKey = (playerId: string, round: number): string => `${playerId}:${round}`;
 
-type RoundInternalArr<T, S extends Record<string, boolean | number>, I extends number> = Omit<
-  IndexedRound<T, S, I>,
-  "index"
-> & {
-  [RoundsType]: "array";
-  index: I;
-};
-type RoundInternalObj<T, S extends Record<string, boolean | number>, K extends string> = KeyedRound<
-  T,
-  S,
-  K
-> & {
-  [RoundsType]: "object";
-};
-type RoundInternal<
-  T extends Record<string, any> | readonly [...any[]],
-  S extends Record<string, boolean | number>,
-> = RoundInternalArr<any, S, keyof T & number> | RoundInternalObj<any, S, keyof T & string>;
+type RoundsValue<R extends readonly [...any[]]> = R[number];
+type RoundValue<R extends readonly [...any[]], K extends number> = K extends keyof R ? R[K] : never;
 
-type RoundKey<T extends Record<string, any> | readonly [...any[]]> = T extends [...any[]]
-  ? keyof T & number
-  : keyof T & string;
-
-const makeTurnKey = <T extends Record<string, any> | readonly [...any[]]>(
-  playerId: string,
-  round: RoundKey<T>,
-): string => `${playerId}:${round}`;
-
-type ObjValues<T> = T extends { [k: string]: infer U } ? U : never;
-type ObjArray<T> = ObjValues<T>[];
-
-type RoundList<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
-  ? {
-      [I in keyof R & number]: IndexedRound<R[I], any, I>;
-    }
-  : ObjArray<{
-      [K in keyof R & string]: KeyedRound<R[K], any, K>;
-    }>;
-type RoundsValue<R extends Record<string, any> | readonly [...any[]]> = R extends [...any[]]
-  ? R[number]
-  : ObjValues<{ [K in keyof R & string]: R[K] }>;
-type RoundValue<
-  R extends Record<string, any> | readonly [...any[]],
-  K extends string | number,
-> = K extends keyof R ? R[K] : never;
-
-type PlayerDataPartial<T extends Array<any> | Record<string, any>> = {
+type PlayerDataPartial<T extends readonly [...any[]]> = {
   playerId: string;
   /** Whether the player has completed all rounds */
   complete: false;
@@ -134,24 +67,24 @@ type PlayerDataPartial<T extends Array<any> | Record<string, any>> = {
   /** The scores differences for each round, only including played rounds */
   deltaScores: number[];
   /** A map of the completed rounds, with non completed rounds missing from the map */
-  rounds: Map<RoundKey<T>, RoundsValue<T>>;
+  rounds: Map<number, RoundsValue<T>>;
   /** The player's current position */
   position: number;
   /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
   tied: string[];
 };
-export type PlayerDataComplete<T extends Array<any> | Record<string, any>> = Omit<
+export type PlayerDataComplete<T extends readonly [...any[]]> = Omit<
   PlayerDataPartial<T>,
   "complete"
 > & {
   complete: true;
   roundsComplete: T;
 };
-export type PlayerData<T extends Array<any> | Record<string, any>> =
+export type PlayerData<T extends readonly [...any[]]> =
   | PlayerDataPartial<T>
   | PlayerDataComplete<T>;
 
-type GameMetadata<T extends readonly [...any[]] | Record<string, any>> = {
+type GameMetadata<T extends readonly [...any[]]> = {
   startScore: (playerId: string) => number;
   playerNameClass?: (data: PlayerData<T>) => ClassBindings;
   /**
@@ -160,29 +93,28 @@ type GameMetadata<T extends readonly [...any[]] | Record<string, any>> = {
    * `"highestFirst"` means the player(s) with the highest score are in first place.
    */
   positionOrder: "lowestFirst" | "highestFirst";
-  rounds: RoundList<T>;
+  rounds: {
+    [I in keyof T & number]: Round<T[I]>;
+  };
 };
 
-export const createComponent = <T extends readonly [...any[]] | Record<string, any>>(
-  gameMeta: GameMetadata<T>,
-) => {
+export const createComponent = <T extends readonly [...any[]]>(gameMeta: GameMetadata<T>) => {
   const roundsType = isKeyedRound(gameMeta.rounds[0]) ? "object" : "array";
   const rounds =
     roundsType === "object"
       ? (gameMeta.rounds.map((r) => ({ ...r, [RoundsType]: "object" })) as RoundInternalObj<
           any,
-          any,
           keyof T & string
         >[])
-      : (gameMeta.rounds.map((r: IndexedRound<any, any, keyof T & number>, index) => ({
+      : (gameMeta.rounds.map((r: IndexedRound<any, keyof T & number>, index) => ({
           ...r,
           [RoundsType]: "array",
           index,
-        })) as RoundInternalArr<any, any, keyof T & number>[]);
-  const roundKey = (round: RoundInternal<T, any>) =>
+        })) as RoundInternalArr<any, keyof T & number>[]);
+  const roundKey = (round: RoundInternal<T>) =>
     roundsType === "object"
-      ? ((round as unknown as RoundInternalObj<any, any, keyof T & string>).key as RoundKey<T>)
-      : ((round as unknown as RoundInternalArr<any, any, keyof T & number>).index as RoundKey<T>);
+      ? ((round as unknown as RoundInternalObj<any, keyof T & string>).key as RoundKey<T>)
+      : ((round as unknown as RoundInternalArr<any, keyof T & number>).index as RoundKey<T>);
   const focusSelectorBase = "td.turnInput";
   return defineComponent({
     props: {
@@ -430,7 +362,7 @@ export const createComponent = <T extends readonly [...any[]] | Record<string, a
         switch (roundsType) {
           case "object":
             return rounds.reduce((obj, r) => {
-              const key = (r as RoundInternalObj<any, any, keyof T & string>).key as keyof T;
+              const key = (r as RoundInternalObj<any, keyof T & string>).key as keyof T;
               obj[key] = turns.get(key as RoundKey<T>)!;
               return obj;
             }, {} as T);
