@@ -214,6 +214,10 @@ export function normaliseRounds<R extends RoundShapes>(rounds: RoundsList<R>) {
   }
 }
 
+export type RoundKey<R extends RoundShapes> = R extends [...any[]]
+  ? keyof R & number
+  : keyof R & string;
+
 type ExtractShape<R extends RoundShapes, Key extends keyof RoundShape> = R extends [...RoundShape[]]
   ? {
       [I in keyof R & number]: R[I][Key];
@@ -230,6 +234,12 @@ export type RoundsValuesMap<R extends RoundShapes> = R extends [...RoundShape<in
   ? Map<keyof R & number, T>
   : R extends Record<string, RoundShape<infer T>>
   ? Map<keyof R & string, T>
+  : [never, "unreachable", "R is neither array or object"];
+
+export type AnyRoundValue<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]
+  ? T
+  : R extends Record<string, RoundShape<infer T>>
+  ? T
   : [never, "unreachable", "R is neither array or object"];
 
 export type AnyPlayerTurnData<R extends RoundShapes> = R extends [...RoundShape<infer T, infer S>[]]

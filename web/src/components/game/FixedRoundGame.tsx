@@ -12,8 +12,10 @@ import {
   type RoundsValues,
   type RoundsValuesMap,
   type AnyPlayerTurnData,
+  type AnyRoundValue,
+  type RoundKey,
 } from "./Rounds";
-import { computed, defineComponent, nextTick, onMounted, type PropType } from "vue";
+import { computed, defineComponent, onMounted, ref, type PropType } from "vue";
 import { usePlayerStore } from "@/stores/player";
 
 export type GameMetadata<R extends RoundShapes, S extends Record<string, any>> = {
@@ -28,6 +30,9 @@ export type GameMetadata<R extends RoundShapes, S extends Record<string, any>> =
   gameStats?: (data: Omit<PlayerData<R, S>, "gameStats">) => S;
   rounds: RoundsList<R>;
 };
+
+const makeTurnKey = <R extends RoundShapes>(playerId: string, round: RoundKey<R>): string =>
+  `${playerId}:${round}`;
 
 export function createComponents<
   R extends Record<string, RoundShape> | readonly [...RoundShape[]],
@@ -91,12 +96,34 @@ export function createComponents<
         /* eslint-enable @typescript-eslint/no-unused-vars */
       },
       setup: (props, { slots, emit }) => {
+        const playerStore = usePlayerStore();
+        const turnData = ref(new Map<string, AnyRoundValue<R>>());
+
+        const playerTurns = computed(
+          () =>
+            new Map(
+              props.players.map((pid) => [
+                pid,
+                new Map(
+                  Object.entries(rounds.roundsLookup).flatMap(([k, round]) => {
+                    const turnKey = makeTurnKey(pid, k);
+                    return turnData.value.has(turnKey)
+                      ? [[round, turnData.value.get(turnKey)!]]
+                      : [];
+                  }),
+                ),
+              ]),
+            ),
+        );
+        const allCompleted = computed(() =>
+          props.players.every((pid) => playerTurns.value.get(pid)!.size === rounds.ordered.length),
+        );
+
         const { focusEmpty, create: makeMoveFocus } = rounds.makeMoveFocusFactory(
           computed(() => props.players.length),
           allCompleted,
         );
         onMounted(() => focusEmpty());
-        const playerStore = usePlayerStore();
 
         return () => <>TODO</>;
       },
