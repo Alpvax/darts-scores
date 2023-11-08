@@ -15,7 +15,7 @@ import {
   type AnyRoundValue,
   type RoundKey,
 } from "./Rounds";
-import { computed, defineComponent, onMounted, ref, type PropType } from "vue";
+import { computed, defineComponent, onMounted, ref, type PropType, type Ref } from "vue";
 import { usePlayerStore } from "@/stores/player";
 
 export type GameMetadata<R extends RoundShapes, S extends Record<string, any>> = {
@@ -34,6 +34,16 @@ export type GameMetadata<R extends RoundShapes, S extends Record<string, any>> =
 const makeTurnKey = <R extends RoundShapes>(playerId: string, round: RoundKey<R>): string =>
   `${playerId}:${round}`;
 
+type DisplayPosRowPositions = "head" | "body" | "foot" | "none";
+type PlayerPositionsLookup = Map<
+  string,
+  {
+    pos: number;
+    posOrdinal: string;
+    players: string[];
+  }
+>;
+
 export function createComponents<
   R extends Record<string, RoundShape> | readonly [...RoundShape[]],
   S extends Record<string, any>,
@@ -42,6 +52,73 @@ export function createComponents<
     ? normaliseRecordRounds(gameMeta.rounds as KeyedRound<any, any, any>[])
     : normaliseTupleRounds(gameMeta.rounds as Round<any, any>[]);
 
+  const makePosRow =
+    (
+      displayPositions: Ref<DisplayPosRowPositions>,
+      players: Ref<string[]>,
+      playerLookup: Ref<PlayerPositionsLookup>,
+      smallClass: boolean,
+    ) =>
+    (displayWhen: DisplayPosRowPositions) =>
+      // Only display when requested, and only if everyone isn't tied
+      displayPositions.value === displayWhen ? (
+        <tr class={{ positionRow: true, small: smallClass }}>
+          <td class="rowLabel">Position</td>
+          {players.value.map((pid) => {
+            const { pos, posOrdinal } = playerLookup.value.get(pid)!;
+            return (
+              <td>
+                {pos}
+                <sup>{posOrdinal}</sup>
+              </td>
+            );
+          })}
+        </tr>
+      ) : undefined;
+  const makePosCalc = (scores: Ref<Map<string, number>>) =>
+    computed(() => {
+      const orderedScores = [...scores.value.values()];
+      orderedScores.sort((a, b) => {
+        switch (gameMeta.positionOrder) {
+          case "lowestFirst":
+            return a - b;
+          case "highestFirst":
+            return b - a;
+        }
+      });
+      const scorePlayerLookup = [...scores.value.entries()].reduce((acc, [pid, score]) => {
+        if (acc.has(score)) {
+          acc.get(score)!.push(pid);
+        } else {
+          acc.set(score, [pid]);
+        }
+        return acc;
+      }, new Map<number, string[]>());
+
+      const { ordered, playerLookup } = orderedScores.reduce(
+        ({ scores, ordered, playerLookup }, score, idx) => {
+          const pos = idx + 1;
+          // Assumes < 21 players in a game
+          const posOrdinal = pos === 1 ? "st" : pos === 2 ? "nd" : pos === 3 ? "rd" : "th";
+          if (!scores.has(score)) {
+            scores.add(score);
+            const players = scorePlayerLookup.get(score)!;
+            ordered.push({ pos, posOrdinal, players });
+            for (const p of players) {
+              playerLookup.set(p, { pos, posOrdinal, players });
+            }
+          }
+          return { scores, ordered, playerLookup };
+        },
+        {
+          scores: new Set<number>(),
+          ordered: [] as { pos: number; posOrdinal: string; players: string[] }[],
+          playerLookup: new Map<string, { pos: number; posOrdinal: string; players: string[] }>(),
+        },
+      );
+
+      return { ordered, playerLookup };
+    });
   return {
     completed: defineComponent({
       props: {
@@ -64,7 +141,7 @@ export function createComponents<
         };
       },
     }),
-    inProgress: defineComponent({
+    mutable: defineComponent({
       props: {
         players: { type: Array as PropType<string[]>, required: true },
         // rounds: { type: Array as PropType<R[]>, required: true },
@@ -73,13 +150,13 @@ export function createComponents<
           default: () => new Map(),
         },
         displayPositions: {
-          type: String as PropType<"head" | "body" | "foot" | "none">,
+          type: String as PropType<DisplayPosRowPositions>,
           default: "head",
         },
       },
       emits: {
         /* eslint-disable @typescript-eslint/no-unused-vars */
-        playerCompleted: (playerId: string, completed: boolean) => true,
+        // playerCompleted: (playerId: string, completed: boolean) => true,
         completed: (completed: boolean) => true,
         turnTaken: (turnData: AnyPlayerTurnData<R>) => true,
         /** Emitted only when the entire game is complete, then each time the result changes */
@@ -124,6 +201,35 @@ export function createComponents<
           allCompleted,
         );
         onMounted(() => focusEmpty());
+
+        const playerScores = computed(
+          () =>
+            new Map(
+              props.players.map((pid) => {
+                const turns = playerTurns.value.get(pid);
+                return [
+                  pid,
+                  rounds.ordered.reduce(
+                    ({ score, scores, deltaScores, lastPlayedRound }, r, i) => {
+                      const round = (isKeyedRound(r) ? r.key : r.index) as RoundKey<R>;
+                      const delta = r.deltaScore(turns?.get(round), pid, i);
+                      score += delta;
+                      scores.push(score);
+                      deltaScores.push(delta);
+                      lastPlayedRound = i;
+                      return { score, scores, deltaScores, lastPlayedRound };
+                    },
+                    {
+                      score: gameMeta.startScore(pid),
+                      scores: [] as number[],
+                      deltaScores: [] as number[],
+                      lastPlayedRound: -1,
+                    },
+                  ),
+                ];
+              }),
+            ),
+        );
 
         return () => <>TODO</>;
       },
