@@ -242,6 +242,12 @@ export type AnyRoundValue<R extends RoundShapes> = R extends [...RoundShape<infe
   ? T
   : [never, "unreachable", "R is neither array or object"];
 
+export type AnyRoundStats<R extends RoundShapes> = R extends [...RoundShape<any, infer S>[]]
+  ? S
+  : R extends Record<string, RoundShape<any, infer S>>
+  ? S
+  : [never, "unreachable", "R is neither array or object"];
+
 export type AnyPlayerTurnData<R extends RoundShapes> = R extends [...RoundShape<infer T, infer S>[]]
   ? PlayerTurnDataStats<T, S>
   : R extends Record<string, RoundShape<infer T, infer S>>

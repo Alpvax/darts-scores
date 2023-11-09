@@ -1,5 +1,5 @@
 import type { ClassBindings, MoveFocus } from "@/utils";
-import type { PlayerData, PlayerDataComplete } from "./PlayerData";
+import type { PlayerData, PlayerDataComplete, PlayerDataPartial } from "./PlayerData";
 import {
   isKeyedRound,
   normaliseRecordRounds,
@@ -14,6 +14,7 @@ import {
   type AnyPlayerTurnData,
   type AnyRoundValue,
   type RoundKey,
+  type AnyRoundStats,
 } from "./Rounds";
 import { computed, defineComponent, onMounted, ref, type PropType, type Ref } from "vue";
 import { usePlayerStore } from "@/stores/player";
@@ -210,22 +211,74 @@ export function createComponents<
                 return [
                   pid,
                   rounds.ordered.reduce(
-                    ({ score, scores, deltaScores, lastPlayedRound }, r, i) => {
+                    ({ score, scores, deltaScores, roundStats }, r, i) => {
                       const round = (isKeyedRound(r) ? r.key : r.index) as RoundKey<R>;
-                      const delta = r.deltaScore(turns?.get(round), pid, i);
+                      const value = turns?.get(round);
+                      const delta = r.deltaScore(value, pid, i);
                       score += delta;
                       scores.push(score);
                       deltaScores.push(delta);
-                      lastPlayedRound = i;
-                      return { score, scores, deltaScores, lastPlayedRound };
+                      roundStats.push(
+                        r.stats ? r.stats({ playerId: pid, score, deltaScore: delta, value }) : {},
+                      );
+                      // lastPlayedRound = i;
+                      return { score, scores, deltaScores, roundStats };
                     },
                     {
                       score: gameMeta.startScore(pid),
                       scores: [] as number[],
                       deltaScores: [] as number[],
-                      lastPlayedRound: -1,
+                      roundStats: [] as AnyRoundStats<R>[],
+                      // lastPlayedRound: -1,
                     },
                   ),
+                ];
+              }),
+            ),
+        );
+
+        const playerPositions = makePosCalc(
+          computed(
+            () =>
+              new Map([...playerScores.value.entries()].map(([pid, { score }]) => [pid, score])),
+          ),
+        );
+
+        const playerData = computed(
+          () =>
+            new Map(
+              [...playerScores.value.entries()].map(([playerId, score]) => {
+                const pos = playerPositions.value.playerLookup.get(playerId)!;
+                const partialData: Omit<PlayerDataPartial<R, S>, "gameStats"> = {
+                  playerId,
+                  complete: false, //TODO: complete?
+                  score: score.score,
+                  scores: score.scores,
+                  deltaScores: score.deltaScores,
+                  rounds: new Map(
+                    Object.keys(rounds.roundsLookup).flatMap(([k]) => {
+                      const turnKey = makeTurnKey(playerId, k);
+                      return turnData.value.has(turnKey)
+                        ? ([[k, turnData.value.get(turnKey)!]] as [RoundKey<R>, AnyRoundValue<R>][])
+                        : [];
+                    }),
+                  ),
+                  roundStats: new Map(
+                    score.roundStats.map((s, i) => {
+                      const round = rounds.ordered[i];
+                      const k = (isKeyedRound(round) ? round.key : i) as keyof R;
+                      return [k, s];
+                    }),
+                  ),
+                  position: pos.pos,
+                  tied: pos.players.filter((pid) => pid !== playerId),
+                };
+                return [
+                  playerId,
+                  { ...partialData, gameStats: gameMeta.gameStats!(partialData) } as PlayerData<
+                    R,
+                    S
+                  >,
                 ];
               }),
             ),
