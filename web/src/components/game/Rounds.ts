@@ -218,6 +218,9 @@ export type RoundKey<R extends RoundShapes> = R extends [...any[]]
   ? keyof R & number
   : keyof R & string;
 
+export const roundKey = <R extends RoundShapes>(round: Round<any, any>): RoundKey<R> =>
+  (isKeyedRound(round) ? round.key : round.index) as RoundKey<R>;
+
 type ExtractShape<R extends RoundShapes, Key extends keyof RoundShape> = R extends [...RoundShape[]]
   ? {
       [I in keyof R & number]: R[I][Key];
@@ -230,10 +233,17 @@ type ExtractShape<R extends RoundShapes, Key extends keyof RoundShape> = R exten
 export type RoundsValues<R extends RoundShapes> = ExtractShape<R, "value">;
 export type RoundsStats<R extends RoundShapes> = ExtractShape<R, "stats">;
 
+type Test = RoundsValues<{ value: number; stats: {}}[]>
+
 export type RoundsValuesMap<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]
   ? Map<keyof R & number, T>
   : R extends Record<string, RoundShape<infer T>>
   ? Map<keyof R & string, T>
+  : [never, "unreachable", "R is neither array or object"];
+export type RoundsStatsMap<R extends RoundShapes> = R extends [...RoundShape<any, infer S>[]]
+  ? Map<keyof R & number, S>
+  : R extends Record<string, RoundShape<any, infer S>>
+  ? Map<keyof R & string, S>
   : [never, "unreachable", "R is neither array or object"];
 
 export type AnyRoundValue<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]

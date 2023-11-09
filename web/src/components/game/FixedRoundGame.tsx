@@ -1,4 +1,4 @@
-import type { ClassBindings, MoveFocus } from "@/utils";
+import { formatClasses, type ClassBindings, type MoveFocus } from "@/utils";
 import type { PlayerData, PlayerDataComplete, PlayerDataPartial } from "./PlayerData";
 import {
   isKeyedRound,
@@ -15,6 +15,7 @@ import {
   type AnyRoundValue,
   type RoundKey,
   type AnyRoundStats,
+  roundKey,
 } from "./Rounds";
 import { computed, defineComponent, onMounted, ref, type PropType, type Ref } from "vue";
 import { usePlayerStore } from "@/stores/player";
@@ -159,7 +160,7 @@ export function createComponents<
         /* eslint-disable @typescript-eslint/no-unused-vars */
         // playerCompleted: (playerId: string, completed: boolean) => true,
         completed: (completed: boolean) => true,
-        turnTaken: (turnData: AnyPlayerTurnData<R>) => true,
+        turnTaken: (turnData: AnyPlayerTurnData<R> & { round: RoundKey<R> }) => true,
         /** Emitted only when the entire game is complete, then each time the result changes */
         ["update:gameResult"]: (result: Map<string, PlayerDataComplete<R, S>>) => true,
         ["update:positions"]: (
@@ -196,7 +197,12 @@ export function createComponents<
         const allCompleted = computed(() =>
           props.players.every((pid) => playerTurns.value.get(pid)!.size === rounds.ordered.length),
         );
-
+        const posRow = makePosRow(
+          computed(() => props.displayPositions),
+          computed(() => props.players),
+          computed(() => playerPositions.value.playerLookup),
+          true,
+        );
         const { focusEmpty, create: makeMoveFocus } = rounds.makeMoveFocusFactory(
           computed(() => props.players.length),
           allCompleted,
@@ -212,8 +218,7 @@ export function createComponents<
                   pid,
                   rounds.ordered.reduce(
                     ({ score, scores, deltaScores, roundStats }, r, i) => {
-                      const round = (isKeyedRound(r) ? r.key : r.index) as RoundKey<R>;
-                      const value = turns?.get(round);
+                      const value = turns?.get(roundKey(r));
                       const delta = r.deltaScore(value, pid, i);
                       score += delta;
                       scores.push(score);
@@ -284,8 +289,92 @@ export function createComponents<
             ),
         );
 
-        return () => <>TODO</>;
+        return () => (
+          <table>
+            <thead>
+              <tr>
+                {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
+                {props.players.map((pid) => {
+                  const classes = formatClasses(
+                    gameMeta.playerNameClass !== undefined
+                      ? () => gameMeta.playerNameClass!(playerData.value.get(pid)!)
+                      : undefined,
+                    "playerName",
+                  );
+                  return <th class={classes}>{playerStore.playerName(pid).value}</th>;
+                })}
+              </tr>
+              {posRow("head")}
+            </thead>
+            <tbody>
+              {posRow("body")}
+              {rounds.ordered.map((r, idx) => {
+                const rKey: RoundKey<R> = roundKey(r);
+                const playerRowData = props.players.map((pid) => {
+                  const pData = playerData.value.get(pid)!;
+                  return {
+                    playerId: pid,
+                    score: pData.scores[idx],
+                    deltaScore: pData.deltaScores[idx],
+                    value: pData.rounds.get(rKey) as AnyRoundValue<R>,
+                    stats: pData.roundStats.get(rKey) as AnyRoundStats<R>,
+                  };
+                });
+                const rowClass: ClassBindings | undefined = r.rowClass
+                  ? r.rowClass(playerRowData)
+                  : undefined;
+                return (
+                  <tr class={rowClass}>
+                    <td class="rowLabel">{r.label}</td>
+                    {playerRowData.map((pData, pIdx) => {
+                      const cellClass = formatClasses(
+                        r.cellClass !== undefined ? () => r.cellClass!(pData) : undefined,
+                        "turnInput",
+                        { unplayed: pData.value === undefined },
+                      );
+                      return (
+                        <td class={cellClass} data-round-index={idx}>
+                          {r.display({
+                            score: pData.score,
+                            deltaScore: pData.deltaScore,
+                            value: computed({
+                              get: () => pData.value,
+                              set: (val) => {
+                                turnData.value.set(
+                                  makeTurnKey(pData.playerId, rKey),
+                                  val as AnyRoundValue<R>,
+                                );
+                                emit("turnTaken", {
+                                  playerId: pData.playerId,
+                                  round: rKey,
+                                  score: pData.score,
+                                  deltaScore: pData.deltaScore,
+                                  value: val,
+                                  stats: pData.stats,
+                                } as unknown as AnyPlayerTurnData<R> & { round: RoundKey<R> });
+                                focusEmpty();
+                              },
+                            }),
+                            editable: true,
+                            focus: makeMoveFocus(pIdx, idx),
+                          })}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+            {props.displayPositions === "foot" || slots.footer ? (
+              <tfoot>{[posRow("foot"), (slots.footer as () => any)()]}</tfoot>
+            ) : (
+              {}
+            )}
+          </table>
+        );
       },
     }),
   };
 }
+
+export default createComponents;

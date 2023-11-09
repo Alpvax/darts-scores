@@ -1,5 +1,5 @@
 import { usePlayerStore } from "@/stores/player";
-import { type ClassBindings, extendClass } from "@/utils";
+import { type ClassBindings, formatClasses } from "@/utils";
 import {
   computed,
   defineComponent,
@@ -499,7 +499,7 @@ export const createComponent = <T extends readonly [...any[]]>(gameMeta: GameMet
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {props.players.map((pid) => {
-                const classes = extendClass(
+                const classes = formatClasses(
                   gameMeta.playerNameClass !== undefined
                     ? () => gameMeta.playerNameClass!(playerData.value.get(pid)!)
                     : undefined,
@@ -531,7 +531,7 @@ export const createComponent = <T extends readonly [...any[]]>(gameMeta: GameMet
                 <tr class={rowClass}>
                   <td class="rowLabel">{r.label}</td>
                   {playerRowData.map(({ playerId, score, deltaScore, value }, pIdx) => {
-                    const cellClass = extendClass(
+                    const cellClass = formatClasses(
                       r.cellClass !== undefined
                         ? () => r.cellClass!({ playerId, score, deltaScore, value })
                         : undefined,

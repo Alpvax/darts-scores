@@ -1,4 +1,4 @@
-import type { RoundShapes, RoundsStats, RoundsValues } from "./Rounds";
+import type { RoundShapes, RoundsStatsMap, RoundsValues, RoundsValuesMap } from "./Rounds";
 
 export type PlayerDataPartial<R extends RoundShapes, S extends Record<string, any>> = {
   playerId: string;
@@ -11,9 +11,9 @@ export type PlayerDataPartial<R extends RoundShapes, S extends Record<string, an
   /** The scores differences for each round, only including played rounds */
   deltaScores: number[];
   /** A map of the completed rounds, with non completed rounds missing from the map */
-  rounds: Map<keyof R, RoundsValues<R>>;
+  rounds: RoundsValuesMap<R>;
   /** A map of round to stats, with non completed rounds missing from the map */
-  roundStats: Map<keyof R, RoundsStats<R>>;
+  roundStats: RoundsStatsMap<R>;
   /** The player's current position */
   position: number;
   /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
