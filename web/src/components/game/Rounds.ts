@@ -233,7 +233,7 @@ type ExtractShape<R extends RoundShapes, Key extends keyof RoundShape> = R exten
 export type RoundsValues<R extends RoundShapes> = ExtractShape<R, "value">;
 export type RoundsStats<R extends RoundShapes> = ExtractShape<R, "stats">;
 
-type Test = RoundsValues<{ value: number; stats: {}}[]>
+type Test = RoundsValues<{ value: number; stats: {} }[]>;
 
 export type RoundsValuesMap<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]
   ? Map<keyof R & number, T>

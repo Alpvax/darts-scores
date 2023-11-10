@@ -50,7 +50,7 @@ export type PlayerData<R extends RoundShapes, S extends Record<string, any>> =
   | PlayerDataComplete<R, S>;
 
 // ================ Player Positions =======================
-export type PositionsOrder = "lowestFirst" | "highestFirst";
+export type PositionsOrder = "highestFirst" | "lowestFirst";
 export type DisplayPosRowPositions = "head" | "body" | "foot" | "none";
 
 export const makePlayerPositions = (
@@ -61,10 +61,10 @@ export const makePlayerPositions = (
     const orderedScores = [...playerScores.value.values()];
     orderedScores.sort((a, b) => {
       switch (positionOrder) {
-        case "lowestFirst":
-          return a - b;
         case "highestFirst":
           return b - a;
+        case "lowestFirst":
+          return a - b;
       }
     });
     const scorePlayerLookup = [...playerScores.value.entries()].reduce((acc, [pid, score]) => {

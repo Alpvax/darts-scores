@@ -1,9 +1,13 @@
 import { defineComponent, ref, watch, type Ref, computed } from "vue";
-import { createComponent } from "@/components/game/fixed/array";
+import {
+  createComponent,
+  type PlayerDataNoStats,
+  type PlayerDataWStats,
+} from "@/components/game/fixed/array";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
-import { arrayRoundsBuilder } from "@/gameUtils/round";
+import { arrayRoundsBuilder, type RoundWStats } from "@/gameUtils/round";
 
 const numfmt = new Intl.NumberFormat(undefined, { style: "decimal", signDisplay: "always" });
 const dateDayMonthFmt = new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short" });
@@ -128,6 +132,11 @@ const Game27 = createComponent({
     fatNick: rounds.size > 0 && [...rounds.values()].reduce((a: number, r) => a + r.value, 0) <= 0,
     allPositive: rounds.size > 0 && !scores.filter((_, i) => rounds.has(i)).some((s) => s < 0),
   }),
+  // playerNameClass: ({ gameStats }: PlayerDataWStats<number, RoundWStats<number, {
+  //   cliff: boolean;
+  //   doubledouble: boolean;
+  //   hits: number;
+  // }>, { fatNick: boolean, allPositive: boolean }>) => gameStats,
   playerNameClass: ({ gameStats }) => gameStats,
 });
 
@@ -212,61 +221,61 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    const gameResult = ref(null as null | Map<string, PlayerDataComplete<number[]>>);
-    const positions = ref(
-      [] as {
-        pos: number;
-        posOrdinal: string;
-        players: string[];
-      }[],
-    );
-    const winners = computed(() =>
-      gameResult.value !== null && positions.value.length > 0
-        ? positions.value[0].players
-        : undefined,
-    );
-    const submitted = ref(false);
+    // const gameResult = ref(null as null | Map<string, PlayerDataComplete<number[]>>);
+    // const positions = ref(
+    //   [] as {
+    //     pos: number;
+    //     posOrdinal: string;
+    //     players: string[];
+    //   }[],
+    // );
+    // const winners = computed(() =>
+    //   gameResult.value !== null && positions.value.length > 0
+    //     ? positions.value[0].players
+    //     : undefined,
+    // );
+    // const submitted = ref(false);
 
-    const submitScores = () => {
-      console.log("Submitting scores:", gameValues.value);
-      console.log("Game result:", gameResult.value);
-      if (gameValues.value !== undefined) {
-        const game = [...gameValues.value.entries()].reduce(
-          (obj, [pid, rounds]) => {
-            obj[pid] = {
-              rounds: rounds.map((r) => r ?? 0),
-              //TODO: rest of values
-            };
-            return obj;
-          },
-          {} as Record<string, { rounds: number[] }>,
-        ); //Result27["game"])
-        console.log(game); //XXX
-      }
-    };
+    // const submitScores = () => {
+    //   console.log("Submitting scores:", gameValues.value);
+    //   console.log("Game result:", gameResult.value);
+    //   if (gameValues.value !== undefined) {
+    //     const game = [...gameValues.value.entries()].reduce(
+    //       (obj, [pid, rounds]) => {
+    //         obj[pid] = {
+    //           rounds: rounds.map((r) => r ?? 0),
+    //           //TODO: rest of values
+    //         };
+    //         return obj;
+    //       },
+    //       {} as Record<string, { rounds: number[] }>,
+    //     ); //Result27["game"])
+    //     console.log(game); //XXX
+    //   }
+    // };
 
-    type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
-    type GameStats = {
-      roundStats: Map<number, RoundStats>;
-    };
-    const gameStats = ref(new Map<string, GameStats>());
+    // type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
+    // type GameStats = {
+    //   roundStats: Map<number, RoundStats>;
+    // };
+    // const gameStats = ref(new Map<string, GameStats>());
 
-    const updateGameStats = (playerId: string, roundIdx: number, data: TurnData<number>) => {
-      if (!gameStats.value.has(playerId)) {
-        gameStats.value.set(playerId, {
-          roundStats: new Map(),
-        });
-      }
-      const stats = gameStats.value.get(playerId)!.roundStats;
-      stats.set(roundIdx + 1, {
-        cliff: data.value === 3,
-        dd: data.value >= 2,
-        hit: data.value >= 1,
-      });
-      console.log(gameStats.value.get(playerId)); //XXX
-    };
+    // const updateGameStats = (playerId: string, roundIdx: number, data: TurnData<number>) => {
+    //   if (!gameStats.value.has(playerId)) {
+    //     gameStats.value.set(playerId, {
+    //       roundStats: new Map(),
+    //     });
+    //   }
+    //   const stats = gameStats.value.get(playerId)!.roundStats;
+    //   stats.set(roundIdx + 1, {
+    //     cliff: data.value === 3,
+    //     dd: data.value >= 2,
+    //     hit: data.value >= 1,
+    //   });
+    //   console.log(gameStats.value.get(playerId)); //XXX
+    // };
 
-    const playerScores = ref([] as PlayerData<number[]>[]);
+    // const playerScores = ref([] as PlayerData<number[]>[]);
 
     return () => (
       <div>
@@ -278,17 +287,17 @@ export default defineComponent({
           players={players.value}
           modelValue={gameValues.value}
           editable={props.gameId.length < 1}
-          onPlayerCompleted={(pid, complete) =>
-            console.log(`player "${pid}" completion state changed: ${complete}`)
-          }
-          onUpdate:gameResult={(result) => (gameResult.value = result)}
-          onUpdate:positions={(order) => (positions.value = order)}
-          onUpdate:modelValue={(vals) => (gameValues.value = vals)}
-          onUpdate:playerScores={(vals) => {
-            console.log(vals);
-            playerScores.value = vals;
-          }}
-          onTurnTaken={updateGameStats}
+          // onPlayerCompleted={(pid, complete) =>
+          //   console.log(`player "${pid}" completion state changed: ${complete}`)
+          // }
+          // onUpdate:gameResult={(result) => (gameResult.value = result)}
+          // onUpdate:positions={(order) => (positions.value = order)}
+          // onUpdate:modelValue={(vals) => (gameValues.value = vals)}
+          // onUpdate:playerScores={(vals) => {
+          //   console.log(vals);
+          //   playerScores.value = vals;
+          // }}
+          // onTurnTaken={updateGameStats}
         >
           {{
             topLeftCell:
@@ -301,70 +310,70 @@ export default defineComponent({
                     </th>
                   )
                 : undefined,
-            footer: () => (
-              <>
-                <tr class="totalHitsRow">
-                  <th class="rowLabel">Hits</th>
-                  {playerScores.value.map(({ rounds }) => {
-                    const l = rounds.size;
-                    const { r, a } = [...rounds.values()].reduce(
-                      ({ r, a }, h) => {
-                        if (h > 0) {
-                          return { r: r + 1, a: a + h };
-                        }
-                        return { r, a };
-                      },
-                      { r: 0, a: 0 },
-                    );
-                    return (
-                      <td>
-                        <span>
-                          {r}/{l}
-                        </span>{" "}
-                        <span>
-                          ({a}/{l * 3})
-                        </span>
-                      </td>
-                    );
-                  })}
-                </tr>
-                {playerScores.value.some(({ rounds }) => rounds.size > 0 && rounds.size < 20) ? (
-                  <tr class="finalScoreRow">
-                    <th class="rowLabel">Final score</th>
-                    {playerScores.value.map(({ rounds }) => {
-                      // const lastComplete = Math.max(...rounds.keys());
-                      // const l_l2 = lastComplete - lastComplete * lastComplete
-                      // Score - 105 - l_l2
-                      // Score + 3 * (105 + l_l2)
-                      let scoreMin = 27;
-                      let scoreMax = 27;
-                      for (let i = 0; i < 20; i++) {
-                        const s = rounds.get(i);
-                        if (s === undefined) {
-                          scoreMin -= 2 * (i + 1);
-                          scoreMax += 6 * (i + 1);
-                        } else {
-                          const delta = (i + 1) * (s > 0 ? 2 * s : -2);
-                          console.log("score", i, s, delta);
-                          scoreMin += delta;
-                          scoreMax += delta;
-                        }
-                      }
-                      return scoreMin === scoreMax ? (
-                        <td>{scoreMin}</td>
-                      ) : (
-                        <td>
-                          {scoreMin} to {scoreMax}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ) : undefined}
-              </>
-            ),
+            // footer: () => (
+            //   <>
+            //     <tr class="totalHitsRow">
+            //       <th class="rowLabel">Hits</th>
+            //       {playerScores.value.map(({ rounds }) => {
+            //         const l = rounds.size;
+            //         const { r, a } = [...rounds.values()].reduce(
+            //           ({ r, a }, h) => {
+            //             if (h > 0) {
+            //               return { r: r + 1, a: a + h };
+            //             }
+            //             return { r, a };
+            //           },
+            //           { r: 0, a: 0 },
+            //         );
+            //         return (
+            //           <td>
+            //             <span>
+            //               {r}/{l}
+            //             </span>{" "}
+            //             <span>
+            //               ({a}/{l * 3})
+            //             </span>
+            //           </td>
+            //         );
+            //       })}
+            //     </tr>
+            //     {playerScores.value.some(({ rounds }) => rounds.size > 0 && rounds.size < 20) ? (
+            //       <tr class="finalScoreRow">
+            //         <th class="rowLabel">Final score</th>
+            //         {playerScores.value.map(({ rounds }) => {
+            //           // const lastComplete = Math.max(...rounds.keys());
+            //           // const l_l2 = lastComplete - lastComplete * lastComplete
+            //           // Score - 105 - l_l2
+            //           // Score + 3 * (105 + l_l2)
+            //           let scoreMin = 27;
+            //           let scoreMax = 27;
+            //           for (let i = 0; i < 20; i++) {
+            //             const s = rounds.get(i);
+            //             if (s === undefined) {
+            //               scoreMin -= 2 * (i + 1);
+            //               scoreMax += 6 * (i + 1);
+            //             } else {
+            //               const delta = (i + 1) * (s > 0 ? 2 * s : -2);
+            //               console.log("score", i, s, delta);
+            //               scoreMin += delta;
+            //               scoreMax += delta;
+            //             }
+            //           }
+            //           return scoreMin === scoreMax ? (
+            //             <td>{scoreMin}</td>
+            //           ) : (
+            //             <td>
+            //               {scoreMin} to {scoreMax}
+            //             </td>
+            //           );
+            //         })}
+            //       </tr>
+            //     ) : undefined}
+            //   </>
+            // ),
           }}
         </Game27>
-        {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
+        {/* {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
           <div class="completed">
             Game Completed!{" "}
             {winners.value.length === 1
@@ -380,7 +389,7 @@ export default defineComponent({
               <input type="button" value="Submit Scores" onClick={submitScores} />
             ) : undefined}
           </div>
-        ) : undefined}
+        ) : undefined} */}
       </div>
     );
   },

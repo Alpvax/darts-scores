@@ -61,7 +61,7 @@ type GameMetaAny<V, RS extends TurnStats, GS extends Record<string, any>> =
   | GameMetaNoRSWithGS<V, GS>
   | GameMetaWithBothStats<V, RS, GS>;
 
-type PlayerDataNoStats<V, R extends Round<V, any>> = PlayerDataBase & {
+export type PlayerDataNoStats<V, R extends Round<V, any>> = PlayerDataBase & {
   /**
    * A map of the completed rounds, with non completed rounds missing from the map. <br/>
    * If the rounds have stats, the values will be an object of `{ value: V; stats: S }`.
@@ -69,7 +69,7 @@ type PlayerDataNoStats<V, R extends Round<V, any>> = PlayerDataBase & {
    */
   rounds: Map<number, R extends RoundWStats<any, infer S> ? { value: V; stats: S } : V>;
 };
-type PlayerDataWStats<
+export type PlayerDataWStats<
   V,
   R extends Round<V, any>,
   S extends Record<string, any>,
@@ -87,6 +87,20 @@ function hasGameStats<V, RS extends TurnStats, GS extends Record<string, any>>(
 function hasGameStats<S>(arg: any): arg is { gameStats: S } {
   return Object.hasOwn(arg, "gameStats");
 }
+
+// type ComponentBuilderBase = {
+//   withRounds: {
+//     <V>(rounds: Iterable<RoundNoStats<V>>): ComponentBuilderRNS<V>;
+//     <V, RS extends TurnStats>(rounds: Iterable<RoundWStats<V, RS>>): ComponentBuilderRWS<V, RS>;
+//   }
+// }
+// type ComponentBuilderRNS<V> = {
+//   withStats: <GS extends Record<string, any>>(stats: PlayerDataNoStats)
+// }
+// type ComponentBuilderRWS<V, RS extends TurnStats> = {}
+// export const componentBuilder = (meta: GameMetaBase) => ({
+//   withRounds: <R extends Round<any, any>>(rounds: Iterator<R> | Iterable<R>) =>
+// })
 
 export function createComponent<V>(meta: GameMetaNoStats<V>): any;
 export function createComponent<V, RS extends TurnStats>(meta: GameMetaWithRSNoGS<V, RS>): any;

@@ -15,6 +15,9 @@ export type FullTurnData<T, K extends string | number = string | number> = TurnD
 export type TurnDataStats<T, S extends TurnStats> = TurnData<T> & {
   stats: S;
 };
+export type FullTurnDataStats<T, S extends TurnStats, K extends string | number = string | number> = FullTurnData<T, K> & {
+  stats: S;
+};
 
 type RoundBase<V> = {
   /** The html to display.
