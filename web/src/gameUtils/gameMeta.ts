@@ -2,9 +2,9 @@ import { extendClass, type ClassBindings, type MoveFocus } from "@/utils";
 import type { PositionsOrder } from "./playerData";
 import type { Ref, VNodeChild } from "vue";
 import { hasStats, type Round } from "./round";
-import type { IndexedRounds, TurnStats } from "./roundDeclaration";
+import { type IndexedRounds, type TurnStats, normaliseIndexedRound } from "./roundDeclaration";
 
-export type ArrayGameMetadata<V, S extends TurnStats = {}> = {
+export type ArrayGameMetadata<V, S extends TurnStats | undefined = undefined> = {
   /**
    * The start score for each game.
    * Can use a factory function to allow for player handicaps.
@@ -32,6 +32,16 @@ export type ArrayGameMetadata<V, S extends TurnStats = {}> = {
 //   positionOrder: PositionsOrder;
 //   rounds: Rounds;
 // }
+
+export function createGameMeta<G extends ArrayGameMetadata<V, S>, V, S extends TurnStats = {}>(
+  meta: G,
+) {
+  return {
+    startScore: meta.startScore,
+    positionOrder: meta.positionOrder,
+    rounds: meta.rounds.map((r) => normaliseIndexedRound<V, S>(r)),
+  };
+}
 
 export interface WrappedMeta<V> {
   /**

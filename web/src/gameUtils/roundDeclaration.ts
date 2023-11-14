@@ -143,11 +143,17 @@ type IndexedRoundDefStats<V, S extends TurnStats> = IndexedRoundDefBase<V> & {
   cellClass?: (data: IndexedTurnDataStats<V, S>) => ClassBindings;
 };
 
-export type RoundDef<V, S extends TurnStats = {}, K extends string = string> =
+export type KeyedRoundDef<V, S extends TurnStats = {}, K extends string = string> =
   | KeyedRoundDefNoStats<V, K>
-  | KeyedRoundDefStats<V, S, K>
+  | KeyedRoundDefStats<V, S, K>;
+
+export type IndexedRoundDef<V, S extends TurnStats = {}> =
   | IndexedRoundDefNoStats<V>
   | IndexedRoundDefStats<V, S>;
+
+export type RoundDef<V, S extends TurnStats = {}, K extends string = string> =
+  | KeyedRoundDef<V, S, K>
+  | IndexedRoundDef<V, S>;
 
 export type TurnDataType<R extends RoundDef<any, any, any>> = R["display"] extends DisplayFactory<
   any,
@@ -228,6 +234,51 @@ type NormalisedRound<V, S extends TurnStats = {}, K extends string = string> =
   | NormIRS<V, S>
   | NormKRN<V, K>
   | NormKRS<V, S, K>;
+
+// export function normaliseIndexedRound<V>(roundDef: IndexedRoundDefNoStats<V>): NormIRN<V>;
+// export function normaliseIndexedRound<V, S extends TurnStats = {}>(
+//   roundDef: IndexedRoundDefStats<V, S>,
+// ): NormIRS<V, S>;
+export function normaliseIndexedRound<V, S extends TurnStats = {}>(
+  roundDef: IndexedRoundDef<V, S>,
+): NormIRS<V, S> | NormIRN<V> {
+  type TData = IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>;
+  return {
+    type: Object.hasOwn(roundDef, "stats") ? "indexed-stats" : "indexed-noStats",
+    display: roundDef.display,
+    label: roundDef.label,
+    // deltaScore,
+    inputFocusSelector: roundDef.inputFocusSelector ?? "input",
+    // @ts-ignore
+    turnData: (
+      value: V | undefined,
+      score: number,
+      playerId: string,
+      roundIndex: number,
+    ): TData => {
+      const partial: IndexedTurnData<V> = {
+        playerId,
+        roundIndex,
+        score,
+        deltaScore: roundDef.deltaScore(value, score, playerId, roundIndex),
+        value,
+      };
+      return Object.hasOwn(roundDef, "stats")
+        ? {
+            ...partial,
+            stats: (roundDef as IndexedRoundDefStats<V, S>).stats(partial as IndexedTurnData<V>),
+          }
+        : partial;
+    },
+    rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
+    cellClass: roundDef.cellClass
+      ? (data: TData) =>
+          extendClass((roundDef.cellClass as (data: TData) => ClassBindings)(data), "turnInput", {
+            unplayed: data.value === undefined,
+          })
+      : (data: TData) => ({ turnInput: true, unplayed: data.value === undefined }) as ClassBindings,
+  };
+}
 
 export function normaliseRound<V>(roundDef: IndexedRoundDefNoStats<V>): NormIRN<V>;
 export function normaliseRound<V, S extends TurnStats = {}>(
