@@ -1,7 +1,37 @@
-import type { ClassBindings, MoveFocus } from "@/utils";
+import { extendClass, type ClassBindings, type MoveFocus } from "@/utils";
 import type { PositionsOrder } from "./playerData";
 import type { Ref, VNodeChild } from "vue";
-import { hasStats, type Round, type TurnStats } from "./round";
+import { hasStats, type Round } from "./round";
+import type { IndexedRounds, TurnStats } from "./roundDeclaration";
+
+export type ArrayGameMetadata<V, S extends TurnStats = {}> = {
+  /**
+   * The start score for each game.
+   * Can use a factory function to allow for player handicaps.
+   */
+  startScore: (playerId: string) => number;
+  /**
+   * Which direction to sort the positions.<br/>
+   * `"highestFirst"` means the player(s) with the highest score are in first place.<br/>
+   * `"lowestFirst"` means the player(s) with the lowest score are in first place.<br/>
+   */
+  positionOrder: PositionsOrder;
+  rounds: IndexedRounds<V, S>;
+};
+// export type RecordGameMetadata<R> = {
+//   /**
+//    * The start score for each game.
+//    * Can use a factory function to allow for player handicaps.
+//    */
+//   startScore: (playerId: string) => number;
+//   /**
+//    * Which direction to sort the positions.<br/>
+//    * `"highestFirst"` means the player(s) with the highest score are in first place.<br/>
+//    * `"lowestFirst"` means the player(s) with the lowest score are in first place.<br/>
+//    */
+//   positionOrder: PositionsOrder;
+//   rounds: Rounds;
+// }
 
 export interface WrappedMeta<V> {
   /**
@@ -45,13 +75,23 @@ type WrappedRound<V, S extends TurnStats = {}> = {
   deltaScore: (value: V | undefined, playerId: string, roundIndex: number) => number;
   /** CSS selector to use to focus the input element of a round. Defaults to using `input` to select the `<input>` element */
   inputFocusSelector: string;
-  turnData: (value: V | undefined, score: number, playerId: string, roundIndex: number) => TurnData<V, S, number>;
+  turnData: (
+    value: V | undefined,
+    score: number,
+    playerId: string,
+    roundIndex: number,
+  ) => TurnData<V, S, number>;
   rowClass: (turns: TurnData<V, S>[]) => ClassBindings;
   cellClass: (data: TurnData<V, S>) => ClassBindings;
-}
+};
 
 export const wrapRound = <V, S extends TurnStats>(roundMeta: Round<V, S>): WrappedRound<V, S> => {
-  const turnData = (value: V | undefined, score: number, playerId: string, roundIndex: number): TurnData<V, S, number> => {
+  const turnData = (
+    value: V | undefined,
+    score: number,
+    playerId: string,
+    roundIndex: number,
+  ): TurnData<V, S, number> => {
     const partial = {
       playerId,
       roundKey: roundIndex,
@@ -61,15 +101,21 @@ export const wrapRound = <V, S extends TurnStats>(roundMeta: Round<V, S>): Wrapp
     };
     return {
       ...partial,
-      stats: hasStats(roundMeta) ? roundMeta.stats(partial) : {} as S,
-    }
-  }
+      stats: hasStats(roundMeta) ? roundMeta.stats(partial) : ({} as S),
+    };
+  };
   return {
     display: roundMeta.display,
     label: roundMeta.label,
     deltaScore: roundMeta.deltaScore,
     inputFocusSelector: roundMeta.inputFocusSelector ?? "input",
     turnData,
-    rowClass: roundMeta.rowClass ? roundMeta.rowClass : (turns => undefined)
+    rowClass: roundMeta.rowClass ? roundMeta.rowClass : () => undefined,
+    cellClass: roundMeta.cellClass
+      ? (data) =>
+          extendClass(roundMeta.cellClass!(data), "turnInput", {
+            unplayed: data.value === undefined,
+          })
+      : (data) => ({ turnInput: true, unplayed: data.value === undefined }),
   };
-}
+};

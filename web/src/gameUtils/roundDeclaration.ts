@@ -1,4 +1,4 @@
-import type { ClassBindings, MoveFocus } from "@/utils";
+import { extendClass, type ClassBindings, type MoveFocus } from "@/utils";
 import type { Ref, VNodeChild } from "vue";
 
 export type TurnStats = Record<string, boolean | number>;
@@ -14,9 +14,9 @@ type TurnDataBase<V> = {
 type KeyedTurnData<V, K extends string = string> = TurnDataBase<V> & {
   roundKey: K;
 };
-type IndexedTurnData<V /*, K extends number = number*/> = TurnDataBase<V> & {
+type IndexedTurnData<V /*, K extends number = number*/> = TurnDataBase<V>; /*& {
   roundKey?: never; //K;
-};
+};*/
 
 type TurnDataStats<S extends TurnStats> = {
   stats: S;
@@ -49,6 +49,22 @@ export function hasStats<V, S extends TurnStats = {}>(
   return Object.hasOwn(data, "stats");
 }
 
+export function isKeyed<V, S extends TurnStats = {}, K extends string = string>(
+  data: TurnData<V, S, K>,
+): data is KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>;
+export function isKeyed<V, S extends TurnStats = {}, K extends string = string>(
+  def: RoundDef<V, S, K>,
+): def is KeyedRoundDefNoStats<V, K> | KeyedRoundDefStats<V, S, K>;
+export function isKeyed<V, S extends TurnStats = {}, K extends string = string>(
+  item: TurnData<V, S, K> | RoundDef<V, S, K>,
+): item is
+  | KeyedTurnDataNoStats<V, K>
+  | KeyedTurnDataStats<V, S, K>
+  | KeyedRoundDefNoStats<V, K>
+  | KeyedRoundDefStats<V, S, K> {
+  return Object.hasOwn(item, "key") || Object.hasOwn(item, "roundKey");
+}
+
 // ========= Round Declaration =============
 
 /** The html to display.
@@ -64,13 +80,6 @@ type DisplayFactory<V, T extends TurnData<V, any>> = (
     focus: MoveFocus;
   },
 ) => VNodeChild;
-
-type TurnDataFactory<V, S extends TurnStats> = (
-  value: V | undefined,
-  score: number,
-  playerId: string,
-  roundIndex: number,
-) => TurnData<V, S>;
 
 type RoundDefBase = {
   label: string;
@@ -147,6 +156,15 @@ export type TurnDataType<R extends RoundDef<any, any, any>> = R["display"] exten
   ? T
   : never;
 
+export type RoundStatsType<R extends RoundDef<any, any, any>> = R extends KeyedRoundDefStats<
+  any,
+  infer S,
+  any
+>
+  ? S
+  : R extends IndexedRoundDefStats<any, infer S>
+  ? S
+  : undefined;
 
 // ============== Rounds definition list types ================
 
@@ -172,3 +190,158 @@ export type KeyedRounds<
 export type IndexedRounds<V, S extends TurnStats | undefined = undefined> = (S extends TurnStats
   ? IndexedRoundDefStats<V, S>
   : IndexedRoundDefNoStats<V>)[];
+
+// ============ Normalised Round ==================
+
+type NormalisedRoundCore<
+  T extends TurnData<V, S, K>,
+  V,
+  S extends TurnStats = {},
+  K extends string = string,
+> = {
+  display: DisplayFactory<V, T>;
+  label: string;
+  // deltaScore,
+  inputFocusSelector: string;
+  turnData: (value: V | undefined, score: number, playerId: string, roundIndex: number) => T;
+  rowClass: (data: T[]) => ClassBindings;
+  cellClass: (data: T) => ClassBindings;
+};
+
+type NormKRS<V, S extends TurnStats, K extends string> = NormalisedRoundCore<
+  KeyedTurnDataStats<V, S, K>,
+  V,
+  S,
+  K
+> & { type: "keyed-stats" };
+type NormKRN<V, K extends string> = NormalisedRoundCore<KeyedTurnDataNoStats<V, K>, V, {}, K> & {
+  type: "keyed-noStats";
+};
+
+type NormIRS<V, S extends TurnStats> = NormalisedRoundCore<IndexedTurnDataStats<V, S>, V, S> & {
+  type: "indexed-stats";
+};
+type NormIRN<V> = NormalisedRoundCore<IndexedTurnDataNoStats<V>, V> & { type: "indexed-noStats" };
+
+type NormalisedRound<V, S extends TurnStats = {}, K extends string = string> =
+  | NormIRN<V>
+  | NormIRS<V, S>
+  | NormKRN<V, K>
+  | NormKRS<V, S, K>;
+
+export function normaliseRound<V>(roundDef: IndexedRoundDefNoStats<V>): NormIRN<V>;
+export function normaliseRound<V, S extends TurnStats = {}>(
+  roundDef: IndexedRoundDefStats<V, S>,
+): NormIRS<V, S>;
+export function normaliseRound<V, K extends string = string>(
+  roundDef: KeyedRoundDefNoStats<V, K>,
+): NormKRN<V, K>;
+export function normaliseRound<V, S extends TurnStats = {}, K extends string = string>(
+  roundDef: KeyedRoundDefStats<V, S, K>,
+): NormKRS<V, S, K>;
+export function normaliseRound<V, S extends TurnStats = {}, K extends string = string>(
+  roundDef: RoundDef<V, S, K>,
+): NormalisedRound<V, S, K> {
+  const deltaScore = isKeyed<V, S, K>(roundDef)
+    ? (value: V | undefined, score: number, playerId: string, index: number) =>
+        roundDef.deltaScore(value, score, playerId, { key: roundDef.key, index })
+    : (value: V | undefined, score: number, playerId: string, index: number) =>
+        roundDef.deltaScore(value, score, playerId, index);
+  // const turnData = (
+  //   value: V | undefined,
+  //   score: number,
+  //   playerId: string,
+  //   roundIndex: number,
+  // ): TData => {
+  //   if (isKeyed<V, S, K>(roundDef)) {
+  //     const partial: KeyedTurnData<V, K> = {
+  //       playerId,
+  //       roundKey: roundDef.key,
+  //       roundIndex,
+  //       score,
+  //       deltaScore: deltaScore(value, score, playerId, roundIndex),
+  //       value,
+  //     }
+  //     return {
+  //       ...partial,
+  //       stats: Object.hasOwn(roundDef, "stats") ? (roundDef as KeyedRoundDefStats<V, S, K>).stats(partial) : ({} as S),
+  //     } as unknown as TData;
+  //   } else {
+  //     const partial: IndexedTurnData<V> = {
+  //       playerId,
+  //       roundIndex,
+  //       score,
+  //       deltaScore: deltaScore(value, score, playerId, roundIndex),
+  //       value,
+  //     };
+  //     return {
+  //       ...partial,
+  //       stats: Object.hasOwn(roundDef, "stats") ? (roundDef as IndexedRoundDefStats<V, S>).stats(partial) : ({} as S),
+  //     } as unknown as TData;
+  //   }
+  // };
+  function tryAddStats(
+    partial: KeyedTurnData<V, K>,
+  ): KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>;
+  function tryAddStats(
+    partial: IndexedTurnData<V>,
+  ): IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>;
+  function tryAddStats(partial: KeyedTurnData<V, K> | IndexedTurnData<V>): TurnData<V, S, K> {
+    if (isKeyed<V, S, K>(roundDef) && isKeyed(partial)) {
+      return {
+        ...partial,
+        stats: Object.hasOwn(roundDef, "stats")
+          ? (roundDef as KeyedRoundDefStats<V, S, K>).stats(partial)
+          : ({} as S),
+      };
+    } else {
+      return {
+        ...partial,
+        stats: Object.hasOwn(roundDef, "stats")
+          ? (roundDef as IndexedRoundDefStats<V, S>).stats(partial as IndexedTurnData<V>)
+          : ({} as S),
+      };
+    }
+  }
+  const hasStats = Object.hasOwn(roundDef, "stats");
+  type TData = ReturnType<NormalisedRound<V, S, K>["turnData"]>;
+  // @ts-ignore
+  return {
+    type: isKeyed<V, S, K>(roundDef)
+      ? hasStats
+        ? "keyed-stats"
+        : "keyed-noStats"
+      : hasStats
+      ? "indexed-stats"
+      : "indexed-noStats",
+    display: roundDef.display as NormalisedRound<V, S, K>["display"],
+    label: roundDef.label,
+    // deltaScore,
+    inputFocusSelector: roundDef.inputFocusSelector ?? "input",
+    turnData: (isKeyed<V, S, K>(roundDef)
+      ? (value: V | undefined, score: number, playerId: string, roundIndex: number) =>
+          tryAddStats({
+            playerId,
+            roundKey: roundDef.key,
+            roundIndex,
+            score,
+            deltaScore: deltaScore(value, score, playerId, roundIndex),
+            value,
+          } satisfies KeyedTurnData<V, K>)
+      : (value: V | undefined, score: number, playerId: string, roundIndex: number) =>
+          tryAddStats({
+            playerId,
+            roundIndex,
+            score,
+            deltaScore: deltaScore(value, score, playerId, roundIndex),
+            value,
+          } satisfies IndexedTurnData<V>)) as NormalisedRound<V, S, K>["turnData"],
+    rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
+    cellClass: roundDef.cellClass
+      ? (data: TData) =>
+          extendClass((roundDef.cellClass as (data: TData) => ClassBindings)(data), "turnInput", {
+            unplayed: data.value === undefined,
+          })
+      : (data: TData) => ({ turnInput: true, unplayed: data.value === undefined }) as ClassBindings,
+  };
+}
