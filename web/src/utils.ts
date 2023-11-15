@@ -1,3 +1,6 @@
+import { nextTick, type Ref } from "vue";
+import type { RoundDef } from "./gameUtils/roundDeclaration";
+
 export type ClassBindings = undefined | string | Record<string, boolean> | string[];
 
 export const extendClass = (
@@ -49,6 +52,7 @@ export const extendClass = (
   }
 };
 
+// ================= Move focus ==============================
 export type MoveFocus = {
   /** Change focus to the next round input */
   next: () => void;
@@ -57,3 +61,79 @@ export type MoveFocus = {
   /** Change focus to the first unentered round input */
   empty: () => void;
 };
+
+type MoveFocusFactory = {
+  create: (playerIndex: number, roundIndex: number) => MoveFocus;
+  focusEmpty: () => void;
+};
+/** Create moveFocus object
+ * @param playerLength a reactive value returning the number of players in the current game.
+ * @param allCompleted a reactive value returning true when there are no more untaken turns, to suppress the error log.
+ * @param focusSelectorBase the css selector used to select all turns input elements.
+ * Will be sub-selected using the round.inputFocusSelector selector, or `input` if not specified.
+ * Defaults to `"td.turnInput"`
+ */
+export function makeMoveFocusFactory(
+  rounds: Ref<RoundDef<any, any>[]>,
+  playerLength: Ref<number>,
+  allCompleted: Ref<boolean>,
+  focusSelectorBase = "td.turnInput",
+): MoveFocusFactory {
+  const focusEmpty = () => {
+    nextTick(() => {
+      const el = document.querySelector(
+        focusSelectorBase + ".unplayed",
+      ) as HTMLTableCellElement | null;
+      if (el) {
+        const row = parseInt(el.dataset.roundIndex!);
+        const inputFocusSelector = rounds.value[row].inputFocusSelector ?? "input";
+        (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
+      } else if (!allCompleted.value) {
+        console.log("Unable to find el!"); //XXX
+      }
+    });
+  };
+  return {
+    focusEmpty,
+    create: (playerIndex: number, roundIndex: number): MoveFocus => {
+      let prev = () => {};
+      if (playerIndex <= 0) {
+        if (roundIndex > 0) {
+          prev = () => focusInput(roundIndex - 1, playerLength.value - 1);
+        }
+      } else {
+        prev = () => focusInput(roundIndex, playerIndex - 1);
+      }
+      const next = () => {
+        if (playerIndex >= playerLength.value - 1) {
+          if (roundIndex < rounds.value.length - 1) {
+            focusInput(roundIndex + 1, 0);
+          }
+        } else {
+          focusInput(roundIndex, playerIndex + 1);
+        }
+      };
+      const focusInput = (row: number, col: number): void => {
+        nextTick(() => {
+          const inputFocusSelector = rounds.value[row].inputFocusSelector ?? "input";
+          // eslint-disable-next-line no-undef
+          const tds = document.querySelectorAll(
+            focusSelectorBase,
+          ) as NodeListOf<HTMLTableCellElement>;
+          const idx = playerLength.value * (row as number) + col;
+          const el = tds.item(idx)?.querySelector(inputFocusSelector) as HTMLElement | null;
+          if (el) {
+            el.focus();
+          } else {
+            console.log("Unable to find el!");
+          }
+        });
+      };
+      return {
+        next,
+        prev,
+        empty: focusEmpty,
+      };
+    },
+  };
+}

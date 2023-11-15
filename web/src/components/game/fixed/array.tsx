@@ -1,7 +1,6 @@
-import { extendClass, type ClassBindings } from "@/utils";
+import { extendClass, type ClassBindings, makeMoveFocusFactory } from "@/utils";
 import {
   hasStats,
-  makeMoveFocusFactory,
   type Round,
   type RoundNoStats,
   type RoundWStats,

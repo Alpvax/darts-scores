@@ -1,5 +1,5 @@
 import type { MoveFocus, ClassBindings } from "@/utils";
-import { nextTick, type Ref, type VNodeChild } from "vue";
+import { type Ref, type VNodeChild } from "vue";
 
 export type TurnStats = Record<string, boolean | number>;
 
@@ -15,7 +15,11 @@ export type FullTurnData<T, K extends string | number = string | number> = TurnD
 export type TurnDataStats<T, S extends TurnStats> = TurnData<T> & {
   stats: S;
 };
-export type FullTurnDataStats<T, S extends TurnStats, K extends string | number = string | number> = FullTurnData<T, K> & {
+export type FullTurnDataStats<
+  T,
+  S extends TurnStats,
+  K extends string | number = string | number,
+> = FullTurnData<T, K> & {
   stats: S;
 };
 
@@ -84,80 +88,3 @@ export const arrayRoundsBuilder = <V>(
   withStats: <S extends TurnStats>(statsFactory: (index: number) => RoundStatsExt<V, S>) =>
     makeArrayRoundsBuilder((i) => ({ ...factory(i), ...statsFactory(i) })),
 });
-
-// ================= Move focus ==============================
-type MoveFocusFactory = {
-  create: (playerIndex: number, roundIndex: number) => MoveFocus;
-  focusEmpty: () => void;
-};
-/** Create moveFocus object
- * @param playerLength a reactive value returning the number of players in the current game.
- * @param allCompleted a reactive value returning true when there are no more untaken turns, to suppress the error log.
- * @param focusSelectorBase the css selector used to select all turns input elements.
- * Will be sub-selected using the round.inputFocusSelector selector, or `input` if not specified.
- * Defaults to `"td.turnInput"`
- */
-export function makeMoveFocusFactory(
-  rounds: Ref<Round<any, any>[]>,
-  playerLength: Ref<number>,
-  allCompleted: Ref<boolean>,
-  focusSelectorBase = "td.turnInput",
-): MoveFocusFactory {
-  const focusEmpty = () => {
-    nextTick(() => {
-      const el = document.querySelector(
-        focusSelectorBase + ".unplayed",
-      ) as HTMLTableCellElement | null;
-      if (el) {
-        const row = parseInt(el.dataset.roundIndex!);
-        const inputFocusSelector = rounds.value[row].inputFocusSelector ?? "input";
-        (el.querySelector(inputFocusSelector) as HTMLElement | null)?.focus();
-      } else if (!allCompleted.value) {
-        console.log("Unable to find el!"); //XXX
-      }
-    });
-  };
-  return {
-    focusEmpty,
-    create: (playerIndex: number, roundIndex: number): MoveFocus => {
-      let prev = () => {};
-      if (playerIndex <= 0) {
-        if (roundIndex > 0) {
-          prev = () => focusInput(roundIndex - 1, playerLength.value - 1);
-        }
-      } else {
-        prev = () => focusInput(roundIndex, playerIndex - 1);
-      }
-      const next = () => {
-        if (playerIndex >= playerLength.value - 1) {
-          if (roundIndex < rounds.value.length - 1) {
-            focusInput(roundIndex + 1, 0);
-          }
-        } else {
-          focusInput(roundIndex, playerIndex + 1);
-        }
-      };
-      const focusInput = (row: number, col: number): void => {
-        nextTick(() => {
-          const inputFocusSelector = rounds.value[row].inputFocusSelector ?? "input";
-          // eslint-disable-next-line no-undef
-          const tds = document.querySelectorAll(
-            focusSelectorBase,
-          ) as NodeListOf<HTMLTableCellElement>;
-          const idx = playerLength.value * (row as number) + col;
-          const el = tds.item(idx)?.querySelector(inputFocusSelector) as HTMLElement | null;
-          if (el) {
-            el.focus();
-          } else {
-            console.log("Unable to find el!");
-          }
-        });
-      };
-      return {
-        next,
-        prev,
-        empty: focusEmpty,
-      };
-    },
-  };
-}
