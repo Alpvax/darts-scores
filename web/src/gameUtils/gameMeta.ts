@@ -2,7 +2,14 @@ import { extendClass, type ClassBindings, type MoveFocus } from "@/utils";
 import type { PositionsOrder } from "./playerData";
 import type { Ref, VNodeChild } from "vue";
 import { hasStats, type Round } from "./round";
-import { type IndexedRounds, type TurnStats, normaliseIndexedRound } from "./roundDeclaration";
+import {
+  type IndexedRounds,
+  type TurnStats,
+  normaliseIndexedRound,
+  type IndexedRoundDefNoStats,
+  type NormalisedRoundsArray,
+  type IndexedRoundDefStats,
+} from "./roundDeclaration";
 
 export type ArrayGameMetadata<V, S extends TurnStats | undefined = undefined> = {
   /**
@@ -32,9 +39,30 @@ export type ArrayGameMetadata<V, S extends TurnStats | undefined = undefined> = 
 //   positionOrder: PositionsOrder;
 //   rounds: Rounds;
 // }
+type GameMetaCore = {
+  /**
+   * The start score for each game.
+   * Can use a factory function to allow for player handicaps.
+   */
+  startScore: (playerId: string) => number;
+  /**
+   * Which direction to sort the positions.<br/>
+   * `"highestFirst"` means the player(s) with the highest score are in first place.<br/>
+   * `"lowestFirst"` means the player(s) with the lowest score are in first place.<br/>
+   */
+  positionOrder: PositionsOrder;
+};
 
-export function createGameMeta<G extends ArrayGameMetadata<V, S>, V, S extends TurnStats = {}>(
-  meta: G,
+export function createArrayGameMeta<V>(
+  meta: GameMetaCore & { rounds: IndexedRoundDefNoStats<V>[] },
+): GameMetaCore & { rounds: NormalisedRoundsArray<IndexedRoundDefNoStats<V>[], V> };
+export function createArrayGameMeta<V, S extends TurnStats>(
+  meta: GameMetaCore & { rounds: IndexedRoundDefStats<V, S>[] },
+): GameMetaCore & { rounds: NormalisedRoundsArray<IndexedRoundDefStats<V, S>[], V, S> };
+export function createArrayGameMeta<V, S extends TurnStats = {}>(
+  meta: GameMetaCore & {
+    rounds: IndexedRoundDefNoStats<V>[] | IndexedRoundDefStats<V, S>[];
+  },
 ) {
   return {
     startScore: meta.startScore,

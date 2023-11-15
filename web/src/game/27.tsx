@@ -1,4 +1,4 @@
-import type { ArrayGameMetadata } from "@/gameUtils/gameMeta";
+import { createArrayGameMeta } from "@/gameUtils/gameMeta";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -63,7 +63,14 @@ export const onKeyInput =
     event.preventDefault();
   };
 
-export const gameMeta = {
+export const gameMeta = createArrayGameMeta<
+  number,
+  {
+    cliff: boolean;
+    doubledouble: boolean;
+    hits: number;
+  }
+>({
   startScore: () => 27,
   positionOrder: "highestFirst",
   rounds: Array.from({ length: 20 }, (_, i) => ({
@@ -120,11 +127,4 @@ export const gameMeta = {
       }
     },
   })),
-} satisfies ArrayGameMetadata<
-  number,
-  {
-    cliff: boolean;
-    doubledouble: boolean;
-    hits: number;
-  }
->;
+});

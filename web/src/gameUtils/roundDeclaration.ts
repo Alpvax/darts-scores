@@ -131,12 +131,12 @@ type KeyedRoundDefStats<V, S extends TurnStats, K extends string = string> = Key
   cellClass?: (data: KeyedTurnDataStats<V, S, K>) => ClassBindings;
 };
 
-type IndexedRoundDefNoStats<V> = IndexedRoundDefBase<V> & {
+export type IndexedRoundDefNoStats<V> = IndexedRoundDefBase<V> & {
   display: DisplayFactory<V, IndexedTurnDataNoStats<V>>;
   rowClass?: (rowData: IndexedTurnDataNoStats<V>[]) => ClassBindings;
   cellClass?: (data: IndexedTurnDataNoStats<V>) => ClassBindings;
 };
-type IndexedRoundDefStats<V, S extends TurnStats> = IndexedRoundDefBase<V> & {
+export type IndexedRoundDefStats<V, S extends TurnStats> = IndexedRoundDefBase<V> & {
   display: DisplayFactory<V, IndexedTurnDataStats<V, S>>;
   stats: (data: IndexedTurnData<V>) => S;
   rowClass?: (rowData: IndexedTurnDataStats<V, S>[]) => ClassBindings;
@@ -396,3 +396,18 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
       : (data: TData) => ({ turnInput: true, unplayed: data.value === undefined }) as ClassBindings,
   };
 }
+
+// ================ Array ======================
+
+export type NormalisedRoundsArray<
+  R extends RoundDef<V, S, K>[],
+  V,
+  S extends TurnStats = {},
+  K extends string = string,
+> = R extends KeyedRoundDefStats<V, S, K>[]
+  ? NormKRS<V, S, K>[]
+  : R extends KeyedRoundDefNoStats<V, K>[]
+  ? NormKRN<V, K>[]
+  : R extends IndexedRoundDefStats<V, S>[]
+  ? NormIRS<V, S>[]
+  : NormIRN<V>[];
