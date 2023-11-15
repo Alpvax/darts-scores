@@ -155,12 +155,8 @@ export type RoundDef<V, S extends TurnStats = {}, K extends string = string> =
   | KeyedRoundDef<V, S, K>
   | IndexedRoundDef<V, S>;
 
-export type TurnDataType<R extends RoundDef<any, any, any>> = R["display"] extends DisplayFactory<
-  any,
-  infer T
->
-  ? T
-  : never;
+export type TurnDataType<R extends RoundDef<any, any, any> | NormalisedRound<any, any, any>> =
+  R["display"] extends DisplayFactory<any, infer T> ? T : never;
 
 export type RoundStatsType<R extends RoundDef<any, any, any>> = R extends KeyedRoundDefStats<
   any,
@@ -411,3 +407,6 @@ export type NormalisedRoundsArray<
   : R extends IndexedRoundDefStats<V, S>[]
   ? NormIRS<V, S>[]
   : NormIRN<V>[];
+
+export type NormTurnDataType<R extends NormalisedRound<any, any, any>[]> =
+  R[number]["display"] extends DisplayFactory<any, infer T> ? T : never;
