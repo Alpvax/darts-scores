@@ -165,8 +165,8 @@ export type RoundStatsType<R extends RoundDef<any, any, any>> = R extends KeyedR
 >
   ? S
   : R extends IndexedRoundDefStats<any, infer S>
-  ? S
-  : undefined;
+    ? S
+    : undefined;
 
 // ============== Rounds definition list types ================
 
@@ -359,8 +359,8 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
         ? "keyed-stats"
         : "keyed-noStats"
       : hasStats
-      ? "indexed-stats"
-      : "indexed-noStats",
+        ? "indexed-stats"
+        : "indexed-noStats",
     display: roundDef.display as NormalisedRound<V, S, K>["display"],
     label: roundDef.label,
     // deltaScore,
@@ -403,10 +403,10 @@ export type NormalisedRoundsArray<
 > = R extends KeyedRoundDefStats<V, S, K>[]
   ? NormKRS<V, S, K>[]
   : R extends KeyedRoundDefNoStats<V, K>[]
-  ? NormKRN<V, K>[]
-  : R extends IndexedRoundDefStats<V, S>[]
-  ? NormIRS<V, S>[]
-  : NormIRN<V>[];
+    ? NormKRN<V, K>[]
+    : R extends IndexedRoundDefStats<V, S>[]
+      ? NormIRS<V, S>[]
+      : NormIRN<V>[];
 
 export type NormTurnDataType<R extends NormalisedRound<any, any, any>[]> =
   R[number]["display"] extends DisplayFactory<any, infer T> ? T : never;

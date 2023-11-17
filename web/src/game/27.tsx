@@ -1,4 +1,4 @@
-import { createArrayGameMeta } from "@/gameUtils/gameMeta";
+import { createArrayGameMeta, metaWithStats } from "@/gameUtils/gameMeta";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -63,68 +63,80 @@ export const onKeyInput =
     event.preventDefault();
   };
 
-export const gameMeta = createArrayGameMeta<
-  number,
+export const gameMeta = metaWithStats(
+  createArrayGameMeta<
+    number,
+    {
+      cliff: boolean;
+      doubledouble: boolean;
+      hits: number;
+    }
+  >({
+    startScore: () => 27,
+    positionOrder: "highestFirst",
+    rounds: Array.from({ length: 20 }, (_, i) => ({
+      label: (i + 1).toString(),
+      display: (hits, { score, deltaScore, editable, focus }) => (
+        <>
+          <span>{score}</span>
+          <sup>({DECIMAL_FORMAT.format(deltaScore)})</sup>
+          {editable ? (
+            <input
+              class="hitsInput"
+              type="number"
+              min="0"
+              max="3"
+              placeholder="0"
+              value={hits.value}
+              onInput={(e) => {
+                const val = parseInt((e.target as HTMLInputElement).value);
+                hits.value = isNaN(val) ? undefined : val;
+                e.preventDefault();
+              }}
+              onKeydown={onKeyInput(hits, focus)}
+            />
+          ) : undefined}
+        </>
+      ),
+      deltaScore: (h) => 2 * (i + 1) * (h === undefined || h <= 0 ? -1 : h),
+      stats: ({ value }) => ({
+        cliff: value === 3,
+        doubledouble: (value ?? 0) >= 2,
+        hits: value ?? 0,
+      }),
+      rowClass: (data) => {
+        const values = data.map((d) => d.value);
+        return {
+          current: values.some((v) => v !== undefined) && values.some((v) => v === undefined),
+          untaken: values.every((v) => v === undefined),
+          allMissed: values.every((v) => v !== undefined && v < 1),
+          allHit: values.every((v) => v),
+        };
+      },
+      cellClass: ({ value }) => {
+        switch (value) {
+          case 0:
+            return "turn27 miss";
+          case 1:
+            return "turn27 hit";
+          case 2:
+            return "turn27 doubledouble";
+          case 3:
+            return "turn27 cliff";
+          default:
+            return "turn27";
+        }
+      },
+    })),
+  }),
   {
-    cliff: boolean;
-    doubledouble: boolean;
-    hits: number;
-  }
->({
-  startScore: () => 27,
-  positionOrder: "highestFirst",
-  rounds: Array.from({ length: 20 }, (_, i) => ({
-    label: (i + 1).toString(),
-    display: (hits, { score, deltaScore, editable, focus }) => (
-      <>
-        <span>{score}</span>
-        <sup>({DECIMAL_FORMAT.format(deltaScore)})</sup>
-        {editable ? (
-          <input
-            class="hitsInput"
-            type="number"
-            min="0"
-            max="3"
-            placeholder="0"
-            value={hits.value}
-            onInput={(e) => {
-              const val = parseInt((e.target as HTMLInputElement).value);
-              hits.value = isNaN(val) ? undefined : val;
-              e.preventDefault();
-            }}
-            onKeydown={onKeyInput(hits, focus)}
-          />
-        ) : undefined}
-      </>
-    ),
-    deltaScore: (h) => 2 * (i + 1) * (h === undefined || h <= 0 ? -1 : h),
-    stats: ({ value }) => ({
-      cliff: value === 3,
-      doubledouble: (value ?? 0) >= 2,
-      hits: value ?? 0,
+    gameStatsFactory: (stats, { taken }) => ({
+      fatNick: taken.length > 0 && (stats.hitsCountNZ ?? 0) < 1,
+      allPositive: taken.length > 0 && ![...taken.values()].some(({ score }) => score < 0),
     }),
-    rowClass: (data) => {
-      const values = data.map((d) => d.value);
-      return {
-        current: values.some((v) => v !== undefined) && values.some((v) => v === undefined),
-        untaken: values.every((v) => v === undefined),
-        allMissed: values.every((v) => v !== undefined && v < 1),
-        allHit: values.every((v) => v),
-      };
-    },
-    cellClass: ({ value }) => {
-      switch (value) {
-        case 0:
-          return "turn27 miss";
-        case 1:
-          return "turn27 hit";
-        case 2:
-          return "turn27 doubledouble";
-        case 3:
-          return "turn27 cliff";
-        default:
-          return "turn27";
-      }
-    },
-  })),
-});
+    playerNameClass: ({ stats }) => ({
+      fatNick: stats.fatNick,
+      allPositive: stats.allPositive,
+    }),
+  },
+);

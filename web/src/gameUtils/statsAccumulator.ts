@@ -1,4 +1,4 @@
-import type { TurnStats } from "./roundDeclaration";
+import type { TurnData, TurnStats } from "./roundDeclaration";
 
 type BoolTS<T extends TurnStats> = {
   [K in keyof T as T[K] extends boolean ? K : never]: T[K];
@@ -24,13 +24,19 @@ export type GameStatsForRounds<T extends TurnStats, V = any> = {
 export type GameStats<T extends TurnStats, G extends GameStatsForRounds<T>> = ArrayGameStats<T> & G;
 
 export class ArrayStatsAccumulatorGame<
+  V,
   T extends TurnStats,
   G extends GameStatsForRounds<T>,
   RK extends number /*TODO: non numeric rounds | [...string[]]*/ = number,
 > {
   private readonly turns = new Map<RK, T>();
   private readonly game = {} as Omit<ArrayGameStats<T>, "turnStats">;
-  constructor(private readonly gameStatsFactory: (stats: ArrayGameStats<T>) => G) {}
+  constructor(
+    private readonly gameStatsFactory: (
+      stats: ArrayGameStats<T>,
+      turns: { all: TurnData<V, T>[]; taken: TurnData<V, T>[] },
+    ) => G,
+  ) {}
 
   addRound(roundKey: RK, stats: T) {
     this.turns.set(roundKey, stats);
@@ -60,7 +66,7 @@ export class ArrayStatsAccumulatorGame<
     }
   }
 
-  get result(): GameStats<T, G> {
+  result(turns: { all: TurnData<V, T>[]; taken: TurnData<V, T>[] }): GameStats<T, G> {
     const stats = {
       turnStats: Array.from({ length: this.turns.size }, (_, i) =>
         this.turns.get(i as RK /*TODO: non numeric rounds */),
@@ -69,13 +75,15 @@ export class ArrayStatsAccumulatorGame<
     } as ArrayGameStats<T>;
     return {
       ...stats,
-      ...this.gameStatsFactory(stats),
+      ...this.gameStatsFactory(stats, turns),
     };
   }
 }
 
-export default <T extends TurnStats>() =>
+export const makeGameStatsFactoryFor =
+  <T extends TurnStats>() =>
   <G extends GameStatsForRounds<T>>(gameStatsFactory: (stats: ArrayGameStats<T>) => G) => ({
     createGameAcc: () => new ArrayStatsAccumulatorGame(gameStatsFactory),
     //TODO: createSummaryAcc: () => {},
   });
+export default makeGameStatsFactoryFor;

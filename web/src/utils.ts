@@ -1,5 +1,5 @@
 import { nextTick, type Ref } from "vue";
-import type { RoundDef } from "./gameUtils/roundDeclaration";
+import type { NormalisedRoundsArray } from "./gameUtils/roundDeclaration";
 
 export type ClassBindings = undefined | string | Record<string, boolean> | string[];
 
@@ -24,29 +24,29 @@ export const extendClass = (
         return isStrB
           ? `${a} ${b}`
           : isArrB
-          ? [...a.split(" "), ...b]
-          : {
-              [a]: true,
-              ...b,
-            };
+            ? [...a.split(" "), ...b]
+            : {
+                [a]: true,
+                ...b,
+              };
       } else if (Array.isArray(a)) {
         return isStrB
           ? [...a, ...b.split(" ")]
           : isArrB
-          ? [...a, ...b]
-          : a.reduce((acc, clas) => {
-              acc[clas] = true;
-              return acc;
-            }, b);
+            ? [...a, ...b]
+            : a.reduce((acc, clas) => {
+                acc[clas] = true;
+                return acc;
+              }, b);
       } else {
         return isStrB
           ? { ...a, [b]: true }
           : isArrB
-          ? b.reduce((acc, clas) => {
-              acc[clas] = true;
-              return acc;
-            }, a)
-          : { ...a, ...b };
+            ? b.reduce((acc, clas) => {
+                acc[clas] = true;
+                return acc;
+              }, a)
+            : { ...a, ...b };
       }
     }, c);
   }
@@ -74,7 +74,7 @@ type MoveFocusFactory = {
  * Defaults to `"td.turnInput"`
  */
 export function makeMoveFocusFactory(
-  rounds: Ref<RoundDef<any, any>[]>,
+  rounds: Ref<NormalisedRoundsArray<any, any, any>>,
   playerLength: Ref<number>,
   allCompleted: Ref<boolean>,
   focusSelectorBase = "td.turnInput",

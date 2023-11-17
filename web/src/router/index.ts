@@ -21,22 +21,19 @@ const router = createRouter({
       path: "/twentyseven/game",
       alias: "/27/game",
       name: "twentyseven",
-      props: (route) => ({
-        gameId: route.query.gameId,
-      }),
+      // props: (route) => ({
+      //   gameId: route.query.gameId,
+      // }),
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       // component: () => import("@/views/GameView27.vue"),
-      component: () => import("@/views/GameView27v2"),
+      component: () => import("@/views/GameView27v3"),
     },
     {
       path: "/twentyseven/history",
       alias: "/27/history",
       name: "twentysevenHistory",
-      props: (route) => ({
-        gameId: route.query.gameId,
-      }),
       // route level code-splitting
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.

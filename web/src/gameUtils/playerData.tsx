@@ -5,6 +5,30 @@ import type {
   RoundsValues,
 } from "@/components/game/Rounds";
 import { computed, type Ref } from "vue";
+import type { TurnData, TurnStats } from "./roundDeclaration";
+import type { GameStatsForRounds, GameStats } from "./statsAccumulator";
+
+export type PlayerDataT<
+  RS extends TurnStats,
+  T extends TurnData<any, RS>,
+  GS extends GameStatsForRounds<RS>,
+> = {
+  playerId: string;
+  /** Whether the player has completed all rounds */
+  complete: false;
+  /** The final score if finished, or the current score if in progress */
+  score: number;
+  /**
+   * A Map of the completed rounds, with non completed rounds missing from the map. <br/>
+   * Key is round index; value is {@link TurnData}, including the value, delta score of the round and score at this round.
+   * */
+  turns: Map<number, T>;
+  /** The player's current position */
+  position: number;
+  /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
+  tied: string[];
+  stats: GameStats<RS, GS>;
+};
 
 export type PlayerDataBase = {
   playerId: string;
