@@ -1,6 +1,5 @@
-import { type ClassBindings } from "@/utils";
+import { extendClass, type ClassBindings } from "@/utils";
 import type { PlayerDataT, PositionsOrder } from "./playerData";
-import type { Ref } from "vue";
 import {
   type TurnStats,
   normaliseIndexedRound,
@@ -8,6 +7,15 @@ import {
   type NormalisedRoundsArray,
   type IndexedRoundDefStats,
   type TurnData,
+  type NormIRN,
+  type NormalisedRound,
+  type NormIRS,
+  type NormKRN,
+  type NormKRS,
+  type RoundDef,
+  type KeyedRoundDefNoStats,
+  type KeyedRoundDefStats,
+  normaliseRound,
 } from "./roundDeclaration";
 import type { ArrayGameStats, GameStatsForRounds } from "./statsAccumulator";
 
@@ -105,89 +113,56 @@ export const metaWithStats = <V, RS extends TurnStats, GS extends GameStatsForRo
   ...def,
 });
 
-export interface WrappedMeta<V> {
-  /**
-   * The start score for each game.
-   * Can use a factory function to allow for player handicaps.
-   */
-  startScore: (playerId: string) => number;
-  /**
-   * Which direction to sort the positions.<br/>
-   * `"highestFirst"` means the player(s) with the highest score are in first place.<br/>
-   * `"lowestFirst"` means the player(s) with the lowest score are in first place.<br/>
-   */
-  positionOrder: PositionsOrder;
-  rounds: Ref<V[]>;
-  playerNameClass: (playerId: string) => ClassBindings;
-  rowClass: (roundIndex: number) => ClassBindings;
-  cellClass: (roundIndex: number, playerId: string) => ClassBindings;
-  gameStats: (playerId: string) => any;
+export type GameStatsFactory<GS extends GameStatsForRounds<RS>, T extends TurnData<any, RS, any>, RS extends TurnStats> = (
+  accumulatedStats: ArrayGameStats<{}>,
+  turns: { all: T[]; taken: T[] },
+) => GS; 
+
+type GameMetadataArgs<R extends RoundDef<V, RS, K>, GS extends GameStatsForRounds<RS>, V, RS extends TurnStats = {}, K extends string = string> = GameMetaCore & {
+  rounds: R[];
+  playerNameClass?: (data: PlayerDataT<RS, TurnData<V, RS, K>, GS>) => ClassBindings;
+} & (GS extends Record<any, never> ? {
+  gameStatsFactory?: never; 
+} : {
+  gameStatsFactory: GameStatsFactory<GS, TurnData<V, RS, K>, RS>;
+})
+
+export type GameMetaArgsINS<V, GS extends GameStatsForRounds<{}>> = GameMetadataArgs<IndexedRoundDefNoStats<V>, GS, V>;
+export type GameMetaArgsIRS<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>> = GameMetadataArgs<IndexedRoundDefStats<V, RS>, GS, V, RS>;
+export type GameMetaArgsKNS<V, GS extends GameStatsForRounds<{}>, K extends string = string> = GameMetadataArgs<KeyedRoundDefNoStats<V, K>, GS, V, {}, K>;
+export type GameMetaArgsKRS<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>, K extends string = string> = GameMetadataArgs<KeyedRoundDefStats<V, RS, K>, GS, V, RS, K>;
+
+
+type GameMetadata<R extends NormalisedRound<V, RS, K>, GS extends GameStatsForRounds<RS>, V, RS extends TurnStats = {}, K extends string = string> = GameMetaCore & {
+  rounds: R[];
+  gameStatsFactory: (
+    accumulatedStats: ArrayGameStats<{}>,
+    turns: { all: TurnData<V, RS, K>[]; taken: TurnData<V, RS, K>[] },
+  ) => GS;
+  playerNameClass: (data: PlayerDataT<RS, TurnData<V, RS, K>, GS>) => ClassBindings;
 }
 
-// type TurnData<T, S extends TurnStats = {}, K extends string | number = string | number> = {
-//   playerId: string;
-//   roundKey: K;
-//   value: T | undefined;
-//   deltaScore: number;
-//   score: number;
-//   stats: S;
-// };
-// type WrappedRound<V, S extends TurnStats = {}> = {
-//   /** The html to display.
-//    * @param value is a ref that can be used as a v-model value for the round input. Setting it will automatically move the focus to the next unentered input
-//    */
-//   display: (turnProps: {
-//     score: number;
-//     deltaScore: number;
-//     value: Ref<V | undefined>;
-//     editable: boolean;
-//     focus: MoveFocus;
-//   }) => VNodeChild;
-//   label: string;
-//   deltaScore: (value: V | undefined, playerId: string, roundIndex: number) => number;
-//   /** CSS selector to use to focus the input element of a round. Defaults to using `input` to select the `<input>` element */
-//   inputFocusSelector: string;
-//   turnData: (
-//     value: V | undefined,
-//     score: number,
-//     playerId: string,
-//     roundIndex: number,
-//   ) => TurnData<V, S, number>;
-//   rowClass: (turns: TurnData<V, S>[]) => ClassBindings;
-//   cellClass: (data: TurnData<V, S>) => ClassBindings;
-// };
+export type GameMetaINS<V, GS extends GameStatsForRounds<{}>> = GameMetadata<NormIRN<V>, GS, V>;
+export type GameMetaIRS<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>> = GameMetadata<NormIRS<V, RS>, GS, V, RS>;
+export type GameMetaKNS<V, GS extends GameStatsForRounds<{}>, K extends string = string> = GameMetadata<NormKRN<V, K>, GS, V, {}, K>;
+export type GameMetaKRS<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>, K extends string = string> = GameMetadata<NormKRS<V, RS, K>, GS, V, RS, K>;
 
-// export const wrapRound = <V, S extends TurnStats>(roundMeta: Round<V, S>): WrappedRound<V, S> => {
-//   const turnData = (
-//     value: V | undefined,
-//     score: number,
-//     playerId: string,
-//     roundIndex: number,
-//   ): TurnData<V, S, number> => {
-//     const partial = {
-//       playerId,
-//       roundKey: roundIndex,
-//       score,
-//       deltaScore: roundMeta.deltaScore(value, playerId, roundIndex),
-//       value,
-//     };
-//     return {
-//       ...partial,
-//       stats: hasStats(roundMeta) ? roundMeta.stats(partial) : ({} as S),
-//     };
-//   };
-//   return {
-//     display: roundMeta.display,
-//     label: roundMeta.label,
-//     deltaScore: roundMeta.deltaScore,
-//     inputFocusSelector: roundMeta.inputFocusSelector ?? "input",
-//     turnData,
-//     rowClass: roundMeta.rowClass ? roundMeta.rowClass : () => undefined,
-//     cellClass: roundMeta.cellClass
-//       ? (data) =>
-//           extendClass(roundMeta.cellClass!(data), "turnInput", {
-//             unplayed: data.value === undefined,
-//           })
-//       : (data) => ({ turnInput: true, unplayed: data.value === undefined }),
-//   };
-// };
+export type AnyGameMetadata<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>, K extends string = string> = GS extends GameStatsForRounds<{}> ?
+GameMetaINS<V, GS> | GameMetaKNS<V, GS, K> : GameMetaIRS<V, RS, GS> | GameMetaKRS<V, RS, GS, K>
+
+export function createGameMetadata<V, GS extends GameStatsForRounds<{}>>(meta: GameMetaArgsINS<V, GS>): GameMetaINS<V, GS>;
+export function createGameMetadata<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>>(meta: GameMetaArgsIRS<V, RS, GS>): GameMetaIRS<V, RS, GS>;
+export function createGameMetadata<V, GS extends GameStatsForRounds<{}>, K extends string = string>(meta: GameMetaArgsKNS<V, GS>): GameMetaKNS<V, GS, K>;
+export function createGameMetadata<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>, K extends string = string>(meta: GameMetaArgsKRS<V, RS, GS, K>): GameMetaKRS<V, RS, GS, K>;
+export function createGameMetadata<V, RS extends TurnStats, GS extends GameStatsForRounds<RS>, K extends string = string>(meta: GameMetadataArgs<any, GS, V, RS, K>): GameMetadata<any, GS, V, RS, K> {
+  return {
+    startScore: meta.startScore,
+    positionOrder: meta.positionOrder,
+    rounds: meta.rounds.map(normaliseRound),
+    gameStatsFactory: meta.gameStatsFactory ? meta.gameStatsFactory as GameStatsFactory<GS, TurnData<V, RS, K>, RS> : () => ({} as GS), //TODO: error if missing when GS != {}
+    playerNameClass: meta.playerNameClass ? (data) => extendClass(
+      meta.playerNameClass!(data),
+      "playerName",
+    ) : () => "playerName",
+  }
+}
