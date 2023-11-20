@@ -121,10 +121,11 @@ export type KeyedRoundDefNoStats<V, K extends string = string> = KeyedRoundDefBa
   rowClass?: (rowData: KeyedTurnDataNoStats<V, K>[]) => ClassBindings;
   cellClass?: (data: KeyedTurnDataNoStats<V, K>) => ClassBindings;
 };
-export type KeyedRoundDefStats<V, S extends TurnStats, K extends string = string> = KeyedRoundDefBase<
+export type KeyedRoundDefStats<
   V,
-  K
-> & {
+  S extends TurnStats,
+  K extends string = string,
+> = KeyedRoundDefBase<V, K> & {
   display: DisplayFactory<V, KeyedTurnDataStats<V, S, K>>;
   stats: (data: KeyedTurnData<V>) => S;
   rowClass?: (rowData: KeyedTurnDataStats<V, S, K>[]) => ClassBindings;
@@ -216,14 +217,25 @@ export type NormKRS<V, S extends TurnStats, K extends string> = NormalisedRoundC
   S,
   K
 > & { type: "keyed-stats" };
-export type NormKRN<V, K extends string> = NormalisedRoundCore<KeyedTurnDataNoStats<V, K>, V, {}, K> & {
+export type NormKRN<V, K extends string> = NormalisedRoundCore<
+  KeyedTurnDataNoStats<V, K>,
+  V,
+  {},
+  K
+> & {
   type: "keyed-noStats";
 };
 
-export type NormIRS<V, S extends TurnStats> = NormalisedRoundCore<IndexedTurnDataStats<V, S>, V, S> & {
+export type NormIRS<V, S extends TurnStats> = NormalisedRoundCore<
+  IndexedTurnDataStats<V, S>,
+  V,
+  S
+> & {
   type: "indexed-stats";
 };
-export type NormIRN<V> = NormalisedRoundCore<IndexedTurnDataNoStats<V>, V> & { type: "indexed-noStats" };
+export type NormIRN<V> = NormalisedRoundCore<IndexedTurnDataNoStats<V>, V> & {
+  type: "indexed-noStats";
+};
 
 export type NormalisedRound<V, S extends TurnStats = {}, K extends string = string> =
   | NormIRN<V>
