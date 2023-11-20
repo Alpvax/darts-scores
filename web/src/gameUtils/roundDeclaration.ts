@@ -37,6 +37,13 @@ export type TurnData<V, S extends TurnStats = {}, K extends string = string> =
   | IndexedTurnDataNoStats<V>
   | IndexedTurnDataStats<V, S>;
 
+export type TakenTurnData<V, S extends TurnStats = {}, K extends string = string> = Omit<
+  TurnData<V, S, K>,
+  "value"
+> & {
+  value: V;
+};
+
 export function hasStats<V, S extends TurnStats = {}, K extends string = string>(
   keyed: KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>,
 ): keyed is KeyedTurnDataStats<V, S, K>;

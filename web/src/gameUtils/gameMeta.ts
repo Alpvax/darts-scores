@@ -37,10 +37,7 @@ export type GameMetaWithStats<
   GS extends GameStatsForRounds<RS>,
   K extends string = string,
 > = {
-  gameStatsFactory?: (
-    accumulatedStats: ArrayGameStats<RS>,
-    turns: { all: TurnData<V, RS, string>[]; taken: TurnData<V, RS>[] },
-  ) => GS;
+  gameStatsFactory?: GameStatsFactory<GS, TurnData<V, RS, K>, RS>;
   playerNameClass?: (data: PlayerDataT<RS, TurnData<V, RS, K>, GS>) => ClassBindings;
 };
 // export type RecordGameMetadata<R> = {
@@ -117,7 +114,13 @@ export type GameStatsFactory<
   GS extends GameStatsForRounds<RS>,
   T extends TurnData<any, RS, any>,
   RS extends TurnStats,
-> = (accumulatedStats: ArrayGameStats<RS>, turns: { all: T[]; taken: T[] }) => GS;
+> = (
+  accumulatedStats: ArrayGameStats<RS>,
+  turns: {
+    all: T[];
+    taken: (Omit<T, "value"> & { value: T extends TurnData<infer V, any, any> ? V : never })[];
+  },
+) => GS;
 
 type GameMetadataArgs<
   R extends RoundDef<V, RS, K>,
@@ -166,10 +169,7 @@ type GameMetadata<
   K extends string = string,
 > = GameMetaCore & {
   rounds: R[];
-  gameStatsFactory: (
-    accumulatedStats: ArrayGameStats<{}>,
-    turns: { all: TurnData<V, RS, K>[]; taken: TurnData<V, RS, K>[] },
-  ) => GS;
+  gameStatsFactory: GameStatsFactory<GS, TurnData<V, RS, K>, RS>;
   playerNameClass: (data: PlayerDataT<RS, TurnData<V, RS, K>, GS>) => ClassBindings;
 };
 

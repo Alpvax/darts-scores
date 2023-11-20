@@ -1,4 +1,5 @@
-import type { TurnData, TurnStats } from "./roundDeclaration";
+import type { GameStatsFactory } from "./gameMeta";
+import type { TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
 
 type BoolTS<T extends TurnStats> = {
   [K in keyof T as T[K] extends boolean ? K : never]: T[K];
@@ -31,12 +32,7 @@ export class ArrayStatsAccumulatorGame<
 > {
   private readonly turns = new Map<RK, T>();
   private readonly game = {} as Omit<ArrayGameStats<T>, "turnStats">;
-  constructor(
-    private readonly gameStatsFactory: (
-      stats: ArrayGameStats<T>,
-      turns: { all: TurnData<V, T>[]; taken: TurnData<V, T>[] },
-    ) => G,
-  ) {}
+  constructor(private readonly gameStatsFactory: GameStatsFactory<G, TurnData<V, T>, T>) {}
 
   addRound(roundKey: RK, stats: T) {
     this.turns.set(roundKey, stats);
@@ -66,7 +62,7 @@ export class ArrayStatsAccumulatorGame<
     }
   }
 
-  result(turns: { all: TurnData<V, T>[]; taken: TurnData<V, T>[] }): GameStats<T, G> {
+  result(turns: { all: TurnData<V, T>[]; taken: TakenTurnData<V, T>[] }): GameStats<T, G> {
     const stats = {
       turnStats: Array.from({ length: this.turns.size }, (_, i) =>
         this.turns.get(i as RK /*TODO: non numeric rounds */),

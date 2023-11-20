@@ -135,7 +135,7 @@ export const gameMeta = normaliseGameMetadata<
   })),
   gameStatsFactory: (stats, { taken }) => {
     const firstNeg = taken.findIndex(({ score }) => score < 0);
-    const firstMiss = taken.findIndex(({ value }) => value! < 1);
+    const firstMiss = taken.findIndex(({ value }) => value < 1);
     return {
       fatNick: taken.length > 0 && stats.hitsCountNZ! < 1,
       farPos: firstNeg > 0 ? firstNeg - 1 : 20,

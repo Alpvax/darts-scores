@@ -7,7 +7,7 @@ import {
 } from "@/gameUtils/playerData";
 import { usePlayerStore } from "@/stores/player";
 import type { AnyGameMetadata } from "@/gameUtils/gameMeta";
-import type { TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
+import type { TakenTurnData, TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
 import { ArrayStatsAccumulatorGame, type GameStatsForRounds } from "@/gameUtils/statsAccumulator";
 
 export const createComponent = <
@@ -18,7 +18,8 @@ export const createComponent = <
   meta: AnyGameMetadata<V, RS, GS>,
 ) => {
   type PlayerData = PlayerDataT<RS, TurnData<V, RS>, GS>;
-  const gameStatsFactory = () => new ArrayStatsAccumulatorGame(meta.gameStatsFactory);
+  // @ts-ignore
+  const gameStatsFactory = () => new ArrayStatsAccumulatorGame<V, RS, GS>(meta.gameStatsFactory);
 
   const turnKey = (playerId: string, roundIdx: number) => `${playerId}:${roundIdx}`;
 
@@ -93,7 +94,7 @@ export const createComponent = <
                   tied: position.players.filter((p) => p !== playerId),
                   stats: statsAccumulator.result({
                     all: [...turns.values()],
-                    taken: [...turnsTaken.values()],
+                    taken: [...turnsTaken.values()] as TakenTurnData<V, RS>[],
                   }),
                 },
               ] as [string, PlayerData];
@@ -193,25 +194,25 @@ export const createComponent = <
       },
       emits: {
         /* eslint-disable @typescript-eslint/no-unused-vars */
-      //   playerCompleted: (playerId: string, completed: boolean) => true,
-      //   completed: (completed: boolean) => true,
-      //   turnTaken: (
-      //     playerId: string,
-      //     roundId: RoundKey<T>,
-      //     turnData: TurnData<RoundValue<T, RoundKey<T>>>,
-      //   ) => true,
-      //   /** Emitted only when the entire game is complete, then each time the result changes */
-      //   ["update:gameResult"]: (result: Map<string, PlayerDataComplete<T>>) => true,
-      //   ["update:positions"]: (
-      //     ordered: {
-      //       pos: number;
-      //       posOrdinal: string;
-      //       players: string[];
-      //     }[],
-      //   ) => true,
-      //   ["update:playerScores"]: (result: PlayerData<T>[]) => true,
-      //   ["update:modelValue"]: (values: Map<string, Partial<T>>) => true,
-      //   ["update:modelValueSparse"]: (values: Map<string, Map<RoundKey<T>, RoundsValue<T>>>) => true,
+        //   playerCompleted: (playerId: string, completed: boolean) => true,
+        //   completed: (completed: boolean) => true,
+        //   turnTaken: (
+        //     playerId: string,
+        //     roundId: RoundKey<T>,
+        //     turnData: TurnData<RoundValue<T, RoundKey<T>>>,
+        //   ) => true,
+        //   /** Emitted only when the entire game is complete, then each time the result changes */
+        //   ["update:gameResult"]: (result: Map<string, PlayerDataComplete<T>>) => true,
+        //   ["update:positions"]: (
+        //     ordered: {
+        //       pos: number;
+        //       posOrdinal: string;
+        //       players: string[];
+        //     }[],
+        //   ) => true,
+        //   ["update:playerScores"]: (result: PlayerData<T>[]) => true,
+        //   ["update:modelValue"]: (values: Map<string, Partial<T>>) => true,
+        //   ["update:modelValueSparse"]: (values: Map<string, Map<RoundKey<T>, RoundsValue<T>>>) => true,
         /* eslint-enable @typescript-eslint/no-unused-vars */
       },
     },
