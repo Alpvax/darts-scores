@@ -67,12 +67,12 @@ export type RoundsList<R extends RoundShapes> = R extends [...RoundShape[]]
       [I in keyof R & number]: RoundBase<R[I]["value"], R[I]["stats"]>;
     }
   : R extends Record<string, RoundShape<any, any>>
-  ? {
-      [K in keyof R & string]: KeyedRound<R[K]["value"], R[K]["stats"], K>;
-    } extends Record<string, infer KR>
-    ? KR[]
-    : [never, "unreachable", "R is a record of non-keyed rounds"]
-  : [never, "unreachable", "R is neither array or object"];
+    ? {
+        [K in keyof R & string]: KeyedRound<R[K]["value"], R[K]["stats"], K>;
+      } extends Record<string, infer KR>
+      ? KR[]
+      : [never, "unreachable", "R is a record of non-keyed rounds"]
+    : [never, "unreachable", "R is neither array or object"];
 
 /** Create moveFocus object
  * @param playerLength a reactive value returning the number of players in the current game.
@@ -226,10 +226,10 @@ type ExtractShape<R extends RoundShapes, Key extends keyof RoundShape> = R exten
       [I in keyof R & number]: R[I][Key];
     }
   : R extends Record<string, RoundShape>
-  ? {
-      [K in keyof R & string]: R[K][Key];
-    }
-  : [never, "unreachable", "R is neither array or object"];
+    ? {
+        [K in keyof R & string]: R[K][Key];
+      }
+    : [never, "unreachable", "R is neither array or object"];
 export type RoundsValues<R extends RoundShapes> = ExtractShape<R, "value">;
 export type RoundsStats<R extends RoundShapes> = ExtractShape<R, "stats">;
 
@@ -238,31 +238,31 @@ type Test = RoundsValues<{ value: number; stats: {} }[]>;
 export type RoundsValuesMap<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]
   ? Map<keyof R & number, T>
   : R extends Record<string, RoundShape<infer T>>
-  ? Map<keyof R & string, T>
-  : [never, "unreachable", "R is neither array or object"];
+    ? Map<keyof R & string, T>
+    : [never, "unreachable", "R is neither array or object"];
 export type RoundsStatsMap<R extends RoundShapes> = R extends [...RoundShape<any, infer S>[]]
   ? Map<keyof R & number, S>
   : R extends Record<string, RoundShape<any, infer S>>
-  ? Map<keyof R & string, S>
-  : [never, "unreachable", "R is neither array or object"];
+    ? Map<keyof R & string, S>
+    : [never, "unreachable", "R is neither array or object"];
 
 export type AnyRoundValue<R extends RoundShapes> = R extends [...RoundShape<infer T>[]]
   ? T
   : R extends Record<string, RoundShape<infer T>>
-  ? T
-  : [never, "unreachable", "R is neither array or object"];
+    ? T
+    : [never, "unreachable", "R is neither array or object"];
 
 export type AnyRoundStats<R extends RoundShapes> = R extends [...RoundShape<any, infer S>[]]
   ? S
   : R extends Record<string, RoundShape<any, infer S>>
-  ? S
-  : [never, "unreachable", "R is neither array or object"];
+    ? S
+    : [never, "unreachable", "R is neither array or object"];
 
 export type AnyPlayerTurnData<R extends RoundShapes> = R extends [...RoundShape<infer T, infer S>[]]
   ? PlayerTurnDataStats<T, S>
   : R extends Record<string, RoundShape<infer T, infer S>>
-  ? PlayerTurnDataStats<T, S>
-  : [never, "unreachable", "R is neither array or object"];
+    ? PlayerTurnDataStats<T, S>
+    : [never, "unreachable", "R is neither array or object"];
 
 // export type PickRound<
 //   R extends RoundShapes,

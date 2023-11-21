@@ -121,7 +121,7 @@ export type GameStatsFactory<
 ) => GS;
 
 type GameMetadataArgs<
-  R extends RoundDef<V, RS, K>,
+  R extends RoundDef<V, RS, K> | NormalisedRound<V, RS, K>,
   GS extends GameStatsForRounds<RS>,
   V,
   RS extends TurnStats = {},
@@ -138,7 +138,7 @@ type GameMetadataArgs<
       });
 
 export type GameMetaArgsINS<V, GS extends GameStatsForRounds<{}>> = GameMetadataArgs<
-  IndexedRoundDefNoStats<V>,
+  IndexedRoundDefNoStats<V> | NormIRN<V>,
   GS,
   V
 >;
@@ -146,18 +146,18 @@ export type GameMetaArgsIRS<
   V,
   RS extends TurnStats,
   GS extends GameStatsForRounds<RS>,
-> = GameMetadataArgs<IndexedRoundDefStats<V, RS>, GS, V, RS>;
+> = GameMetadataArgs<IndexedRoundDefStats<V, RS> | NormIRS<V, RS>, GS, V, RS>;
 export type GameMetaArgsKNS<
   V,
   GS extends GameStatsForRounds<{}>,
   K extends string = string,
-> = GameMetadataArgs<KeyedRoundDefNoStats<V, K>, GS, V, {}, K>;
+> = GameMetadataArgs<KeyedRoundDefNoStats<V, K> | NormKRN<V, K>, GS, V, {}, K>;
 export type GameMetaArgsKRS<
   V,
   RS extends TurnStats,
   GS extends GameStatsForRounds<RS>,
   K extends string = string,
-> = GameMetadataArgs<KeyedRoundDefStats<V, RS, K>, GS, V, RS, K>;
+> = GameMetadataArgs<KeyedRoundDefStats<V, RS, K> | NormKRS<V, RS, K>, GS, V, RS, K>;
 
 type GameMetadata<
   R extends NormalisedRound<V, RS, K>,
@@ -226,7 +226,6 @@ export function normaliseGameMetadata<
     startScore: meta.startScore,
     positionOrder: meta.positionOrder,
     rounds: meta.rounds.map(normaliseRound),
-    // @ts-ignore
     gameStatsFactory: meta.gameStatsFactory
       ? (meta.gameStatsFactory as GameStatsFactory<GS, TurnData<V, RS, K>, RS>)
       : () => ({}) as GS, //TODO: error if missing when GS != {}
