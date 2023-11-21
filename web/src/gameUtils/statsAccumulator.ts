@@ -10,13 +10,11 @@ type NumericTS<T extends TurnStats> = {
 
 export type ArrayGameStats<T extends TurnStats> = {
   turnStats: T[];
-} & Partial<
-  {
-    [K in keyof BoolTS<T> & string as `${K}Count`]: number;
-  } & {
-    [K in keyof NumericTS<T> & string as `${K}Total` | `${K}CountNZ`]: number;
-  }
->;
+} & ({
+  [K in keyof BoolTS<T> & string as `${K}Count`]: number;
+} & {
+  [K in keyof NumericTS<T> & string as `${K}Total` | `${K}CountNZ`]: number;
+});
 
 export type GameStatsForRounds<T extends TurnStats, V = any> = {
   [K in string as K extends keyof T ? never : K]: V;
@@ -31,7 +29,8 @@ export class ArrayStatsAccumulatorGame<
   RK extends number /*TODO: non numeric rounds | [...string[]]*/ = number,
 > {
   private readonly turns = new Map<RK, T>();
-  private readonly game = {} as Omit<ArrayGameStats<T>, "turnStats">;
+  private readonly game = {} as Partial<Omit<ArrayGameStats<T>, "turnStats">>;
+  private readonly initializedKeys = new Set<keyof Omit<ArrayGameStats<T>, "turnStats">>();
   constructor(private readonly gameStatsFactory: GameStatsFactory<G, TurnData<V, T>, T>) {}
 
   addRound(roundKey: RK, stats: T) {
@@ -50,16 +49,23 @@ export class ArrayStatsAccumulatorGame<
   ) {
     (this.game[key] as number) = f((this.game[key] ?? 0) as number);
   }
-  private addBoolRS(statKey: keyof BoolTS<T> & string, value: boolean) {
-    if (value) {
-      this.mapGameVal(`${statKey}Count`, (count) => count + 1);
+  private incrementBoolCount<K extends keyof Omit<ArrayGameStats<T>, "turnStats">>(
+    key: K,
+    value: boolean,
+  ) {
+    if (!this.initializedKeys.has(key)) {
+      this.initializedKeys.add(key);
+      (this.game[key] as number) = value ? 1 : 0;
+    } else if (value) {
+      this.mapGameVal(key, (count) => count + 1);
     }
+  }
+  private addBoolRS(statKey: keyof BoolTS<T> & string, value: boolean) {
+    this.incrementBoolCount(`${statKey}Count`, value);
   }
   private addNumericRS(statKey: keyof NumericTS<T> & string, value: number) {
     this.mapGameVal(`${statKey}Total`, (total) => total + value);
-    if (value !== 0) {
-      this.mapGameVal(`${statKey}CountNZ`, (count) => count + 1);
-    }
+    this.incrementBoolCount(`${statKey}CountNZ`, value !== 0);
   }
 
   result(turns: { all: TurnData<V, T>[]; taken: TakenTurnData<V, T>[] }): GameStats<T, G> {

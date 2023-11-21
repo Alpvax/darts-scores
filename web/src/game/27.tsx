@@ -137,7 +137,7 @@ export const gameMeta = normaliseGameMetadata<
     const firstNeg = taken.findIndex(({ score }) => score < 0);
     const firstMiss = taken.findIndex(({ value }) => value < 1);
     return {
-      fatNick: taken.length > 0 && (stats.hitsCountNZ ?? 0) < 1,
+      fatNick: taken.length > 0 && stats.hitsCountNZ < 1,
       farPos: firstNeg > 0 ? firstNeg - 1 : 20,
       allPositive: taken.length > 0 && ![...taken.values()].some(({ score }) => score < 0),
       farDream: firstMiss > 0 ? firstMiss - 1 : 20,
