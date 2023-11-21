@@ -209,5 +209,6 @@ export const usePlayerStore = defineStore("player", () => {
     playerName,
     defaultOrder,
     getPlayer,
+    all: computed(() => [...loadedPlayers.value.keys()]),
   };
 });

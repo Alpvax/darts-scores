@@ -4,6 +4,7 @@ import {
   makePlayerPositions,
   type DisplayPosRowPositions,
   type PlayerDataT,
+  type Position,
 } from "@/gameUtils/playerData";
 import { usePlayerStore } from "@/stores/player";
 import type { AnyGameMetadata, GameStatsFactory } from "@/gameUtils/gameMeta";
@@ -117,9 +118,8 @@ export const createComponent = <
             emit("completed", val);
           }
           if (val) {
-            emit(
-              "update:gameResult",
-              new Map<string, PlayerData>(
+            emit("update:gameResult", {
+              data: new Map<string, PlayerData>(
                 props.players.flatMap((pid) => {
                   const data = playerData.value.get(pid)!;
                   if (data.complete) {
@@ -134,7 +134,8 @@ export const createComponent = <
                   }
                 }),
               ),
-            );
+              positions: playerPositions.value.ordered,
+            });
           }
         },
       );
@@ -236,7 +237,8 @@ export const createComponent = <
         completed: (completed: boolean) => true,
         turnTaken: (turnData: TurnData<V, RS>) => true,
         /** Emitted only when the entire game is complete, then each time the result changes */
-        ["update:gameResult"]: (result: Map<string, PlayerData>) => true,
+        ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
+          true,
         //   ["update:positions"]: (
         //     ordered: {
         //       pos: number;

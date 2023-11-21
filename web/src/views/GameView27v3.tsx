@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, type Ref } from "vue";
+import { defineComponent, ref, watch, type Ref, computed } from "vue";
 import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
@@ -7,6 +7,8 @@ import { DATE_DM_FORMAT, gameMeta } from "@/game/27";
 import type { PlayerDataFor } from "@/gameUtils/playerData";
 
 const Game27 = createComponent(gameMeta);
+
+const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
 
 type PlayerGameResult27 = {
   rounds: number[];
@@ -100,37 +102,62 @@ export default defineComponent({
         }
       },
     );
-    // const positions = ref(
-    //   [] as {
-    //     pos: number;
-    //     posOrdinal: string;
-    //     players: string[];
-    //   }[],
-    // );
-    // const winners = computed(() =>
-    //   gameResult.value !== null && positions.value.length > 0
-    //     ? positions.value[0].players
-    //     : undefined,
-    // );
-    // const submitted = ref(false);
+    const positions = ref(
+      [] as {
+        pos: number;
+        posOrdinal: string;
+        players: string[];
+      }[],
+    );
+    const winners = computed(() =>
+      gameResult.value !== null && positions.value.length > 0
+        ? positions.value[0].players
+        : undefined,
+    );
+    const submitted = ref(false);
 
-    // const submitScores = () => {
-    //   console.log("Submitting scores:", gameValues.value);
-    //   console.log("Game result:", gameResult.value);
-    //   if (gameValues.value !== undefined) {
-    //     const game = [...gameValues.value.entries()].reduce(
-    //       (obj, [pid, rounds]) => {
-    //         obj[pid] = {
-    //           rounds: rounds.map((r) => r ?? 0),
-    //           //TODO: rest of values
-    //         };
-    //         return obj;
-    //       },
-    //       {} as Record<string, { rounds: number[] }>,
-    //     ); //Result27["game"])
-    //     console.log(game); //XXX
-    //   }
-    // };
+    const submitScores = () => {
+      // console.log("Submitting scores:", gameValues.value);
+      console.log("Game result:", gameResult.value);
+      // if (gameValues.value !== undefined) {
+      //   const game = [...gameValues.value.entries()].reduce(
+      //     (obj, [pid, rounds]) => {
+      //       obj[pid] = {
+      //         rounds: rounds.map((r) => r ?? 0),
+      //         //TODO: rest of values
+      //       };
+      //       return obj;
+      //     },
+      //     {} as Record<string, { rounds: number[] }>,
+      //   ); //Result27["game"])
+      //   console.log(game); //XXX
+      // }
+      if (winners.value !== undefined && gameResult.value !== null) {
+        const result: Result27 = {
+          date: gameDate.value.toISOString(),
+          winner:
+            winners.value.length === 1
+              ? winners.value[0]
+              : {
+                  tie: winners.value,
+                  tiebreak: {}, //TODO: tiebreak
+                },
+          game: [...gameResult.value.entries()].reduce(
+            (game, [pid, data]) => {
+              game[pid] = {
+                rounds: [...data.allTurns.values()].map(({ value }) => value!),
+                score: data.score,
+                cliffs: data.stats.cliffCount,
+                allPositive: data.stats.allPositive,
+              };
+              return game;
+            },
+            {} as Record<string, PlayerGameResult27>,
+          ),
+        };
+        console.log("DBResult:", result);
+      }
+    };
 
     // type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
     // type GameStats = {
@@ -157,20 +184,27 @@ export default defineComponent({
 
     return () => (
       <div>
-        {/* <PlayerSelection
-          available={playerStore.all}
-        /> */}
+        {props.gameId.length < 1 && !submitted.value ? (
+          <PlayerSelection
+            legend="Select players"
+            available={playerStore.all}
+            modelValue={players.value}
+            onUpdate:modelValue={(p) => (players.value = p)}
+          />
+        ) : undefined}
         <Game27
           class="game twentyseven"
           players={players.value}
           // modelValue={gameValues.value}
-          editable={props.gameId.length < 1}
+          editable={props.gameId.length < 1 && !submitted.value}
           displayPositions="head"
           // onPlayerCompleted={(pid, complete) =>
           //   console.log(`player "${pid}" completion state changed: ${complete}`)
           // }
-          onUpdate:gameResult={(result) => (gameResult.value = result)}
-          // onUpdate:positions={(order) => (positions.value = order)}
+          onUpdate:gameResult={({ data, positions: p }) => {
+            gameResult.value = data;
+            positions.value = p;
+          }}
           // onUpdate:modelValue={(vals) => (gameValues.value = vals)}
           // onUpdate:playerScores={(vals) => {
           //   console.log(vals);
@@ -251,23 +285,20 @@ export default defineComponent({
             ),
           }}
         </Game27>
-        {/* {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
+        {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
           <div class="completed">
             Game Completed!{" "}
             {winners.value.length === 1
               ? `Winner = ${playerStore.playerName(winners.value[0]).value}`
-              : `It is a tie between ${winners.value
-                  .slice(0, winners.value.length - 1)
-                  .map((pid) => playerStore.playerName(pid).value)
-                  .join(", ")} and ${
-                  playerStore.playerName(winners.value[winners.value.length - 1]).value
-                }`}
+              : `It is a tie between ${listFormat.format(
+                  winners.value.map((pid) => playerStore.playerName(pid).value),
+                )}`}
             !
             {!submitted.value && props.gameId.length <= 0 ? (
               <input type="button" value="Submit Scores" onClick={submitScores} />
             ) : undefined}
           </div>
-        ) : undefined} */}
+        ) : undefined}
       </div>
     );
   },

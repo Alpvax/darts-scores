@@ -99,6 +99,8 @@ export type PlayerData<R extends RoundShapes, S extends Record<string, any>> =
 export type PositionsOrder = "highestFirst" | "lowestFirst";
 export type DisplayPosRowPositions = "head" | "body" | "foot" | "none";
 
+export type Position = { pos: number; posOrdinal: string; players: string[] };
+
 export const makePlayerPositions = (
   playerScores: Ref<Map<string, number>>,
   positionOrder: PositionsOrder,
@@ -139,8 +141,8 @@ export const makePlayerPositions = (
       },
       {
         scores: new Set<number>(),
-        ordered: [] as { pos: number; posOrdinal: string; players: string[] }[],
-        playerLookup: new Map<string, { pos: number; posOrdinal: string; players: string[] }>(),
+        ordered: [] as Position[],
+        playerLookup: new Map<string, Position>(),
       },
     );
 
