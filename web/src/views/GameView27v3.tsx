@@ -156,6 +156,11 @@ export default defineComponent({
           ),
         };
         console.log("DBResult:", result);
+        console.log(
+          "Stats:",
+          new Map([...gameResult.value.entries()].map(([pid, { stats }]) => [pid, stats])),
+        );
+        submitted.value = true;
       }
     };
 
@@ -227,24 +232,15 @@ export default defineComponent({
               <>
                 <tr class="totalHitsRow">
                   <th class="rowLabel">Hits</th>
-                  {playerScores.value.map(({ turns }) => {
+                  {playerScores.value.map(({ turns, stats: { hitsCountNZ, hitsTotal } }) => {
                     const l = turns.size;
-                    const { r, a } = [...turns.values()].reduce(
-                      ({ r, a }, { value: h }) => {
-                        if (h) {
-                          return { r: r + 1, a: a + h };
-                        }
-                        return { r, a };
-                      },
-                      { r: 0, a: 0 },
-                    );
                     return (
                       <td>
                         <span>
-                          {r}/{l}
+                          {hitsCountNZ}/{l}
                         </span>{" "}
                         <span>
-                          ({a}/{l * 3})
+                          ({hitsTotal}/{l * 3})
                         </span>
                       </td>
                     );

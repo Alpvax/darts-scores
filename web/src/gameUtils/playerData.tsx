@@ -22,7 +22,7 @@ export type PlayerDataT<
 > = {
   playerId: string;
   /** Whether the player has completed all rounds */
-  complete: false;
+  complete: boolean;
   /** The final score if finished, or the current score if in progress */
   score: number;
   /**

@@ -90,7 +90,7 @@ export const createComponent = <
                 playerId,
                 {
                   playerId,
-                  complete: false, //TODO: complete: pRounds.size === rounds.value.length
+                  complete: turnsTaken.size === meta.rounds.length,
                   score,
                   turns: turnsTaken,
                   allTurns: allTurns,
@@ -194,7 +194,7 @@ export const createComponent = <
                           // @ts-ignore
                           {
                             ...pData,
-                            editable: true,
+                            editable: props.editable,
                             focus: makeMoveFocus(pIdx, idx),
                           },
                         )}

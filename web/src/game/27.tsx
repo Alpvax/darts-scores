@@ -192,14 +192,9 @@ export const gameMeta = normaliseGameMetadata<
       piranha: Boolean(all[0].value) && all.slice(1).every(({ value }) => !value),
       jesus: false && stats.hitsTotal === 1 && all[19].value === 1, //TODO: last dart recognition?
       hans: all
-        .slice(2)
+        .map(({ stats }) => stats!.doubledouble)
         .reduce(
-          (acc, _, i) =>
-            all[i].stats!.doubledouble &&
-            all[i - 1].stats!.doubledouble &&
-            all[i - 2].stats!.doubledouble
-              ? acc + 1
-              : acc,
+          (acc, dd, i, arr) => (i <= 17 && dd && arr[i + 1] && arr[i + 2] ? acc + 1 : acc),
           0,
         ),
     };
