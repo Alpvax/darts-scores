@@ -216,7 +216,7 @@ export default defineComponent({
                     );
                   })}
                 </tr>
-                {playerScores.value.some(({ turns }) => turns.size > 0 && turns.size < 20) ? (
+                {playerScores.value.some(({ turns }) => turns.size < 20) ? (
                   <tr class="finalScoreRow">
                     <th class="rowLabel">Final score</th>
                     {playerScores.value.map(({ allTurns }) => {

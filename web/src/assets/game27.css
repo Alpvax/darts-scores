@@ -2,7 +2,7 @@ table.game.twentyseven {
   font-size: 1.8vb;
   white-space: nowrap;
   max-width: 100%;
-  min-width: fit-content;
+  min-width: min-content;
 
   & .rowLabel {
     font-weight: bold;
@@ -112,5 +112,10 @@ table.game.twentyseven {
     border-top: 1px dashed black;
     font-size: 0.95em;
     width: 13ch;
+  }
+
+  & tr.finalScoreRow > th {
+    font-size: 0.8em;
+    white-space: normal;
   }
 }
