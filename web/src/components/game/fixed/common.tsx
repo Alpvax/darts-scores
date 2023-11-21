@@ -146,6 +146,10 @@ export const createComponent = <
         allCompleted,
       );
       onMounted(() => focusEmpty());
+      watch(
+        () => props.players,
+        () => focusEmpty(),
+      );
 
       const playerStore = usePlayerStore();
       return () => (

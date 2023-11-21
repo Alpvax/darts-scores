@@ -178,15 +178,15 @@ export const gameMeta = normaliseGameMetadata<
     },
   })),
   gameStatsFactory: (stats, { taken, all }) => {
-    const farFN = taken.findIndex(({ value }) => value > 0);
+    const firstHit = taken.findIndex(({ value }) => value > 0);
     const firstNeg = taken.findIndex(({ score }) => score < 0);
     const firstMiss = taken.findIndex(({ value }) => value < 1);
     return {
-      farFN,
+      farFN: firstHit >= 0 ? firstHit : 20,
       fatNick: taken.length > 0 && stats.hitsCountNZ < 1,
-      farPos: firstNeg > 0 ? firstNeg - 1 : 20,
+      farPos: firstNeg >= 0 ? firstNeg : 20,
       allPositive: taken.length > 0 && ![...taken.values()].some(({ score }) => score < 0),
-      farDream: firstMiss > 0 ? firstMiss - 1 : 20,
+      farDream: firstMiss >= 0 ? firstMiss : 20,
       dream: firstMiss < 0,
       goblin: taken.every(({ value }) => value !== 1),
       piranha: Boolean(all[0].value) && all.slice(1).every(({ value }) => !value),

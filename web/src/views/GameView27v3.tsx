@@ -194,7 +194,11 @@ export default defineComponent({
             legend="Select players"
             available={playerStore.all}
             modelValue={players.value}
-            onUpdate:modelValue={(p) => (players.value = p)}
+            onUpdate:modelValue={(p: string[]) =>
+              (players.value = p.toSorted(
+                (a, b) => playerStore.defaultOrder(a).value - playerStore.defaultOrder(b).value,
+              ))
+            }
           />
         ) : undefined}
         <Game27
@@ -206,6 +210,11 @@ export default defineComponent({
           // onPlayerCompleted={(pid, complete) =>
           //   console.log(`player "${pid}" completion state changed: ${complete}`)
           // }
+          onCompleted={(c) => {
+            if (!c) {
+              gameResult.value = null;
+            }
+          }}
           onUpdate:gameResult={({ data, positions: p }) => {
             gameResult.value = data;
             positions.value = p;
