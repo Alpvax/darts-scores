@@ -5,8 +5,15 @@ import type {
   RoundsValues,
 } from "@/components/game/Rounds";
 import { computed, type Ref } from "vue";
-import type { TurnData, TurnStats } from "./roundDeclaration";
+import type { TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
 import type { GameStatsForRounds, GameStats } from "./statsAccumulator";
+import type {
+  AnyGameMetadata,
+  GameMetaINS,
+  GameMetaIRS,
+  GameMetaKNS,
+  GameMetaKRS,
+} from "./gameMeta";
 
 export type PlayerDataT<
   RS extends TurnStats,
@@ -20,15 +27,30 @@ export type PlayerDataT<
   score: number;
   /**
    * A Map of the completed rounds, with non completed rounds missing from the map. <br/>
+   * Key is round index; value is {@link TakenTurnData}, including the value, delta score of the round and score at this round.
+   * */
+  turns: Map<number, TakenTurnData<T extends TurnData<infer V, RS> ? V : never, RS>>;
+  /**
+   * A Map of the all rounds, with non completed rounds missing from the map. <br/>
    * Key is round index; value is {@link TurnData}, including the value, delta score of the round and score at this round.
    * */
-  turns: Map<number, T>;
+  allTurns: Map<number, T>;
   /** The player's current position */
   position: number;
   /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
   tied: string[];
   stats: GameStats<RS, GS>;
 };
+
+export type PlayerDataFor<
+  M extends
+    | GameMetaINS<any, any>
+    | GameMetaIRS<any, any, any>
+    | GameMetaKNS<any, any, any>
+    | GameMetaKRS<any, any, any, any>,
+> = M extends AnyGameMetadata<infer V, infer RS, infer GS, infer K>
+  ? PlayerDataT<RS, TurnData<V, RS, K>, GS>
+  : never;
 
 export type PlayerDataBase = {
   playerId: string;

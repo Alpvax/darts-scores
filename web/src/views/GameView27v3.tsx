@@ -1,9 +1,10 @@
-import { defineComponent, ref, watch } from "vue";
-import { createComponent } from "@/components/game/fixed/arrayV2";
+import { defineComponent, ref, watch, type Ref } from "vue";
+import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
 import { DATE_DM_FORMAT, gameMeta } from "@/game/27";
+import type { PlayerDataFor } from "@/gameUtils/playerData";
 
 const Game27 = createComponent(gameMeta);
 
@@ -42,6 +43,7 @@ export default defineComponent({
     gameId: { type: String, default: "" },
   },
   setup(props) {
+    type PlayerData = PlayerDataFor<typeof gameMeta>;
     const db = getFirestore();
     const playerStore = usePlayerStore();
     const players = ref([
@@ -88,7 +90,16 @@ export default defineComponent({
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
-    // const gameResult = ref(null as null | Map<string, PlayerDataComplete<number[]>>);
+    const gameResult = ref(null as null | Map<string, PlayerData>);
+
+    watch(
+      () => gameResult,
+      (result) => {
+        if (result) {
+          console.log("Game Result:", result);
+        }
+      },
+    );
     // const positions = ref(
     //   [] as {
     //     pos: number;
@@ -158,7 +169,7 @@ export default defineComponent({
           // onPlayerCompleted={(pid, complete) =>
           //   console.log(`player "${pid}" completion state changed: ${complete}`)
           // }
-          // onUpdate:gameResult={(result) => (gameResult.value = result)}
+          onUpdate:gameResult={(result) => (gameResult.value = result)}
           // onUpdate:positions={(order) => (positions.value = order)}
           // onUpdate:modelValue={(vals) => (gameValues.value = vals)}
           // onUpdate:playerScores={(vals) => {
@@ -178,67 +189,66 @@ export default defineComponent({
                     </th>
                   )
                 : undefined,
-            // footer: () => (
-            //   <>
-            //     <tr class="totalHitsRow">
-            //       <th class="rowLabel">Hits</th>
-            //       {playerScores.value.map(({ rounds }) => {
-            //         const l = rounds.size;
-            //         const { r, a } = [...rounds.values()].reduce(
-            //           ({ r, a }, h) => {
-            //             if (h > 0) {
-            //               return { r: r + 1, a: a + h };
-            //             }
-            //             return { r, a };
-            //           },
-            //           { r: 0, a: 0 },
-            //         );
-            //         return (
-            //           <td>
-            //             <span>
-            //               {r}/{l}
-            //             </span>{" "}
-            //             <span>
-            //               ({a}/{l * 3})
-            //             </span>
-            //           </td>
-            //         );
-            //       })}
-            //     </tr>
-            //     {playerScores.value.some(({ rounds }) => rounds.size > 0 && rounds.size < 20) ? (
-            //       <tr class="finalScoreRow">
-            //         <th class="rowLabel">Final score</th>
-            //         {playerScores.value.map(({ rounds }) => {
-            //           // const lastComplete = Math.max(...rounds.keys());
-            //           // const l_l2 = lastComplete - lastComplete * lastComplete
-            //           // Score - 105 - l_l2
-            //           // Score + 3 * (105 + l_l2)
-            //           let scoreMin = 27;
-            //           let scoreMax = 27;
-            //           for (let i = 0; i < 20; i++) {
-            //             const s = rounds.get(i);
-            //             if (s === undefined) {
-            //               scoreMin -= 2 * (i + 1);
-            //               scoreMax += 6 * (i + 1);
-            //             } else {
-            //               const delta = (i + 1) * (s > 0 ? 2 * s : -2);
-            //               console.log("score", i, s, delta);
-            //               scoreMin += delta;
-            //               scoreMax += delta;
-            //             }
-            //           }
-            //           return scoreMin === scoreMax ? (
-            //             <td>{scoreMin}</td>
-            //           ) : (
-            //             <td>
-            //               {scoreMin} to {scoreMax}
-            //             </td>
-            //           );
-            //         })}
-            //       </tr>
-            //     ) : undefined}
-            //   </>
-            // ),
+            footer: (playerScores: Ref<PlayerData[]>) => (
+              <>
+                <tr class="totalHitsRow">
+                  <th class="rowLabel">Hits</th>
+                  {playerScores.value.map(({ turns }) => {
+                    const l = turns.size;
+                    const { r, a } = [...turns.values()].reduce(
+                      ({ r, a }, { value: h }) => {
+                        if (h) {
+                          return { r: r + 1, a: a + h };
+                        }
+                        return { r, a };
+                      },
+                      { r: 0, a: 0 },
+                    );
+                    return (
+                      <td>
+                        <span>
+                          {r}/{l}
+                        </span>{" "}
+                        <span>
+                          ({a}/{l * 3})
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+                {playerScores.value.some(({ turns }) => turns.size > 0 && turns.size < 20) ? (
+                  <tr class="finalScoreRow">
+                    <th class="rowLabel">Final score</th>
+                    {playerScores.value.map(({ allTurns }) => {
+                      // const lastComplete = Math.max(...rounds.keys());
+                      // const l_l2 = lastComplete - lastComplete * lastComplete
+                      // Score - 105 - l_l2
+                      // Score + 3 * (105 + l_l2)
+                      let scoreMin = 27;
+                      let scoreMax = 27;
+                      for (let i = 0; i < 20; i++) {
+                        const s = allTurns.get(i)!.value;
+                        if (s === undefined) {
+                          scoreMin -= 2 * (i + 1);
+                          scoreMax += 6 * (i + 1);
+                        } else {
+                          const delta = (i + 1) * (s > 0 ? 2 * s : -2);
+                          scoreMin += delta;
+                          scoreMax += delta;
+                        }
+                      }
+                      return scoreMin === scoreMax ? (
+                        <td>{scoreMin}</td>
+                      ) : (
+                        <td>
+                          {scoreMin} to {scoreMax}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : undefined}
+              </>
+            ),
           }}
         </Game27>
         {/* {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (

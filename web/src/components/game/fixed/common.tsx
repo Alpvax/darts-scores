@@ -1,12 +1,12 @@
 import { type ClassBindings, makeMoveFocusFactory } from "@/utils";
-import { computed, defineComponent, ref, type PropType, onMounted } from "vue";
+import { computed, defineComponent, ref, type PropType, onMounted, watch } from "vue";
 import {
   makePlayerPositions,
   type DisplayPosRowPositions,
   type PlayerDataT,
 } from "@/gameUtils/playerData";
 import { usePlayerStore } from "@/stores/player";
-import type { AnyGameMetadata } from "@/gameUtils/gameMeta";
+import type { AnyGameMetadata, GameStatsFactory } from "@/gameUtils/gameMeta";
 import type { TakenTurnData, TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
 import { ArrayStatsAccumulatorGame, type GameStatsForRounds } from "@/gameUtils/statsAccumulator";
 
@@ -18,8 +18,10 @@ export const createComponent = <
   meta: AnyGameMetadata<V, RS, GS>,
 ) => {
   type PlayerData = PlayerDataT<RS, TurnData<V, RS>, GS>;
-  // @ts-ignore
-  const gameStatsFactory = () => new ArrayStatsAccumulatorGame<V, RS, GS>(meta.gameStatsFactory);
+  const gameStatsFactory = () =>
+    new ArrayStatsAccumulatorGame<V, RS, GS>(
+      meta.gameStatsFactory as GameStatsFactory<GS, TurnData<V, RS>, RS>,
+    );
 
   const turnKey = (playerId: string, roundIdx: number) => `${playerId}:${roundIdx}`;
 
@@ -27,7 +29,7 @@ export const createComponent = <
     (props, { slots, emit }) => {
       const turnValues = ref(new Map<string, V>()); //TODO: set from props
 
-      /** Map of playerId to Map<index, {score, turns, lastPlayedRound}> */
+      /** Map of playerId to Map<index, {score, allTurns, takenTurns, lastPlayedRound}> */
       const playerScores = computed(
         () =>
           new Map(
@@ -35,24 +37,24 @@ export const createComponent = <
               return [
                 pid,
                 meta.rounds.reduce(
-                  ({ score, turns, turnsTaken, lastPlayedRound }, r, i) => {
+                  ({ score, allTurns, turnsTaken, lastPlayedRound }, r, i) => {
                     const val = turnValues.value.get(turnKey(pid, i));
                     const data = r.turnData(val, score, pid, i);
-                    score += data.deltaScore;
+                    score = data.score;
                     if (r.type === "indexed-stats") {
                       // || r.type === "keyed-stats") {
-                      turns.set(i, data);
+                      allTurns.set(i, data);
                     }
                     if (val !== undefined) {
-                      turnsTaken.add(data);
+                      turnsTaken.set(i, data as TakenTurnData<V, RS>);
                       lastPlayedRound = i;
                     }
-                    return { score, turns, turnsTaken, lastPlayedRound };
+                    return { score, allTurns, turnsTaken, lastPlayedRound };
                   },
                   {
                     score: meta.startScore(pid),
-                    turns: new Map<number, TurnData<V, RS>>(),
-                    turnsTaken: new Set<TurnData<V, RS>>(),
+                    allTurns: new Map<number, TurnData<V, RS>>(),
+                    turnsTaken: new Map<number, TakenTurnData<V, RS>>(),
                     lastPlayedRound: -1,
                   },
                 ),
@@ -77,10 +79,10 @@ export const createComponent = <
         () =>
           new Map(
             props.players.map((playerId) => {
-              const { score, turns, turnsTaken } = playerScores.value.get(playerId)!;
+              const { score, allTurns, turnsTaken } = playerScores.value.get(playerId)!;
               const position = playerPositions.value.playerLookup.get(playerId)!;
               const statsAccumulator = gameStatsFactory();
-              turns.forEach(({ stats, roundIndex }) =>
+              allTurns.forEach(({ stats, roundIndex }) =>
                 statsAccumulator.addRound(roundIndex, stats!),
               );
               return [
@@ -89,12 +91,13 @@ export const createComponent = <
                   playerId,
                   complete: false, //TODO: complete: pRounds.size === rounds.value.length
                   score,
-                  turns,
+                  turns: turnsTaken,
+                  allTurns: allTurns,
                   position: position.pos,
                   tied: position.players.filter((p) => p !== playerId),
                   stats: statsAccumulator.result({
-                    all: [...turns.values()],
-                    taken: [...turnsTaken.values()] as TakenTurnData<V, RS>[],
+                    all: [...allTurns.values()],
+                    taken: [...turnsTaken.values()],
                   }),
                 },
               ] as [string, PlayerData];
@@ -105,6 +108,35 @@ export const createComponent = <
       const allCompleted = computed(() =>
         //TODO: completed early for dynamic rounds
         props.players.every((pid) => playerData.value.get(pid)!.turns.size === meta.rounds.length),
+      );
+      /** Update when completed or when a turn changes, but with the completed value as a convenience */
+      watch(
+        () => [allCompleted.value, turnValues.value] as [boolean, Map<string, V>],
+        ([val], [prev]) => {
+          if (val !== prev) {
+            emit("completed", val);
+          }
+          if (val) {
+            emit(
+              "update:gameResult",
+              new Map<string, PlayerData>(
+                props.players.flatMap((pid) => {
+                  const data = playerData.value.get(pid)!;
+                  if (data.complete) {
+                    return [[pid, data]];
+                  } else {
+                    console.error(
+                      `Attempted to return gameResult from an incomplete game for player: ${pid}`,
+                      "\nIgnoring playerData:",
+                      data,
+                    );
+                    return [];
+                  }
+                }),
+              ),
+            );
+          }
+        },
       );
 
       const { focusEmpty, create: makeMoveFocus } = makeMoveFocusFactory(
@@ -121,7 +153,9 @@ export const createComponent = <
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {[...playerData.value.entries()].map(([pid, data]) => (
-                <th class={meta.playerNameClass(data)}>{playerStore.playerName(pid).value}</th>
+                <th class={(meta.playerNameClass as (data: PlayerData) => ClassBindings)(data)}>
+                  {playerStore.playerName(pid).value}
+                </th>
               ))}
             </tr>
             {posRow("head")}
@@ -130,7 +164,7 @@ export const createComponent = <
             {posRow("body")}
             {meta.rounds.map((r, idx) => {
               const playerRowData = props.players.map(
-                (pid) => playerScores.value.get(pid)!.turns.get(idx)!,
+                (pid) => playerScores.value.get(pid)!.allTurns.get(idx)!,
               );
               return (
                 <tr
@@ -151,7 +185,7 @@ export const createComponent = <
                             get: () => value,
                             set: (val) => {
                               turnValues.value.set(turnKey(pData.playerId, idx), val!);
-                              emit("turnTaken", pData);
+                              emit("turnTaken", { value, ...pData });
                               focusEmpty();
                             },
                           }),
@@ -173,7 +207,11 @@ export const createComponent = <
           {props.displayPositions === "foot" || slots.footer ? (
             <tfoot>
               {posRow("foot")}
-              {slots.footer ? slots.footer() : undefined}
+              {slots.footer
+                ? slots.footer(
+                    computed(() => props.players.map((pid) => playerData.value.get(pid)!)),
+                  )
+                : undefined}
             </tfoot>
           ) : undefined}
         </table>
@@ -195,14 +233,10 @@ export const createComponent = <
       emits: {
         /* eslint-disable @typescript-eslint/no-unused-vars */
         //   playerCompleted: (playerId: string, completed: boolean) => true,
-        //   completed: (completed: boolean) => true,
-        //   turnTaken: (
-        //     playerId: string,
-        //     roundId: RoundKey<T>,
-        //     turnData: TurnData<RoundValue<T, RoundKey<T>>>,
-        //   ) => true,
-        //   /** Emitted only when the entire game is complete, then each time the result changes */
-        //   ["update:gameResult"]: (result: Map<string, PlayerDataComplete<T>>) => true,
+        completed: (completed: boolean) => true,
+        turnTaken: (turnData: TurnData<V, RS>) => true,
+        /** Emitted only when the entire game is complete, then each time the result changes */
+        ["update:gameResult"]: (result: Map<string, PlayerData>) => true,
         //   ["update:positions"]: (
         //     ordered: {
         //       pos: number;

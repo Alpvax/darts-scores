@@ -254,46 +254,47 @@ export type NormalisedRound<V, S extends TurnStats = {}, K extends string = stri
 // export function normaliseIndexedRound<V, S extends TurnStats = {}>(
 //   roundDef: IndexedRoundDefStats<V, S>,
 // ): NormIRS<V, S>;
-export function normaliseIndexedRound<V, S extends TurnStats = {}>(
-  roundDef: IndexedRoundDef<V, S>,
-): NormIRS<V, S> | NormIRN<V> {
-  type TData = IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>;
-  return {
-    type: Object.hasOwn(roundDef, "stats") ? "indexed-stats" : "indexed-noStats",
-    display: roundDef.display,
-    label: roundDef.label,
-    // deltaScore,
-    inputFocusSelector: roundDef.inputFocusSelector ?? "input",
-    // @ts-ignore
-    turnData: (
-      value: V | undefined,
-      score: number,
-      playerId: string,
-      roundIndex: number,
-    ): TData => {
-      const partial: IndexedTurnData<V> = {
-        playerId,
-        roundIndex,
-        score,
-        deltaScore: roundDef.deltaScore(value, score, playerId, roundIndex),
-        value,
-      };
-      return Object.hasOwn(roundDef, "stats")
-        ? {
-            ...partial,
-            stats: (roundDef as IndexedRoundDefStats<V, S>).stats(partial as IndexedTurnData<V>),
-          }
-        : partial;
-    },
-    rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
-    cellClass: roundDef.cellClass
-      ? (data: TData) =>
-          extendClass((roundDef.cellClass as (data: TData) => ClassBindings)(data), "turnInput", {
-            unplayed: data.value === undefined,
-          })
-      : (data: TData) => ({ turnInput: true, unplayed: data.value === undefined }) as ClassBindings,
-  };
-}
+// export function normaliseIndexedRound<V, S extends TurnStats = {}>(
+//   roundDef: IndexedRoundDef<V, S>,
+// ): NormIRS<V, S> | NormIRN<V> {
+//   type TData = IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>;
+//   return {
+//     type: Object.hasOwn(roundDef, "stats") ? "indexed-stats" : "indexed-noStats",
+//     display: roundDef.display,
+//     label: roundDef.label,
+//     // deltaScore,
+//     inputFocusSelector: roundDef.inputFocusSelector ?? "input",
+//     // @ts-ignore
+//     turnData: (
+//       value: V | undefined,
+//       score: number,
+//       playerId: string,
+//       roundIndex: number,
+//     ): TData => {
+//       const deltaScore = roundDef.deltaScore(value, score, playerId, roundIndex);
+//       const partial: IndexedTurnData<V> = {
+//         playerId,
+//         roundIndex,
+//         score: score + deltaScore,
+//         deltaScore,
+//         value,
+//       };
+//       return Object.hasOwn(roundDef, "stats")
+//         ? {
+//             ...partial,
+//             stats: (roundDef as IndexedRoundDefStats<V, S>).stats(partial as IndexedTurnData<V>),
+//           }
+//         : partial;
+//     },
+//     rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
+//     cellClass: roundDef.cellClass
+//       ? (data: TData) =>
+//           extendClass((roundDef.cellClass as (data: TData) => ClassBindings)(data), "turnInput", {
+//             unplayed: data.value === undefined,
+//           })
+//       : (data: TData) => ({ turnInput: true, unplayed: data.value === undefined }) as ClassBindings,
+//   };
+// }
 
 export function normaliseRound<V>(roundDef: IndexedRoundDefNoStats<V>): NormIRN<V>;
 export function normaliseRound<V, S extends TurnStats = {}>(
@@ -385,23 +386,27 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
     // deltaScore,
     inputFocusSelector: roundDef.inputFocusSelector ?? "input",
     turnData: (isKeyed<V, S, K>(roundDef)
-      ? (value: V | undefined, score: number, playerId: string, roundIndex: number) =>
-          tryAddStats({
+      ? (value: V | undefined, score: number, playerId: string, roundIndex: number) => {
+          const delta = deltaScore(value, score, playerId, roundIndex);
+          return tryAddStats({
             playerId,
             roundKey: roundDef.key,
             roundIndex,
-            score,
-            deltaScore: deltaScore(value, score, playerId, roundIndex),
+            score: score + delta,
+            deltaScore: delta,
             value,
-          } satisfies KeyedTurnData<V, K>)
-      : (value: V | undefined, score: number, playerId: string, roundIndex: number) =>
-          tryAddStats({
+          } satisfies KeyedTurnData<V, K>);
+        }
+      : (value: V | undefined, score: number, playerId: string, roundIndex: number) => {
+          const delta = deltaScore(value, score, playerId, roundIndex);
+          return tryAddStats({
             playerId,
             roundIndex,
-            score,
-            deltaScore: deltaScore(value, score, playerId, roundIndex),
+            score: score + delta,
+            deltaScore: delta,
             value,
-          } satisfies IndexedTurnData<V>)) as NormalisedRound<V, S, K>["turnData"],
+          } satisfies IndexedTurnData<V>);
+        }) as NormalisedRound<V, S, K>["turnData"],
     rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
     cellClass: roundDef.cellClass
       ? (data: TData) =>

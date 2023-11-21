@@ -2,7 +2,6 @@ import { extendClass, type ClassBindings } from "@/utils";
 import type { PlayerDataT, PositionsOrder } from "./playerData";
 import {
   type TurnStats,
-  normaliseIndexedRound,
   type IndexedRoundDefNoStats,
   type NormalisedRoundsArray,
   type IndexedRoundDefStats,
@@ -68,39 +67,38 @@ type GameMetaCore = {
   positionOrder: PositionsOrder;
 };
 
-export function createArrayGameMeta<V>(
-  meta: GameMetaCore & { rounds: IndexedRoundDefNoStats<V>[] },
-): GameMetaCore & {
-  hasRoundStats: false;
-  rounds: NormalisedRoundsArray<IndexedRoundDefNoStats<V>[], V>;
-};
-export function createArrayGameMeta<V, S extends TurnStats>(
-  meta: GameMetaCore & { rounds: IndexedRoundDefStats<V, S>[] },
-): GameMetaCore & {
-  hasRoundStats: true;
-  rounds: NormalisedRoundsArray<IndexedRoundDefStats<V, S>[], V, S>;
-};
-export function createArrayGameMeta<V, S extends TurnStats>(
-  meta: GameMetaCore & {
-    rounds: IndexedRoundDefNoStats<V>[] | IndexedRoundDefStats<V, S>[];
-  },
-): ArrayGameMetadata<V, S> {
-  const rounds = meta.rounds.map((r) => normaliseIndexedRound<V, S>(r));
-  // @ts-expect-error
-  return rounds[0].type === "indexed-stats"
-    ? {
-        startScore: meta.startScore,
-        positionOrder: meta.positionOrder,
-        hasRoundStats: true,
-        rounds,
-      }
-    : {
-        startScore: meta.startScore,
-        positionOrder: meta.positionOrder,
-        hasRoundStats: false,
-        rounds,
-      };
-}
+// export function createArrayGameMeta<V>(
+//   meta: GameMetaCore & { rounds: IndexedRoundDefNoStats<V>[] },
+// ): GameMetaCore & {
+//   hasRoundStats: false;
+//   rounds: NormalisedRoundsArray<IndexedRoundDefNoStats<V>[], V>;
+// };
+// export function createArrayGameMeta<V, S extends TurnStats>(
+//   meta: GameMetaCore & { rounds: IndexedRoundDefStats<V, S>[] },
+// ): GameMetaCore & {
+//   hasRoundStats: true;
+//   rounds: NormalisedRoundsArray<IndexedRoundDefStats<V, S>[], V, S>;
+// };
+// export function createArrayGameMeta<V, S extends TurnStats>(
+//   meta: GameMetaCore & {
+//     rounds: IndexedRoundDefNoStats<V>[] | IndexedRoundDefStats<V, S>[];
+//   },
+// ): ArrayGameMetadata<V, S> {
+//   const rounds = meta.rounds.map((r) => normaliseIndexedRound<V, S>(r));
+//   return rounds[0].type === "indexed-stats"
+//     ? {
+//         startScore: meta.startScore,
+//         positionOrder: meta.positionOrder,
+//         hasRoundStats: true,
+//         rounds,
+//       }
+//     : {
+//         startScore: meta.startScore,
+//         positionOrder: meta.positionOrder,
+//         hasRoundStats: false,
+//         rounds,
+//       };
+// }
 
 export const metaWithStats = <V, RS extends TurnStats, GS extends GameStatsForRounds<RS>>(
   meta: ArrayGameMetadata<V, RS>,
@@ -197,8 +195,8 @@ export type AnyGameMetadata<
   RS extends TurnStats,
   GS extends GameStatsForRounds<RS>,
   K extends string = string,
-> = GS extends GameStatsForRounds<{}>
-  ? GameMetaINS<V, GS> | GameMetaKNS<V, GS, K>
+> = [GS, RS] extends [infer G extends GameStatsForRounds<{}>, Record<any, never>]
+  ? GameMetaINS<V, G> | GameMetaKNS<V, G, K>
   : GameMetaIRS<V, RS, GS> | GameMetaKRS<V, RS, GS, K>;
 
 export function normaliseGameMetadata<V, GS extends GameStatsForRounds<{}>>(
