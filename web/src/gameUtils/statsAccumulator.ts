@@ -8,13 +8,16 @@ type NumericTS<T extends TurnStats> = {
   [K in keyof T as T[K] extends number ? K : never]: T[K];
 };
 
-export type ArrayGameStats<T extends TurnStats> = {
-  turnStats: T[];
-} & ({
+type RoundStatsMapped<T extends TurnStats> = {
   [K in keyof BoolTS<T> & string as `${K}Count`]: number;
 } & {
   [K in keyof NumericTS<T> & string as `${K}Total` | `${K}CountNZ`]: number;
-});
+};
+
+export type ArrayGameStats<T extends TurnStats> = {
+  turnStats: T[];
+  score: number;
+} & RoundStatsMapped<T>;
 
 export type GameStatsForRounds<T extends TurnStats, V = any> = {
   [K in string as K extends keyof T ? never : K]: V;
@@ -29,8 +32,8 @@ export class ArrayStatsAccumulatorGame<
   RK extends number /*TODO: non numeric rounds | [...string[]]*/ = number,
 > {
   private readonly turns = new Map<RK, T>();
-  private readonly game = {} as Partial<Omit<ArrayGameStats<T>, "turnStats">>;
-  private readonly initializedKeys = new Set<keyof Omit<ArrayGameStats<T>, "turnStats">>();
+  private readonly game = {} as Partial<RoundStatsMapped<T>>;
+  private readonly initializedKeys = new Set<keyof RoundStatsMapped<T>>();
   constructor(private readonly gameStatsFactory: GameStatsFactory<G, TurnData<V, T>, T>) {}
 
   addRound(roundKey: RK, stats: T) {
@@ -43,16 +46,10 @@ export class ArrayStatsAccumulatorGame<
       }
     });
   }
-  private mapGameVal<K extends keyof Omit<ArrayGameStats<T>, "turnStats">>(
-    key: K,
-    f: (val: number) => number,
-  ) {
+  private mapGameVal<K extends keyof RoundStatsMapped<T>>(key: K, f: (val: number) => number) {
     (this.game[key] as number) = f((this.game[key] ?? 0) as number);
   }
-  private incrementBoolCount<K extends keyof Omit<ArrayGameStats<T>, "turnStats">>(
-    key: K,
-    value: boolean,
-  ) {
+  private incrementBoolCount<K extends keyof RoundStatsMapped<T>>(key: K, value: boolean) {
     if (!this.initializedKeys.has(key)) {
       this.initializedKeys.add(key);
       (this.game[key] as number) = value ? 1 : 0;
@@ -78,6 +75,7 @@ export class ArrayStatsAccumulatorGame<
     return {
       ...stats,
       ...this.gameStatsFactory(stats, turns),
+      score: turns.all[turns.all.length - 1].score,
     };
   }
 }

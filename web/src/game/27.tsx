@@ -63,6 +63,55 @@ export const onKeyInput =
     event.preventDefault();
   };
 
+/** Player stats for a single game, combined with the round stats */
+type GameStats = {
+  /** Furthest number reached before hitting */
+  farFN: number;
+  /** No hits in the entire game (farFN = 20) */
+  fatNick: boolean;
+  /** Furthest number reached before going negative */
+  farPos: number;
+  /** Score did not go negative for the entire game (farPos = 20) */
+  allPositive: boolean;
+  /** Furthest number reached without missing a round */
+  farDream: number;
+  /** Had at least 1 hit per round (farDream = 20) */
+  dream: boolean;
+  /** Only hit double doubles or cliffs */
+  goblin: boolean;
+  /** Only hit double 1(s) */
+  piranha: boolean;
+  /** Only hit with the very last dart of the game */
+  jesus: boolean;
+  /** 3 consecutive double doubles */
+  hans: number;
+};
+const summaryOrder = [
+  "score.highest",
+  "score.lowest",
+  "score.mean",
+  // REAL WINS?!
+  // "wins.count",
+  "numGames.count",
+  // "wins.rate",
+  "fatNicks.count",
+  "fatNicks.closest",
+  "cliffs.total",
+  "cliffs.meanTotal",
+  "doubleDoubles.total",
+  "doubleDoubles.meanTotal",
+  "hans.total",
+  "goblins.count",
+  "piranhas.count",
+  "jesus.count",
+  "dreams.furthest",
+  "positive.total",
+  "positive.furthest",
+  "hits.highest",
+  "hits.lowest",
+  "hits.mean",
+];
+
 export const gameMeta = normaliseGameMetadata<
   number,
   {
@@ -70,12 +119,7 @@ export const gameMeta = normaliseGameMetadata<
     doubledouble: boolean;
     hits: number;
   },
-  {
-    fatNick: boolean;
-    farPos: number;
-    allPositive: boolean;
-    farDream: number;
-  }
+  GameStats
 >({
   startScore: () => 27,
   positionOrder: "highestFirst",
@@ -133,14 +177,31 @@ export const gameMeta = normaliseGameMetadata<
       }
     },
   })),
-  gameStatsFactory: (stats, { taken }) => {
+  gameStatsFactory: (stats, { taken, all }) => {
+    const farFN = taken.findIndex(({ value }) => value > 0);
     const firstNeg = taken.findIndex(({ score }) => score < 0);
     const firstMiss = taken.findIndex(({ value }) => value < 1);
     return {
+      farFN,
       fatNick: taken.length > 0 && stats.hitsCountNZ < 1,
       farPos: firstNeg > 0 ? firstNeg - 1 : 20,
       allPositive: taken.length > 0 && ![...taken.values()].some(({ score }) => score < 0),
       farDream: firstMiss > 0 ? firstMiss - 1 : 20,
+      dream: firstMiss < 0,
+      goblin: taken.every(({ value }) => value !== 1),
+      piranha: Boolean(all[0].value) && all.slice(1).every(({ value }) => !value),
+      jesus: false && stats.hitsTotal === 1 && all[19].value === 1, //TODO: last dart recognition?
+      hans: all
+        .slice(2)
+        .reduce(
+          (acc, _, i) =>
+            all[i].stats!.doubledouble &&
+            all[i - 1].stats!.doubledouble &&
+            all[i - 2].stats!.doubledouble
+              ? acc + 1
+              : acc,
+          0,
+        ),
     };
   },
   playerNameClass: ({ stats }) => ({
