@@ -139,6 +139,17 @@ export const createComponent = <
           }
         },
       );
+      watch(
+        () => new Map([...playerData.value.entries()].map(([pid, { stats }]) => [pid, stats])),
+        (statsMap, oldMap) => {
+          for (const [pid, stats] of statsMap) {
+            if (oldMap === undefined || JSON.stringify(stats) !== JSON.stringify(oldMap.get(pid))) {
+              emit("update:playerStats", pid, stats);
+            }
+          }
+        },
+        { immediate: true },
+      );
 
       const { focusEmpty, create: makeMoveFocus } = makeMoveFocusFactory(
         computed(() => meta.rounds),
@@ -243,6 +254,7 @@ export const createComponent = <
         /** Emitted only when the entire game is complete, then each time the result changes */
         ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
           true,
+        ["update:playerStats"]: (playerId: string, stats: PlayerData["stats"]) => true,
         //   ["update:positions"]: (
         //     ordered: {
         //       pos: number;

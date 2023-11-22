@@ -178,9 +178,9 @@ export const gameMeta = normaliseGameMetadata<
     },
   })),
   gameStatsFactory: (stats, { taken, all }) => {
-    const firstHit = taken.findIndex(({ value }) => value > 0);
-    const firstNeg = taken.findIndex(({ score }) => score < 0);
-    const firstMiss = taken.findIndex(({ value }) => value < 1);
+    const firstHit = all.findIndex(({ value }) => value);
+    const firstNeg = all.findIndex(({ score }) => score < 0);
+    const firstMiss = all.findIndex(({ value }) => !value);
     return {
       farFN: firstHit >= 0 ? firstHit : 20,
       fatNick: taken.length > 0 && stats.hitsCountNZ < 1,
