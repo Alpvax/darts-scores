@@ -6,7 +6,7 @@ import type {
 } from "@/components/game/Rounds";
 import { computed, type Ref } from "vue";
 import type { TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
-import type { GameStatsForRounds, GameStats } from "./statsAccumulator";
+import type { GameStatsForRounds, GameStats } from "./statsAccumulatorGame";
 import type {
   AnyGameMetadata,
   GameMetaINS,

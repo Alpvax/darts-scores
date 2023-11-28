@@ -16,7 +16,7 @@ import {
   type KeyedRoundDefStats,
   normaliseRound,
 } from "./roundDeclaration";
-import type { ArrayGameStats, GameStatsForRounds } from "./statsAccumulator";
+import type { ArrayGameStats, GameStatsForRounds } from "./statsAccumulatorGame";
 
 export type ArrayGameMetadata<V, S extends TurnStats = {}> = GameMetaCore &
   (

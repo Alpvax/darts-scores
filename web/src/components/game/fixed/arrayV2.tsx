@@ -8,7 +8,10 @@ import {
 import { usePlayerStore } from "@/stores/player";
 import type { ArrayGameMetadata, GameMetaWithStats } from "@/gameUtils/gameMeta";
 import type { TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
-import { ArrayStatsAccumulatorGame, type GameStatsForRounds } from "@/gameUtils/statsAccumulator";
+import {
+  ArrayStatsAccumulatorGame,
+  type GameStatsForRounds,
+} from "@/gameUtils/statsAccumulatorGame";
 
 // type ComponentBuilderBase = {
 //   withRounds: {

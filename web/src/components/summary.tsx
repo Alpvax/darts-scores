@@ -1,6 +1,6 @@
 import type { AnyGameMetadata } from "@/gameUtils/gameMeta";
 import type { TurnStats } from "@/gameUtils/roundDeclaration";
-import type { GameStats, GameStatsForRounds } from "@/gameUtils/statsAccumulator";
+import type { GameStats, GameStatsForRounds } from "@/gameUtils/statsAccumulatorGame";
 import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
 

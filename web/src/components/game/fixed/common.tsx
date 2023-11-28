@@ -9,7 +9,10 @@ import {
 import { usePlayerStore } from "@/stores/player";
 import type { AnyGameMetadata, GameStatsFactory } from "@/gameUtils/gameMeta";
 import type { TakenTurnData, TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
-import { ArrayStatsAccumulatorGame, type GameStatsForRounds } from "@/gameUtils/statsAccumulator";
+import {
+  ArrayStatsAccumulatorGame,
+  type GameStatsForRounds,
+} from "@/gameUtils/statsAccumulatorGame";
 
 export const createComponent = <
   V,
