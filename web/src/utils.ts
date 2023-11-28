@@ -137,3 +137,15 @@ export function makeMoveFocusFactory(
     },
   };
 }
+
+// ================= General utility functions ===================
+
+export function* nonEmptyPowerSet<T>(array: T[]) {
+  let calculated: T[][] = [];
+  for (const item of array) {
+    yield [item];
+    const toAdd = calculated.map((it) => [...it, item]);
+    yield* toAdd;
+    calculated = [...calculated, [item], ...toAdd];
+  }
+}

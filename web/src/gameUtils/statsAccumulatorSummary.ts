@@ -1,3 +1,4 @@
+import { nonEmptyPowerSet } from "@/utils";
 import type { TurnStats } from "./roundDeclaration";
 import type { GameStats, GameStatsForRounds } from "./statsAccumulatorGame";
 
@@ -31,13 +32,13 @@ class WinCounter {
   private total = 0;
   /**
    * Map of `"[...playerId]"` (as string) to number of wins with at least those players (in addition to this player).
-   * Will grow exponentially with total number of opponents. (`2**(num_opponents)`)
+   * Will grow exponentially with total number of opponents. (`2**(num_opponents) - 1` keys)
    * (i.e 1 entry with 2 players total (1 opponent): `[a]`, 3 with 3 players: `[a], [b], [a, b]`, 7 with 4 players: `[a], [b], [c], [a, b], [a, c], [b, c], [a, b, c]`)
    */
   private readonly withAtLeastPlayers = new Map<string, number>();
   /**
    * Map of `"[...playerId]"` (as string) to number of wins with only those players in addition to this player.
-   * Will grow exponentially with total number of opponents. (`2**(num_opponents)`)
+   * May grow exponentially with total number of opponents, up to `2**(num_opponents) - 1` keys.
    * (i.e 1 entry with 2 players total (1 opponent): `[a]`, 3 with 3 players: `[a], [b], [a, b]`, 7 with 4 players: `[a], [b], [c], [a, b], [a, c], [b, c], [a, b, c]`)
    */
   private readonly withExactlyPlayers = new Map<string, number>();
@@ -46,29 +47,19 @@ class WinCounter {
     this.playerId = playerId;
   }
 
-  private incrementList(ordered: string[], isAll = false) {
+  private incrementList(map: Map<string, number>, ordered: string[]) {
     if (ordered.length < 1) {
       return;
     }
     const key = JSON.stringify(ordered);
-    if (isAll) {
-      this.withExactlyPlayers.set(key, (this.withExactlyPlayers.get(key) ?? 0) + 1);
-    }
-    this.withAtLeastPlayers.set(key, (this.withAtLeastPlayers.get(key) ?? 0) + 1);
+    map.set(key, (this.withExactlyPlayers.get(key) ?? 0) + 1);
   }
   public addWin(players: string[]) {
     this.total += 1;
     const ordered = players.filter((pid) => pid !== this.playerId).toSorted();
-    this.incrementList(ordered, true);
-    const len = ordered.length;
-    for (let i = 1; i < 1 << len; i++) {
-      const combination = [];
-      for (let j = 0; j < len; j++) {
-        if (i & (1 << j)) {
-          combination.push(ordered[j]);
-        }
-      }
-      this.incrementList(combination);
+    this.incrementList(this.withExactlyPlayers, ordered);
+    for (const arr of nonEmptyPowerSet(ordered)) {
+      this.incrementList(this.withAtLeastPlayers, arr);
     }
   }
   get wins() {
