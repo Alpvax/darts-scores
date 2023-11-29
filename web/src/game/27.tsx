@@ -86,6 +86,29 @@ type GameStats = {
   /** 3 consecutive double doubles */
   hans: number;
 };
+type HLT = number;
+type WinCount = {};
+type Count = boolean; //& rate
+type Closest = number;
+type GameSummary = {
+  score: HLT;
+  wins: WinCount;
+  fatNicks: Count & Closest;
+  cliffs: HLT;
+  dd: HLT;
+  hans: HLT;
+  goblins: Count;
+  piranhas: Count;
+  jesus: Count;
+  dreams: Count & Closest;
+  allPos: Count & Closest;
+  hits: {
+    total: HLT;
+    rounds: HLT;
+    cliffs: HLT;
+    dd: HLT;
+  };
+};
 const summaryOrder = [
   "score.highest",
   "score.lowest",
@@ -178,6 +201,9 @@ export const gameMeta = normaliseGameMetadata<
     },
   })),
   gameStatsFactory: (stats, { taken, all }) => {
+    // fatNick = countUntil(({ value }) => value);
+    // dream = countUntil(({ value }) => !value);
+    // allPos = countUntil(({ score }) => score < 0);
     const firstHit = all.findIndex(({ value }) => value);
     const firstNeg = all.findIndex(({ score }) => score < 0);
     const firstMiss = all.findIndex(({ value }) => !value);

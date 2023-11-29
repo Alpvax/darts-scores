@@ -5,7 +5,7 @@ import type {
   RoundsValues,
 } from "@/components/game/Rounds";
 import { computed, type Ref } from "vue";
-import type { TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
+import type { IntoTaken, TurnData, TurnStats } from "./roundDeclaration";
 import type { GameStatsForRounds, GameStats } from "./statsAccumulatorGame";
 import type {
   AnyGameMetadata,
@@ -29,7 +29,7 @@ export type PlayerDataT<
    * A Map of the completed rounds, with non completed rounds missing from the map. <br/>
    * Key is round index; value is {@link TakenTurnData}, including the value, delta score of the round and score at this round.
    * */
-  turns: Map<number, TakenTurnData<T extends TurnData<infer V, RS> ? V : never, RS>>;
+  turns: Map<number, IntoTaken<T>>;
   /**
    * A Map of the all rounds, with non completed rounds missing from the map. <br/>
    * Key is round index; value is {@link TurnData}, including the value, delta score of the round and score at this round.

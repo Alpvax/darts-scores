@@ -1,10 +1,10 @@
 import type { GameStatsFactory } from "./gameMeta";
 import type { TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
 
-type BoolTS<T extends TurnStats> = {
+export type BoolTS<T extends TurnStats> = {
   [K in keyof T as T[K] extends boolean ? K : never]: T[K];
 };
-type NumericTS<T extends TurnStats> = {
+export type NumericTS<T extends TurnStats> = {
   [K in keyof T as T[K] extends number ? K : never]: T[K];
 };
 

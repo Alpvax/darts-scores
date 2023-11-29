@@ -1,6 +1,6 @@
 import { nonEmptyPowerSet } from "@/utils";
 import type { TurnStats } from "./roundDeclaration";
-import type { GameStats, GameStatsForRounds } from "./statsAccumulatorGame";
+import type { BoolTS, GameStats, GameStatsForRounds, NumericTS } from "./statsAccumulatorGame";
 
 type BoolGS<S extends GameStats<any, any>> = {
   [K in keyof S as S[K] extends boolean ? K : never]: S[K];
@@ -9,8 +9,22 @@ type NumericGS<S extends GameStats<any, any>> = {
   [K in keyof S as S[K] extends number ? K : never]: S[K];
 };
 type TurnStatGS<S extends GameStats<any, any>> = S extends GameStats<infer RS, any>
-  ? { turnStats: RS[] }
+  ? {
+      [K in keyof BoolTS<RS> & string as `${K}Total` | `${K}Mean`]: number;
+    } & {
+      [K in keyof NumericTS<RS> & string as
+        | `${K}Total`
+        | `${K}TotalCountNZ`
+        | `${K}Most`
+        | `${K}Least`
+        | `${K}Mean`
+        | `${K}MeanCountNZ`]: number;
+    }
   : never;
+
+type StatWithRate = {
+  total: number;
+};
 
 type SummaryStats<RS extends TurnStats, GS extends GameStatsForRounds<RS>> = {
   [K in keyof BoolGS<GameStats<RS, GS>> & string as `${K}:Total` | `${K}:Mean`]: number;
@@ -20,9 +34,7 @@ type SummaryStats<RS extends TurnStats, GS extends GameStatsForRounds<RS>> = {
     | `${K}:Lowest`
     | `${K}:Mean`]: number;
 } & {
-  turns: GameStats<RS, GS>["turnStats"][]; //TODO: proper types
-} & {
-  //[K in keyof TurnStatGS<S> & string as `${K}Total` | `${K}CountNZ`]: number;
+  turnStats: TurnStatGS<GameStats<RS, GS>>[];
 };
 
 class WinCounter {
@@ -71,6 +83,32 @@ class WinCounter {
     return (exact ? this.withExactlyPlayers.get(key) : this.withAtLeastPlayers.get(key)) ?? 0;
   }
 }
+
+type HLT = {
+  highest: number;
+  lowest: number;
+  total: number;
+};
+
+function withRate(numGames: number, hlt: HLT): HLT & { mean: number };
+function withRate(numGames: number, total: number): { total: number; mean: number };
+function withRate(numGames: number, val: HLT | number) {
+  return typeof val === "number"
+    ? {
+        total: val,
+        mean: val / numGames,
+      }
+    : {
+        ...val,
+        mean: val.total / numGames,
+      };
+}
+
+type GameSummary = Record<string, HLT | number>;
+
+type Summary<G extends GameSummary> = {
+  [K in keyof G]: G[K] extends number ? { total: number; mean: number } : HLT & { mean: number };
+};
 
 export class SummaryStatsAccumulator<
   V,
@@ -133,6 +171,38 @@ export class SummaryStatsAccumulator<
   result(filter?: (game: { id: string; stats: S }) => boolean): SummaryStats<RS, GS> {
     const allGames = [...this.games].map(([id, stats]) => ({ id, stats }));
     const games = filter ? allGames.filter(filter) : allGames;
+    const turnStats: TurnStatGS<S>[] =
+      games /*.map(({ stats:{ turnStats }}) => turnStats.map((roundStats, roundIdx) =>
+      Object.entries(roundStats).reduce((acc, [k, v]) => {
+        if (typeof v === "boolean") {
+          acc[`${k}Total`] = v ? 1 : 0;
+        } else {
+          acc[`${k}Total`] = v
+          acc[`${k}TotalCountNZ`] = v > 0 ? 1 : 0;
+          this.addNumericRS(k as keyof NumericTS<T> & string, v);
+        }
+        return acc;
+      }, {} as Record<string, { type: "bool"; flag: 0 | 1; } | { type: "num"; total: number }>)
+    ))*/
+        .reduce(
+          (acc, { stats: { turnStats } }) => {
+            turnStats.forEach((roundStats, i) => {
+              if (acc.length < i || acc[i] === undefined) {
+                acc[i] = {};
+              }
+              Object.entries(roundStats).forEach(([k, v]) => {
+                if (typeof v === "boolean" && v) {
+                  acc[i][`${k}Total`] += 1;
+                } else {
+                  acc[`${k}Total`] = v;
+                  acc[`${k}TotalCountNZ`] = v > 0 ? 1 : 0;
+                }
+              });
+            });
+            return acc;
+          },
+          [] as Record<string, number>[],
+        );
     return null!; //TODO: implement
     //   const stats = {
     //     turnStats: Array.from({ length: this.turns.size }, (_, i) =>

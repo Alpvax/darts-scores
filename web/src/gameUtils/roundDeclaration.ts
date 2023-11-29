@@ -43,6 +43,13 @@ export type TakenTurnData<V, S extends TurnStats = {}, K extends string = string
 > & {
   value: V;
 };
+export type IntoTaken<T extends TurnData<any, any, any>> = T extends TurnData<
+  infer V,
+  infer S,
+  infer K
+>
+  ? TakenTurnData<V, S, K>
+  : never;
 
 export function hasStats<V, S extends TurnStats = {}, K extends string = string>(
   keyed: KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>,
