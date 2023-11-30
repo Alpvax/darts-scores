@@ -1,4 +1,4 @@
-import type { PlayerDataNoStats, SummaryEntryField } from ".";
+import type { PlayerDataForStats, SummaryEntryField } from ".";
 import type { TurnData, IntoTaken } from "../roundDeclaration";
 
 type RoundIndexPredicateResult =
@@ -79,7 +79,7 @@ export class RoundCountField<T extends TurnData<any, any>>
         };
   }
 
-  public entry({ turns, allTurns }: PlayerDataNoStats<T>) {
+  entry({ turns, allTurns }: PlayerDataForStats<T>) {
     const result = this.findIndex(this.takenOnly ? [...turns.values()] : [...allTurns.values()]);
     return {
       index: result.index ?? allTurns.size,
@@ -87,7 +87,16 @@ export class RoundCountField<T extends TurnData<any, any>>
     };
   }
 
-  public summary(
+  emptySummary(): RoundCountSummaryValues {
+    return {
+      count: 0,
+      earliest: Number.POSITIVE_INFINITY,
+      latest: Number.NEGATIVE_INFINITY,
+      mean: NaN,
+    };
+  }
+
+  summary(
     { earliest, latest, count }: RoundCountSummaryValues,
     numGames: number,
     { index, allGame }: { index: number; allGame: boolean },

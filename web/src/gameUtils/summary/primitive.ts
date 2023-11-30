@@ -1,12 +1,18 @@
-import type { PlayerDataNoStats, SummaryEntryField } from ".";
+import type { PlayerDataForStats, SummaryEntryField } from ".";
 import type { TurnData } from "../roundDeclaration";
 
 export class BoolSummaryField<T extends TurnData<any, any>>
   implements SummaryEntryField<T, boolean, BooleanSummaryValues>
 {
-  constructor(readonly calculate: (data: PlayerDataNoStats<T>) => boolean) {}
-  entry(playerData: PlayerDataNoStats<T>) {
+  constructor(readonly calculate: (data: PlayerDataForStats<T>) => boolean) {}
+  entry(playerData: PlayerDataForStats<T>) {
     return this.calculate(playerData);
+  }
+  emptySummary(): BooleanSummaryValues {
+    return {
+      count: 0,
+      mean: 0,
+    };
   }
   summary({ count }: BooleanSummaryValues, numGames: number, flag: boolean): BooleanSummaryValues {
     return {
@@ -25,9 +31,17 @@ type BooleanSummaryValues = {
 export class NumericSummaryField<T extends TurnData<any, any>>
   implements SummaryEntryField<T, number, NumericSummaryValues>
 {
-  constructor(readonly calculate: (data: PlayerDataNoStats<T>) => number) {}
-  entry(playerData: PlayerDataNoStats<T>) {
+  constructor(readonly calculate: (data: PlayerDataForStats<T>) => number) {}
+  entry(playerData: PlayerDataForStats<T>) {
     return this.calculate(playerData);
+  }
+  emptySummary(): NumericSummaryValues {
+    return {
+      highest: Number.NEGATIVE_INFINITY,
+      lowest: Number.POSITIVE_INFINITY,
+      total: 0,
+      mean: 0,
+    };
   }
   summary(
     { highest, lowest, total }: NumericSummaryValues,

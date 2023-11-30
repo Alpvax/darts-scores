@@ -1,8 +1,9 @@
 import type { IntoTaken, TurnData } from "../roundDeclaration";
 import type { NumericSummaryField } from "./primitive";
+import type { PlayerRequirements, WinSummaryField } from "./wins";
 
 //TODO: use PlayerData instead of inline type declaration
-export type PlayerDataNoStats<T extends TurnData<any, any>> = {
+export type PlayerDataForStats<T extends TurnData<any, any>> = {
   playerId: string;
   /** Whether the player has completed all rounds */
   complete: boolean;
@@ -25,23 +26,21 @@ export type PlayerDataNoStats<T extends TurnData<any, any>> = {
 };
 
 export interface SummaryEntryField<T extends TurnData<any, any>, E, S> {
+  /** Create an entry for a single game */
   //TODO: use PlayerData instead of inline type declaration
-  entry(playerData: PlayerDataNoStats<T>): E;
+  entry(playerData: PlayerDataForStats<T>, opponents: string[], tiebreakWinner?: string): E;
+  /** Create an empty summary (the initial / zero values, when no games have been played) */
+  emptySummary(): S;
+  /** Accumulate an entry into the summary */
   summary(accumulated: S, numGames: number, entry: E): S;
 }
 
-class WinSummaryField<T extends TurnData<any, any>> implements SummaryEntryField<T, {}, {}> {
-  entry(playerData: PlayerDataNoStats<T>): {} {
-    throw new Error("Method not implemented.");
-  }
-  summary(accumulated: {}, numGames: number, entry: {}): {} {
-    throw new Error("Method not implemented.");
-  }
-}
-
-export type SummaryEntry<T extends TurnData<any, any>> = {
+export type SummaryEntry<
+  T extends TurnData<any, any>,
+  P extends PlayerRequirements = { all: "*" },
+> = {
   score: NumericSummaryField<T>;
-  wins: WinSummaryField<T>;
+  wins: WinSummaryField<T, P>;
   [key: string]: SummaryEntryField<T, any, any>;
 };
 

@@ -64,7 +64,7 @@ class WinCounter {
       return;
     }
     const key = JSON.stringify(ordered);
-    map.set(key, (this.withExactlyPlayers.get(key) ?? 0) + 1);
+    map.set(key, (map.get(key) ?? 0) + 1);
   }
   public addWin(players: string[]) {
     this.total += 1;
