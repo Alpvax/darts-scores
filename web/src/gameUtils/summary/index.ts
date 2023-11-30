@@ -1,4 +1,5 @@
 import type { IntoTaken, TurnData } from "../roundDeclaration";
+import type { NumericSummaryField } from "./primitive";
 
 //TODO: use PlayerData instead of inline type declaration
 export type PlayerDataNoStats<T extends TurnData<any, any>> = {
@@ -23,22 +24,27 @@ export type PlayerDataNoStats<T extends TurnData<any, any>> = {
   tied: string[];
 };
 
-export interface SummaryEntryFactory<T extends TurnData<any, any>, E, S> {
+export interface SummaryEntryField<T extends TurnData<any, any>, E, S> {
   //TODO: use PlayerData instead of inline type declaration
   entry(playerData: PlayerDataNoStats<T>): E;
   summary(accumulated: S, numGames: number, entry: E): S;
 }
 
+class WinSummaryField<T extends TurnData<any, any>> implements SummaryEntryField<T, {}, {}> {
+  entry(playerData: PlayerDataNoStats<T>): {} {
+    throw new Error("Method not implemented.");
+  }
+  summary(accumulated: {}, numGames: number, entry: {}): {} {
+    throw new Error("Method not implemented.");
+  }
+}
+
 export type SummaryEntry<T extends TurnData<any, any>> = {
-  score: number;
-  win: boolean;
-  [key: string]: number | boolean | RoundCount<T>;
+  score: NumericSummaryField<T>;
+  wins: WinSummaryField<T>;
+  [key: string]: SummaryEntryField<T, any, any>;
 };
 
 export type SummaryValues<E extends SummaryEntry<T>, T extends TurnData<any, any>> = {
-  [K in keyof E]: E[K] extends boolean
-    ? BooleanSummaryValues
-    : E[K] extends number
-      ? NumericSummaryValues
-      : RoundCountSummaryValues;
+  [K in keyof E]: E[K] extends SummaryEntryField<T, any, infer S> ? S : never;
 };

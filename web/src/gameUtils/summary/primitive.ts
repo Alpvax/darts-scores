@@ -1,8 +1,8 @@
-import type { PlayerDataNoStats, SummaryEntryFactory } from ".";
+import type { PlayerDataNoStats, SummaryEntryField } from ".";
 import type { TurnData } from "../roundDeclaration";
 
-export class BoolSummaryFactory<T extends TurnData<any, any>>
-  implements SummaryEntryFactory<T, boolean, BooleanSummaryValues>
+export class BoolSummaryField<T extends TurnData<any, any>>
+  implements SummaryEntryField<T, boolean, BooleanSummaryValues>
 {
   constructor(readonly calculate: (data: PlayerDataNoStats<T>) => boolean) {}
   entry(playerData: PlayerDataNoStats<T>) {
@@ -22,8 +22,8 @@ type BooleanSummaryValues = {
   mean: number;
 };
 
-export class NumericSummaryFactory<T extends TurnData<any, any>>
-  implements SummaryEntryFactory<T, number, NumericSummaryValues>
+export class NumericSummaryField<T extends TurnData<any, any>>
+  implements SummaryEntryField<T, number, NumericSummaryValues>
 {
   constructor(readonly calculate: (data: PlayerDataNoStats<T>) => number) {}
   entry(playerData: PlayerDataNoStats<T>) {

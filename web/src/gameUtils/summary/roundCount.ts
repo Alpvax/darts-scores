@@ -1,4 +1,4 @@
-import type { PlayerDataNoStats, SummaryEntryFactory } from ".";
+import type { PlayerDataNoStats, SummaryEntryField } from ".";
 import type { TurnData, IntoTaken } from "../roundDeclaration";
 
 type RoundIndexPredicateResult =
@@ -10,8 +10,8 @@ type RoundIndexPredicateResult =
       found: false;
       index: undefined;
     };
-export class RoundCount<T extends TurnData<any, any>>
-  implements SummaryEntryFactory<T, { index: number; allGame: boolean }, RoundCountSummaryValues>
+export class RoundCountField<T extends TurnData<any, any>>
+  implements SummaryEntryField<T, { index: number; allGame: boolean }, RoundCountSummaryValues>
 {
   private readonly findIndex: (data: (T | IntoTaken<T>)[]) => RoundIndexPredicateResult;
   private readonly predicate: (data: T | IntoTaken<T>) => boolean;
