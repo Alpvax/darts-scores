@@ -1,5 +1,6 @@
 import type { IntoTaken, TurnData } from "../roundDeclaration";
-import type { NumericSummaryField } from "./primitive";
+import { BoolSummaryField, NumericSummaryField } from "./primitive";
+import { countUntil, countWhile } from "./roundCount";
 import type { PlayerRequirements, WinSummaryField } from "./wins";
 
 //TODO: use PlayerData instead of inline type declaration
@@ -71,6 +72,36 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
   }
 };
 
+type SummaryAccumulatorFactory<
+  S extends SummaryEntry<T, P>,
+  T extends TurnData<any, any>,
+  P extends PlayerRequirements = { all: "*" },
+> = () => {
+  /**
+   * @param playerData the data for the curent player
+   * @param allPlayers the ids of all the players in the game
+   * @param tiebreakWinner the player who won the tiebreak, if applicable
+   * @returns The changes to all values between the previous game and this one
+   */
+  addGame(
+    playerData: PlayerDataForStats<T>,
+    allPlayers: string[],
+    tiebreakWinner?: string,
+  ): SummaryValues<S, T, P>;
+  /**
+   * @param playerData the data for the curent player
+   * @param allPlayers the ids of all the players in the game
+   * @param tiebreakWinner the player who won the tiebreak, if applicable
+   * @returns The changes to all values between the previous game and this one. Does not modify the summary
+   */
+  getDeltas(
+    playerData: PlayerDataForStats<T>,
+    allPlayers: string[],
+    tiebreakWinner?: string,
+  ): SummaryValues<S, T, P>;
+  /** The current summary values. SHOULD NOT BE OVERWRITTEN OR MODIFIED! */
+  summary: SummaryValues<S, T, P>;
+};
 export const summaryAccumulatorFactory =
   <
     S extends SummaryEntry<T, P>,
@@ -78,33 +109,8 @@ export const summaryAccumulatorFactory =
     P extends PlayerRequirements = { all: "*" },
   >(
     fields: S,
-  ) =>
-  (): {
-    /**
-     * @param playerData the data for the curent player
-     * @param allPlayers the ids of all the players in the game
-     * @param tiebreakWinner the player who won the tiebreak, if applicable
-     * @returns The changes to all values between the previous game and this one
-     */
-    addGame(
-      playerData: PlayerDataForStats<T>,
-      allPlayers: string[],
-      tiebreakWinner?: string,
-    ): SummaryValues<S, T, P>;
-    /**
-     * @param playerData the data for the curent player
-     * @param allPlayers the ids of all the players in the game
-     * @param tiebreakWinner the player who won the tiebreak, if applicable
-     * @returns The changes to all values between the previous game and this one. Does not modify the summary
-     */
-    getDeltas(
-      playerData: PlayerDataForStats<T>,
-      allPlayers: string[],
-      tiebreakWinner?: string,
-    ): SummaryValues<S, T, P>;
-    /** The current summary values. SHOULD NOT BE OVERWRITTEN OR MODIFIED! */
-    summary: SummaryValues<S, T, P>;
-  } => {
+  ): SummaryAccumulatorFactory<S, T, P> =>
+  () => {
     type SVTyp = SummaryValues<S, T, P>;
     const fieldEntries = Object.entries(fields) as [keyof S, SummaryEntryField<T, any, any>][];
     const summary = fieldEntries.reduce(
@@ -166,4 +172,23 @@ export const summaryAccumulatorFactory =
     };
   };
 
-export default summaryAccumulatorFactory;
+const fieldFactoryUtils = {
+  /** Count rounds until the predicate passes, returning the index of the passed round (so 0 would be first round passed) */
+  countUntil,
+  /** Count rounds until the predicate fails, returning the index of the failed round (so 0 would be first round failed) */
+  countWhile,
+  /** Make numeric stat */
+  numeric: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => number) =>
+    new NumericSummaryField<T>(calculate),
+  /** Make boolean stat */
+  boolean: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => boolean) =>
+    new BoolSummaryField<T>(calculate),
+};
+export const makeSummaryAccumulatorFactory = <
+  T extends TurnData<any, any, any>,
+  P extends PlayerRequirements = { all: "*" },
+>(
+  fieldFactory: (fieldUtils: typeof fieldFactoryUtils) => SummaryEntry<T, P>,
+): SummaryAccumulatorFactory<ReturnType<typeof fieldFactory>, T, P> =>
+  summaryAccumulatorFactory<ReturnType<typeof fieldFactory>, T, P>(fieldFactory(fieldFactoryUtils));
+export default makeSummaryAccumulatorFactory;

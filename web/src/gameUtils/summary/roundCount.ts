@@ -124,3 +124,32 @@ type RoundCountSummaryValues = {
   /** The mean number of times that the count has reached the final round */
   mean: number;
 };
+
+const makeConstructor =
+  <T extends TurnData<any, any>>(
+    findFirst: boolean,
+  ): {
+    (predicate: (data: IntoTaken<T>) => boolean, takenOnly: true): RoundCountField<T>;
+    (predicate: (data: T) => boolean, takenOnly?: false): RoundCountField<T>;
+  } =>
+  (predicate, takenOnly) =>
+    takenOnly
+      ? new RoundCountField<T>(predicate as (data: IntoTaken<T>) => boolean, {
+          findFirst,
+          ignoreUntakenRounds: true,
+        })
+      : new RoundCountField<T>(predicate as (data: T) => boolean, {
+          findFirst,
+          ignoreUntakenRounds: false,
+        });
+
+export const countUntil = makeConstructor(true);
+export const countWhile = makeConstructor(false);
+
+// export function countUntil<T extends TurnData<any, any>>(predicate: (data: IntoTaken<T>) => boolean, takenOnly: true): RoundCountField<T>;
+// export function countUntil<T extends TurnData<any, any>>(predicate: (data: T) => boolean, takenOnly?: false): RoundCountField<T>;
+// export function countUntil<T extends TurnData<any, any>>(predicate: ((data: T) => boolean) | ((data: IntoTaken<T>) => boolean), takenOnly?: boolean) {
+//   return takenOnly
+//     ? new RoundCountField<T>(predicate as (data: IntoTaken<T>) => boolean, { findFirst: true, ignoreUntakenRounds: true })
+//     : new RoundCountField<T>(predicate as (data: T) => boolean, { findFirst: true, ignoreUntakenRounds: false })
+// }
