@@ -1,4 +1,5 @@
 import { normaliseGameMetadata } from "@/gameUtils/gameMeta";
+import makeSummaryAccumulatorFactory from "@/gameUtils/summary";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -86,29 +87,44 @@ type GameStats = {
   /** 3 consecutive double doubles */
   hans: number;
 };
-type HLT = number;
-type WinCount = {};
-type Count = boolean; //& rate
-type Closest = number;
-type GameSummary = {
-  score: HLT;
-  wins: WinCount;
-  fatNicks: Count & Closest;
-  cliffs: HLT;
-  dd: HLT;
-  hans: HLT;
-  goblins: Count;
-  piranhas: Count;
-  jesus: Count;
-  dreams: Count & Closest;
-  allPos: Count & Closest;
-  hits: {
-    total: HLT;
-    rounds: HLT;
-    cliffs: HLT;
-    dd: HLT;
-  };
-};
+const summaryFactory = makeSummaryAccumulatorFactory(({ countWhile, numeric, boolean }) => ({
+  fatNicks: countWhile(({ value }) => !value),
+  dreams: countWhile(({ value }) => value),
+  allPos: countWhile(({ score }) => score > 0),
+  //TODO: use round stats
+  cliffs: numeric((data) => [...data.turns.values()].filter(({ value }) => value === 3).length),
+  //TODO: use round stats
+  doubleDoubles: numeric(
+    (data) => [...data.turns.values()].filter(({ value }) => value >= 2).length,
+  ),
+  // hans: numeric(data => ),
+  goblins: boolean((data) => [...data.turns.values()].every(({ value }) => !value || value >= 2)),
+  piranhas: boolean((data) =>
+    [...data.turns.values()].every(
+      ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
+    ),
+  ),
+  // jesus: boolean(data => ),
+}));
+// type GameSummary = {
+//   score: HLT;
+//   wins: WinCount;
+//   fatNicks: Count & Closest;
+//   cliffs: HLT;
+//   dd: HLT;
+//   hans: HLT;
+//   goblins: Count;
+//   piranhas: Count;
+//   jesus: Count;
+//   dreams: Count & Closest;
+//   allPos: Count & Closest;
+//   hits: {
+//     total: HLT;
+//     rounds: HLT;
+//     cliffs: HLT;
+//     dd: HLT;
+//   };
+// };
 const summaryOrder = [
   "score.highest",
   "score.lowest",

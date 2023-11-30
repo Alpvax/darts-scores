@@ -1,7 +1,7 @@
 import type { IntoTaken, TurnData } from "../roundDeclaration";
 import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
-import type { PlayerRequirements, WinSummaryField } from "./wins";
+import { WinSummaryField, type PlayerRequirements } from "./wins";
 
 //TODO: use PlayerData instead of inline type declaration
 export type PlayerDataForStats<T extends TurnData<any, any>> = {
@@ -108,11 +108,14 @@ export const summaryAccumulatorFactory =
     T extends TurnData<any, any>,
     P extends PlayerRequirements = { all: "*" },
   >(
-    fields: S,
+    fields: Omit<S, "score">,
   ): SummaryAccumulatorFactory<S, T, P> =>
   () => {
     type SVTyp = SummaryValues<S, T, P>;
-    const fieldEntries = Object.entries(fields) as [keyof S, SummaryEntryField<T, any, any>][];
+    const fieldEntries = [
+      ["score", new NumericSummaryField(({ score }) => score)],
+      Object.entries(fields),
+    ] as [keyof S, SummaryEntryField<T, any, any>][];
     const summary = fieldEntries.reduce(
       (summary, [k, field]) =>
         Object.assign(summary, {
@@ -188,7 +191,21 @@ export const makeSummaryAccumulatorFactory = <
   T extends TurnData<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
 >(
-  fieldFactory: (fieldUtils: typeof fieldFactoryUtils) => SummaryEntry<T, P>,
-): SummaryAccumulatorFactory<ReturnType<typeof fieldFactory>, T, P> =>
-  summaryAccumulatorFactory<ReturnType<typeof fieldFactory>, T, P>(fieldFactory(fieldFactoryUtils));
+  fieldFactory: (
+    fieldUtils: typeof fieldFactoryUtils,
+  ) => Omit<SummaryEntry<T, P>, "score" | "wins">,
+  winsRequirements: PlayerRequirements = { all: "*" },
+): SummaryAccumulatorFactory<
+  ReturnType<typeof fieldFactory> & Pick<SummaryEntry<T, P>, "score" | "wins">,
+  T,
+  P
+> =>
+  summaryAccumulatorFactory<
+    ReturnType<typeof fieldFactory> & Pick<SummaryEntry<T, P>, "score" | "wins">,
+    T,
+    P
+  >({
+    wins: WinSummaryField.create(winsRequirements),
+    ...fieldFactory(fieldFactoryUtils),
+  });
 export default makeSummaryAccumulatorFactory;
