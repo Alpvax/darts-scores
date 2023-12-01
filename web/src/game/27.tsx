@@ -1,6 +1,6 @@
 import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
-import makeSummaryAccumulatorFactory from "@/gameUtils/summary";
+import makeSummaryAccumulatorFactory, { type PlayerDataForStats } from "@/gameUtils/summary";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -224,6 +224,10 @@ const summaryFactory = makeSummaryAccumulatorFactory<TurnData27>(
     ),
     // jesus: boolean(data => ),
   }),
+  {
+    all: "*",
+    solo: { players: [], exact: true },
+  },
 );
 
 // type GameSummary = {
@@ -276,7 +280,7 @@ const summaryOrder = [
   const testSummary = summaryFactory();
   console.log(JSON.stringify(testSummary.summary, null, 2));
   // console.log(testSummary.summary);
-  const testGame = (...hits: number[]) => {
+  const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
     const { turns, score } = gameMeta.rounds.reduce(
       ({ turns, score }, r, i) => {
         const t = r.turnData(hits[i], score, "", i);
@@ -297,18 +301,21 @@ const summaryOrder = [
       tied: [],
     };
   };
-  const addTestGame = (hits: number[], apply = true) => {
-    const g = testGame(...hits);
-    console.log("Game:", g, "\n\thits:", hits);
-    // console.log("Delta:", testSummary.getDeltas(g, [g.playerId]));
-    if (apply) {
-      console.log("Delta:", testSummary.addGame(g, [g.playerId]));
-      console.log(JSON.parse(JSON.stringify(testSummary.summary)));
-    }
+  const addTestGame = (
+    hits: number[],
+    gameModifier?: Partial<PlayerDataForStats<TurnData27>>,
+    players?: string[],
+  ) => {
+    const g = { ...testGame(...hits), ...gameModifier };
+    console.log("Adding Game:", g, "\n\thits:", hits);
+    console.log("\tDelta:", testSummary.addGame(g, players ?? [g.playerId, ...g.tied], g.playerId));
+    console.log("\tSummary:", JSON.parse(JSON.stringify(testSummary.summary)));
   };
 
   addTestGame([0, 1, 2, 0, 0, 0, 1, 0, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 1, 0]);
-  addTestGame([1, 1, 1, 2, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 3, 0, 1, 0]); //, false);
+  addTestGame([1, 1, 1, 2, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 3, 0, 1, 0], {
+    tied: ["anotherInvalidPlayer"],
+  });
   // console.log(testSummary.summary);
   // console.log(JSON.stringify(testSummary.summary, null, 2));
 })();

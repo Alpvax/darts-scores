@@ -90,8 +90,8 @@ export class RoundCountField<T extends TurnData<any, any>>
   emptySummary(): RoundCountSummaryValues {
     return {
       count: 0,
-      earliest: Number.POSITIVE_INFINITY,
-      latest: Number.NEGATIVE_INFINITY,
+      earliest: Number.MAX_SAFE_INTEGER,
+      latest: Number.MIN_SAFE_INTEGER,
       mean: NaN,
     };
   }

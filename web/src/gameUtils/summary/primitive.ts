@@ -37,8 +37,8 @@ export class NumericSummaryField<T extends TurnData<any, any>>
   }
   emptySummary(): NumericSummaryValues {
     return {
-      highest: Number.NEGATIVE_INFINITY,
-      lowest: Number.POSITIVE_INFINITY,
+      highest: Number.MIN_SAFE_INTEGER,
+      lowest: Number.MAX_SAFE_INTEGER,
       total: 0,
       mean: 0,
     };
