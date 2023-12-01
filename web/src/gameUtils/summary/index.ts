@@ -3,6 +3,9 @@ import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
 import { WinSummaryField, type PlayerRequirements } from "./wins";
 
+// Re-exports for convenience
+export { type PlayerRequirements } from "./wins";
+
 //TODO: use PlayerData instead of inline type declaration
 export type PlayerDataForStats<T extends TurnData<any, any>> = {
   playerId: string;
@@ -24,6 +27,12 @@ export type PlayerDataForStats<T extends TurnData<any, any>> = {
   position: number;
   /** A list of playerIds that the player is tied with, empty list for no players tied with this player */
   tied: string[];
+};
+
+export type GameResult<T extends TurnData<any, any, any>, P extends string = string> = {
+  date: Date;
+  results: Map<P, PlayerDataForStats<T>>;
+  tiebreakWinner?: P;
 };
 
 interface SummaryValueRecord {
@@ -72,7 +81,7 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
   }
 };
 
-type SummaryAccumulatorFactory<
+export type SummaryAccumulatorFactory<
   S extends SummaryEntry<T, P>,
   T extends TurnData<any, any>,
   P extends PlayerRequirements = { all: "*" },
@@ -224,3 +233,15 @@ export const makeSummaryAccumulatorFactory = <T extends TurnData<any, any, any>>
     }),
   });
 export default makeSummaryAccumulatorFactory;
+
+type FlattenSummaryKeysInternal<S extends SummaryValueRecord, Key = keyof S> = Key extends string
+  ? S[Key] extends SummaryValueRecord
+    ? `${Key}.${FlattenSummaryKeysInternal<S[Key]>}`
+    : `${Key}`
+  : never;
+
+export type SummaryFieldKeys<
+  S extends SummaryEntry<T, P>,
+  T extends TurnData<any, any, any>,
+  P extends PlayerRequirements = { all: "*" },
+> = FlattenSummaryKeysInternal<SummaryValues<S, T, P>>;
