@@ -53,7 +53,7 @@ export class NumericSummaryField<T extends TurnData<any, any>>
       highest: Math.max(highest, val),
       lowest: Math.min(lowest, val),
       total: tot,
-      mean: total / numGames,
+      mean: tot / numGames,
     };
   }
 }

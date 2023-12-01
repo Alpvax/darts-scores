@@ -6,7 +6,7 @@ export type TurnStats = Record<string, boolean | number>;
 type TurnDataBase<V> = {
   playerId: string;
   roundIndex: number;
-  value: V | undefined;
+  value: V;
   deltaScore: number;
   score: number;
 };
@@ -25,11 +25,16 @@ type TurnDataNoStats = {
   stats?: never;
 };
 
-type KeyedTurnDataNoStats<V, K extends string = string> = KeyedTurnData<V, K> & TurnDataNoStats;
-type KeyedTurnDataStats<V, S extends TurnStats, K extends string = string> = KeyedTurnData<V, K> &
+type KeyedTurnDataNoStats<V, K extends string = string> = KeyedTurnData<V | undefined, K> &
+  TurnDataNoStats;
+type KeyedTurnDataStats<V, S extends TurnStats, K extends string = string> = KeyedTurnData<
+  V | undefined,
+  K
+> &
   TurnDataStats<S>;
-type IndexedTurnDataNoStats<V> = IndexedTurnData<V> & TurnDataNoStats;
-type IndexedTurnDataStats<V, S extends TurnStats> = IndexedTurnData<V> & TurnDataStats<S>;
+type IndexedTurnDataNoStats<V> = IndexedTurnData<V | undefined> & TurnDataNoStats;
+type IndexedTurnDataStats<V, S extends TurnStats> = IndexedTurnData<V | undefined> &
+  TurnDataStats<S>;
 
 export type TurnData<V, S extends TurnStats = {}, K extends string = string> =
   | KeyedTurnDataNoStats<V, K>
@@ -37,19 +42,32 @@ export type TurnData<V, S extends TurnStats = {}, K extends string = string> =
   | IndexedTurnDataNoStats<V>
   | IndexedTurnDataStats<V, S>;
 
-export type TakenTurnData<V, S extends TurnStats = {}, K extends string = string> = Omit<
-  TurnData<V, S, K>,
-  "value"
-> & {
-  value: V;
-};
-export type IntoTaken<T extends TurnData<any, any, any>> = T extends TurnData<
+type TakenKeyedTurnDataNoStats<V, K extends string = string> = KeyedTurnData<V, K> &
+  TurnDataNoStats;
+type TakenKeyedTurnDataStats<V, S extends TurnStats, K extends string = string> = KeyedTurnData<
+  V,
+  K
+> &
+  TurnDataStats<S>;
+type TakenIndexedTurnDataNoStats<V> = IndexedTurnData<V> & TurnDataNoStats;
+type TakenIndexedTurnDataStats<V, S extends TurnStats> = IndexedTurnData<V> & TurnDataStats<S>;
+export type TakenTurnData<V, S extends TurnStats = {}, K extends string = string> =
+  | TakenKeyedTurnDataNoStats<V, K>
+  | TakenKeyedTurnDataStats<V, S, K>
+  | TakenIndexedTurnDataNoStats<V>
+  | TakenIndexedTurnDataStats<V, S>;
+export type IntoTaken<T extends TurnData<any, any, any>> = T extends KeyedTurnDataNoStats<
   infer V,
-  infer S,
   infer K
 >
-  ? TakenTurnData<V, S, K>
-  : never;
+  ? TakenKeyedTurnDataNoStats<V, K>
+  : T extends KeyedTurnDataStats<infer V, infer S, infer K>
+    ? TakenKeyedTurnDataStats<V, S, K>
+    : T extends IndexedTurnDataNoStats<infer V>
+      ? TakenIndexedTurnDataNoStats<V>
+      : T extends IndexedTurnDataStats<infer V, infer S>
+        ? TakenIndexedTurnDataStats<V, S>
+        : never;
 
 export function hasStats<V, S extends TurnStats = {}, K extends string = string>(
   keyed: KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>,
@@ -355,24 +373,28 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
   //   }
   // };
   function tryAddStats(
-    partial: KeyedTurnData<V, K>,
+    partial: KeyedTurnData<V | undefined, K>,
   ): KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>;
   function tryAddStats(
-    partial: IndexedTurnData<V>,
+    partial: IndexedTurnData<V | undefined>,
   ): IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>;
-  function tryAddStats(partial: KeyedTurnData<V, K> | IndexedTurnData<V>): TurnData<V, S, K> {
+  function tryAddStats(
+    partial: KeyedTurnData<V | undefined, K> | IndexedTurnData<V | undefined>,
+  ): TurnData<V, S, K> {
     if (isKeyed<V, S, K>(roundDef) && isKeyed(partial)) {
       return {
         ...partial,
         stats: Object.hasOwn(roundDef, "stats")
-          ? (roundDef as KeyedRoundDefStats<V, S, K>).stats(partial)
+          ? (roundDef as KeyedRoundDefStats<V | undefined, S, K>).stats(partial)
           : ({} as S),
       };
     } else {
       return {
         ...partial,
         stats: Object.hasOwn(roundDef, "stats")
-          ? (roundDef as IndexedRoundDefStats<V, S>).stats(partial as IndexedTurnData<V>)
+          ? (roundDef as IndexedRoundDefStats<V | undefined, S>).stats(
+              partial as IndexedTurnData<V | undefined>,
+            )
           : ({} as S),
       };
     }
@@ -402,7 +424,7 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
             score: score + delta,
             deltaScore: delta,
             value,
-          } satisfies KeyedTurnData<V, K>);
+          } satisfies KeyedTurnData<V | undefined, K>);
         }
       : (value: V | undefined, score: number, playerId: string, roundIndex: number) => {
           const delta = deltaScore(value, score, playerId, roundIndex);
@@ -412,7 +434,7 @@ export function normaliseRound<V, S extends TurnStats = {}, K extends string = s
             score: score + delta,
             deltaScore: delta,
             value,
-          } satisfies IndexedTurnData<V>);
+          } satisfies IndexedTurnData<V | undefined>);
         }) as NormalisedRound<V, S, K>["turnData"],
     rowClass: roundDef.rowClass ? roundDef.rowClass : () => undefined,
     cellClass: roundDef.cellClass

@@ -126,13 +126,22 @@ type RoundCountSummaryValues = {
 };
 
 const makeConstructor =
-  <T extends TurnData<any, any>>(
+  (
     findFirst: boolean,
   ): {
-    (predicate: (data: IntoTaken<T>) => boolean, takenOnly: true): RoundCountField<T>;
-    (predicate: (data: T) => boolean, takenOnly?: false): RoundCountField<T>;
+    <T extends TurnData<any, any>>(
+      predicate: (data: IntoTaken<T>) => boolean,
+      takenOnly: true,
+    ): RoundCountField<T>;
+    <T extends TurnData<any, any>>(
+      predicate: (data: T) => boolean,
+      takenOnly?: false,
+    ): RoundCountField<T>;
   } =>
-  (predicate, takenOnly) =>
+  <T extends TurnData<any, any>>(
+    predicate: ((data: IntoTaken<T>) => boolean) | ((data: T) => boolean),
+    takenOnly?: Boolean,
+  ) =>
     takenOnly
       ? new RoundCountField<T>(predicate as (data: IntoTaken<T>) => boolean, {
           findFirst,

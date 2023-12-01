@@ -58,43 +58,32 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
       entry.type === "outright"
         ? { tiebreak: false, tbWin: false }
         : { tiebreak: true, tbWin: entry.wonTiebreak };
-    for (const [k, req] of Object.entries(this.requirements) as [
-      keyof Outputs,
-      PlayerRequirement,
-    ][]) {
-      const players = new Set(entry.opponents);
-      const checkPlayers = (required: string[], exact = false) => {
-        const hasAll = required.filter((pid) => !players.has(pid)).length < 1;
-        return exact ? required.length === players.size && hasAll : hasAll;
-      };
-      if (
-        req === "*" ||
-        (Array.isArray(req) ? checkPlayers(req) : checkPlayers(req.players, req.exact))
-      ) {
-        if (tiebreak) {
-          accumulated[k].tiebreaksPlayed += 1;
-          if (tbWin) {
-            accumulated[k].tiebreakWins += 1;
+    return (Object.entries(this.requirements) as [keyof Outputs, PlayerRequirement][]).reduce(
+      (acc, [k, req]) => {
+        const players = new Set(entry.opponents);
+        const checkPlayers = (required: string[], exact = false) => {
+          const hasAll = required.filter((pid) => !players.has(pid)).length < 1;
+          return exact ? required.length === players.size && hasAll : hasAll;
+        };
+        if (
+          req === "*" ||
+          (Array.isArray(req) ? checkPlayers(req) : checkPlayers(req.players, req.exact))
+        ) {
+          if (tiebreak) {
+            acc[k].tiebreaksPlayed += 1;
+            if (tbWin) {
+              acc[k].tiebreakWins += 1;
+            }
+            acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
+          } else {
+            acc[k].totalOutright += 1;
+            acc[k].meanOutright = acc[k].totalOutright / numGames;
           }
-          accumulated[k].tiebreakWinRate =
-            accumulated[k].tiebreakWins / accumulated[k].tiebreaksPlayed;
-        } else {
-          accumulated[k].totalOutright += 1;
-          accumulated[k].meanOutright = accumulated[k].totalOutright / numGames;
+          acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
+          acc[k].mean = acc[k].total / numGames;
         }
-        accumulated[k].total = accumulated[k].totalOutright + accumulated[k].tiebreakWins;
-        accumulated[k].mean = accumulated[k].total / numGames;
-      }
-      return accumulated;
-    }
-    return Object.entries(entry).reduce(
-      (acc, [k, total]) =>
-        Object.assign(acc, {
-          [k]: {
-            total,
-            mean: total / numGames,
-          },
-        }),
+        return acc;
+      },
       accumulated,
     );
   }

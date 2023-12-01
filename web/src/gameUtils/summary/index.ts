@@ -16,7 +16,7 @@ export type PlayerDataForStats<T extends TurnData<any, any>> = {
    * */
   turns: Map<number, IntoTaken<T>>;
   /**
-   * A Map of the all rounds, with non completed rounds missing from the map. <br/>
+   * A Map of all the rounds. <br/>
    * Key is round index; value is {@link TurnData}, including the value, delta score of the round and score at this round.
    * */
   allTurns: Map<number, T>;
@@ -114,7 +114,7 @@ export const summaryAccumulatorFactory =
     type SVTyp = SummaryValues<S, T, P>;
     const fieldEntries = [
       ["score", new NumericSummaryField(({ score }) => score)],
-      Object.entries(fields),
+      ...Object.entries(fields),
     ] as [keyof S, SummaryEntryField<T, any, any>][];
     const summary = fieldEntries.reduce(
       (summary, [k, field]) =>
@@ -123,89 +123,104 @@ export const summaryAccumulatorFactory =
         }),
       { numGames: 0 } as SVTyp,
     );
+    const makeGameDeltas = (pData: PlayerDataForStats<T>, players: string[], tbWinner?: string) => {
+      return fieldEntries.reduce(
+        ({ newSummary, deltas }, [key, field]) => {
+          const entry = field.entry(
+            pData,
+            players.filter((pid) => pid !== pData.playerId),
+            tbWinner,
+          );
+          // Deep clone previous value
+          const prev = JSON.parse(JSON.stringify(summary[key]));
+          newSummary[key] = field.summary(prev, newSummary.numGames, entry);
+          deltas[key] =
+            summary.numGames < 1
+              ? newSummary[key]
+              : Object.entries(newSummary[key]).reduce(
+                  (acc, [k, v]) =>
+                    Object.assign(acc, {
+                      [k]: calcDeltaVal(prev[k], v),
+                    }),
+                  {} as SVTyp[typeof key],
+                );
+          return { newSummary, deltas };
+        },
+        {
+          newSummary: { numGames: summary.numGames + 1 } as SVTyp,
+          deltas: { numGames: 1 } as SVTyp,
+        },
+      );
+    };
     return {
       addGame: (pData, players, tbWinner) => {
-        summary.numGames += 1;
-        return fieldEntries.reduce(
-          (deltas, [key, field]) => {
-            const entry = field.entry(
-              pData,
-              players.filter((pid) => pid !== pData.playerId),
-              tbWinner,
-            );
-            // Deep clone previous value
-            const prev = JSON.parse(JSON.stringify(summary[key]));
-            summary[key] = field.summary(prev, summary.numGames, entry);
-            deltas[key] = Object.entries(summary[key]).reduce(
-              (acc, [k, v]) =>
-                Object.assign(acc, {
-                  [k]: calcDeltaVal(prev[k], v),
-                }),
-              {} as SVTyp[typeof key],
-            );
-            return deltas;
-          },
-          { numGames: 1 } as SVTyp,
-        );
+        const { newSummary, deltas } = makeGameDeltas(pData, players, tbWinner);
+        for (const [k, v] of Object.entries(newSummary) as [keyof S, SVTyp[keyof S]][]) {
+          summary[k] = v;
+        }
+        return deltas;
+        // summary.numGames += 1;
+        // return fieldEntries.reduce(
+        //   (deltas, [key, field]) => {
+        //     const entry = field.entry(
+        //       pData,
+        //       players.filter((pid) => pid !== pData.playerId),
+        //       tbWinner,
+        //     );
+        //     // Deep clone previous value
+        //     const prev = JSON.parse(JSON.stringify(summary[key]));
+        //     summary[key] = field.summary(prev, summary.numGames, entry);
+        //     deltas[key] = Object.entries(summary[key]).reduce(
+        //       (acc, [k, v]) =>
+        //         Object.assign(acc, {
+        //           [k]: calcDeltaVal(prev[k], v),
+        //         }),
+        //       {} as SVTyp[typeof key],
+        //     );
+        //     return deltas;
+        //   },
+        //   { numGames: 1 } as SVTyp,
+        // );
       },
-      getDeltas: (pData, players, tbWinner) => {
-        return fieldEntries.reduce(
-          (deltas, [key, field]) => {
-            const entry = field.entry(
-              pData,
-              players.filter((pid) => pid !== pData.playerId),
-              tbWinner,
-            );
-            // Deep clone previous value
-            const prev = JSON.parse(JSON.stringify(summary[key]));
-            const newSummary: SVTyp[typeof key] = field.summary(prev, summary.numGames + 1, entry);
-            deltas[key] = Object.entries(newSummary).reduce(
-              (acc, [k, v]) =>
-                Object.assign(acc, {
-                  [k]: calcDeltaVal(prev[k], v),
-                }),
-              {} as SVTyp[typeof key],
-            );
-            return deltas;
-          },
-          { numGames: 1 } as SVTyp,
-        );
-      },
+      getDeltas: (pData, players, tbWinner) => makeGameDeltas(pData, players, tbWinner).deltas,
       summary,
     };
   };
 
-const fieldFactoryUtils = {
+type FieldFactoryUtils<T extends TurnData<any, any>> = {
   /** Count rounds until the predicate passes, returning the index of the passed round (so 0 would be first round passed) */
-  countUntil,
+  countUntil: typeof countUntil<T>;
   /** Count rounds until the predicate fails, returning the index of the failed round (so 0 would be first round failed) */
-  countWhile,
+  countWhile: typeof countWhile<T>;
   /** Make numeric stat */
-  numeric: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => number) =>
-    new NumericSummaryField<T>(calculate),
+  numeric: (calculate: (data: PlayerDataForStats<T>) => number) => NumericSummaryField<T>;
   /** Make boolean stat */
-  boolean: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => boolean) =>
-    new BoolSummaryField<T>(calculate),
+  boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
 };
-export const makeSummaryAccumulatorFactory = <
-  T extends TurnData<any, any, any>,
-  P extends PlayerRequirements = { all: "*" },
->(
-  fieldFactory: (
-    fieldUtils: typeof fieldFactoryUtils,
-  ) => Omit<SummaryEntry<T, P>, "score" | "wins">,
+export const makeSummaryAccumulatorFactory = <T extends TurnData<any, any, any>>(
+  fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => Omit<SummaryEntry<T, any>, "score" | "wins">,
   winsRequirements: PlayerRequirements = { all: "*" },
 ): SummaryAccumulatorFactory<
-  ReturnType<typeof fieldFactory> & Pick<SummaryEntry<T, P>, "score" | "wins">,
+  ReturnType<typeof fieldFactory> &
+    Pick<SummaryEntry<T, typeof winsRequirements>, "score" | "wins">,
   T,
-  P
+  typeof winsRequirements
 > =>
   summaryAccumulatorFactory<
-    ReturnType<typeof fieldFactory> & Pick<SummaryEntry<T, P>, "score" | "wins">,
+    ReturnType<typeof fieldFactory> &
+      Pick<SummaryEntry<T, typeof winsRequirements>, "score" | "wins">,
     T,
-    P
+    typeof winsRequirements
   >({
     wins: WinSummaryField.create(winsRequirements),
-    ...fieldFactory(fieldFactoryUtils),
+    ...fieldFactory({
+      countUntil: countUntil as typeof countUntil<T>,
+      countWhile: countWhile as typeof countWhile<T>,
+      numeric: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => number) =>
+        new NumericSummaryField<T>(calculate),
+      boolean: <T extends TurnData<any, any>>(
+        calculate: (data: PlayerDataForStats<T>) => boolean,
+      ) => new BoolSummaryField<T>(calculate),
+    }),
   });
 export default makeSummaryAccumulatorFactory;

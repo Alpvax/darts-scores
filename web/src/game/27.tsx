@@ -1,4 +1,5 @@
-import { normaliseGameMetadata } from "@/gameUtils/gameMeta";
+import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
+import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import makeSummaryAccumulatorFactory from "@/gameUtils/summary";
 import type { Ref } from "vue";
 
@@ -87,69 +88,6 @@ type GameStats = {
   /** 3 consecutive double doubles */
   hans: number;
 };
-const summaryFactory = makeSummaryAccumulatorFactory(({ countWhile, numeric, boolean }) => ({
-  fatNicks: countWhile(({ value }) => !value),
-  dreams: countWhile(({ value }) => value),
-  allPos: countWhile(({ score }) => score > 0),
-  //TODO: use round stats
-  cliffs: numeric((data) => [...data.turns.values()].filter(({ value }) => value === 3).length),
-  //TODO: use round stats
-  doubleDoubles: numeric(
-    (data) => [...data.turns.values()].filter(({ value }) => value >= 2).length,
-  ),
-  // hans: numeric(data => ),
-  goblins: boolean((data) => [...data.turns.values()].every(({ value }) => !value || value >= 2)),
-  piranhas: boolean((data) =>
-    [...data.turns.values()].every(
-      ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
-    ),
-  ),
-  // jesus: boolean(data => ),
-}));
-// type GameSummary = {
-//   score: HLT;
-//   wins: WinCount;
-//   fatNicks: Count & Closest;
-//   cliffs: HLT;
-//   dd: HLT;
-//   hans: HLT;
-//   goblins: Count;
-//   piranhas: Count;
-//   jesus: Count;
-//   dreams: Count & Closest;
-//   allPos: Count & Closest;
-//   hits: {
-//     total: HLT;
-//     rounds: HLT;
-//     cliffs: HLT;
-//     dd: HLT;
-//   };
-// };
-const summaryOrder = [
-  "score.highest",
-  "score.lowest",
-  "score.mean",
-  // REAL WINS?!
-  // "wins.count",
-  "numGames.count",
-  // "wins.rate",
-  "fatNicks.count",
-  "fatNicks.closest",
-  "cliffs.total",
-  "cliffs.meanTotal",
-  "doubleDoubles.total",
-  "doubleDoubles.meanTotal",
-  "hans.total",
-  "goblins.count",
-  "piranhas.count",
-  "jesus.count",
-  "dreams.furthest",
-  "positive.total",
-  "positive.furthest",
-  "hits.highest",
-  "hits.lowest",
-  "hits.mean",
-];
 
 export const gameMeta = normaliseGameMetadata<
   number,
@@ -246,3 +184,131 @@ export const gameMeta = normaliseGameMetadata<
     allPositive: stats.allPositive,
   }),
 });
+
+type TurnData27 = TurnDataForGame<typeof gameMeta>;
+
+const summaryFactory = makeSummaryAccumulatorFactory<TurnData27>(
+  ({ countWhile, numeric, boolean }) => ({
+    fatNicks: countWhile(({ value }) => !value),
+    dreams: countWhile(({ value }) => value > 0, true),
+    allPos: countWhile(({ score }) => score > 0),
+    cliffs: numeric(
+      (data) => [...data.turns.values()].filter(({ stats: { cliff } }) => cliff).length,
+    ),
+    doubleDoubles: numeric(
+      (data) =>
+        [...data.turns.values()].filter(({ stats: { doubledouble } }) => doubledouble).length,
+    ),
+    hans: numeric(
+      (data) =>
+        Array.from({ length: 20 }, (_, i) => data.allTurns.get(i)!).reduce(
+          ({ count, preDD }, { stats }) => {
+            if (stats.doubledouble) {
+              preDD += 1;
+              if (preDD >= 3) {
+                count += 1;
+              }
+            } else {
+              preDD = 0;
+            }
+            return { count, preDD };
+          },
+          { count: 0, preDD: 0 },
+        ).count,
+    ),
+    goblins: boolean((data) => [...data.turns.values()].every(({ value }) => !value || value >= 2)),
+    piranhas: boolean((data) =>
+      [...data.turns.values()].every(
+        ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
+      ),
+    ),
+    // jesus: boolean(data => ),
+  }),
+);
+
+// type GameSummary = {
+//   score: HLT;
+//   wins: WinCount;
+//   fatNicks: Count & Closest;
+//   cliffs: HLT;
+//   dd: HLT;
+//   hans: HLT;
+//   goblins: Count;
+//   piranhas: Count;
+//   jesus: Count;
+//   dreams: Count & Closest;
+//   allPos: Count & Closest;
+//   hits: {
+//     total: HLT;
+//     rounds: HLT;
+//     cliffs: HLT;
+//     dd: HLT;
+//   };
+// };
+const summaryOrder = [
+  "score.highest",
+  "score.lowest",
+  "score.mean",
+  // REAL WINS?!
+  // "wins.count",
+  "numGames.count",
+  // "wins.rate",
+  "fatNicks.count",
+  "fatNicks.closest",
+  "cliffs.total",
+  "cliffs.meanTotal",
+  "doubleDoubles.total",
+  "doubleDoubles.meanTotal",
+  "hans.total",
+  "goblins.count",
+  "piranhas.count",
+  "jesus.count",
+  "dreams.furthest",
+  "positive.total",
+  "positive.furthest",
+  "hits.highest",
+  "hits.lowest",
+  "hits.mean",
+];
+
+//TODO: REMOVE TEST
+(() => {
+  const testSummary = summaryFactory();
+  console.log(JSON.stringify(testSummary.summary, null, 2));
+  // console.log(testSummary.summary);
+  const testGame = (...hits: number[]) => {
+    const { turns, score } = gameMeta.rounds.reduce(
+      ({ turns, score }, r, i) => {
+        const t = r.turnData(hits[i], score, "", i);
+        turns.push(t);
+        return { turns, score: t.score };
+      },
+      { turns: [] as TurnData27[], score: 27 },
+    );
+    return {
+      playerId: "notavalidplayerid",
+      complete: Array.from({ length: 20 }, (_, i) => hits[i] !== undefined).every((h) => h),
+      score,
+      turns: new Map(
+        turns.flatMap((t, i) => (t.value === undefined ? [] : [[i, t as IntoTaken<TurnData27>]])),
+      ),
+      allTurns: new Map(turns.map((t, i) => [i, t])),
+      position: 1,
+      tied: [],
+    };
+  };
+  const addTestGame = (hits: number[], apply = true) => {
+    const g = testGame(...hits);
+    console.log("Game:", g, "\n\thits:", hits);
+    // console.log("Delta:", testSummary.getDeltas(g, [g.playerId]));
+    if (apply) {
+      console.log("Delta:", testSummary.addGame(g, [g.playerId]));
+      console.log(JSON.parse(JSON.stringify(testSummary.summary)));
+    }
+  };
+
+  addTestGame([0, 1, 2, 0, 0, 0, 1, 0, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 1, 0]);
+  addTestGame([1, 1, 1, 2, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 3, 0, 1, 0]); //, false);
+  // console.log(testSummary.summary);
+  // console.log(JSON.stringify(testSummary.summary, null, 2));
+})();

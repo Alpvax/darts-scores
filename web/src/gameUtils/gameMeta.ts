@@ -15,6 +15,7 @@ import {
   type KeyedRoundDefNoStats,
   type KeyedRoundDefStats,
   normaliseRound,
+  type TurnDataType,
 } from "./roundDeclaration";
 import type { ArrayGameStats, GameStatsForRounds } from "./statsAccumulatorGame";
 
@@ -296,3 +297,14 @@ export function createGameMetadata<
     return normaliseGameMetadata(meta);
   }
 }
+
+// =========== TurnData Lookup ===============
+
+export type TurnDataForGame<M extends GameMetadata<any, any, any, any>> = M extends GameMetadata<
+  infer R,
+  any,
+  any,
+  any
+>
+  ? TurnDataType<R>
+  : never;
