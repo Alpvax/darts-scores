@@ -1,6 +1,6 @@
 import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
-import makeSummaryAccumulatorFactory, { type PlayerDataForStats } from "@/gameUtils/summary";
+import makeSummaryAccumulatorFactoryFor, { type PlayerDataForStats } from "@/gameUtils/summary";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -187,7 +187,7 @@ export const gameMeta = normaliseGameMetadata<
 
 type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
-const summaryFactory = makeSummaryAccumulatorFactory<TurnData27>(
+export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
   ({ countWhile, numeric, boolean }) => ({
     fatNicks: countWhile(({ value }) => !value),
     dreams: countWhile(({ value }) => value > 0, true),

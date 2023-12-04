@@ -10,16 +10,12 @@ import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
 
 export const createSummaryComponent = <
-  S extends SummaryEntry<T, P>,
+  S extends SummaryEntry<T, any, P>,
   T extends TurnData<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
 >(
-  summaryFactory: SummaryAccumulatorFactory<S, T, P>,
+  summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-  decimalFormat = new Intl.NumberFormat(undefined, {
-    style: "decimal",
-    maximumFractionDigits: 2,
-  }),
 ) => {
   return defineComponent(
     (props, { slots }) => {
@@ -61,7 +57,7 @@ export const createSummaryComponent = <
                       for (const p of parts) {
                         val = val[p];
                       }
-                      return <td>{decimalFormat.format(val)}</td>;
+                      return <td>{props.decimalFormat.format(val)}</td>;
                     })}
                 </tr>
               );
@@ -75,6 +71,13 @@ export const createSummaryComponent = <
         players: { type: Array as PropType<string[]>, required: true },
         games: { type: Array as PropType<GameResult<T>[]>, required: true },
         fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
+        decimalFormat: {
+          type: Object as PropType<Intl.NumberFormat>,
+          default: new Intl.NumberFormat(undefined, {
+            style: "decimal",
+            maximumFractionDigits: 2,
+          }),
+        },
       },
     },
   );

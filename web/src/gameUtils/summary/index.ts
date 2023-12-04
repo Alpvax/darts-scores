@@ -48,21 +48,27 @@ export interface SummaryEntryField<T extends TurnData<any, any>, E, S extends Su
   summary(accumulated: S, numGames: number, entry: E): S;
 }
 
-export type SummaryEntry<
-  T extends TurnData<any, any>,
-  P extends PlayerRequirements = { all: "*" },
-> = {
+type SummaryEntryCore<T extends TurnData<any, any>, P extends PlayerRequirements> = {
   score: NumericSummaryField<T>;
   wins: WinSummaryField<T, P>;
-  [key: string]: SummaryEntryField<T, any, any>;
 };
+export type SummaryEntryFields<T extends TurnData<any, any>> = Record<
+  string,
+  SummaryEntryField<T, any, any>
+>;
+export type SummaryEntry<
+  T extends TurnData<any, any>,
+  S extends SummaryEntryFields<T>,
+  P extends PlayerRequirements = { all: "*" },
+> = SummaryEntryCore<T, P> & S;
 
 export type SummaryValues<
-  E extends SummaryEntry<T, P>,
+  E extends SummaryEntry<T, S, P>,
   T extends TurnData<any, any>,
+  S extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = {
-  [K in keyof E]: E[K] extends SummaryEntryField<T, any, infer S> ? S : never;
+  [Key in keyof E]: E[Key] extends SummaryEntryField<T, any, infer S> ? S : never;
 } & {
   numGames: number;
 };
@@ -82,8 +88,9 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
 };
 
 export type SummaryAccumulatorFactory<
-  S extends SummaryEntry<T, P>,
+  S extends SummaryEntry<T, R, P>,
   T extends TurnData<any, any>,
+  R extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = () => {
   /**
@@ -96,7 +103,7 @@ export type SummaryAccumulatorFactory<
     playerData: PlayerDataForStats<T>,
     allPlayers: string[],
     tiebreakWinner?: string,
-  ): SummaryValues<S, T, P>;
+  ): SummaryValues<S, T, R, P>;
   /**
    * @param playerData the data for the curent player
    * @param allPlayers the ids of all the players in the game
@@ -107,20 +114,21 @@ export type SummaryAccumulatorFactory<
     playerData: PlayerDataForStats<T>,
     allPlayers: string[],
     tiebreakWinner?: string,
-  ): SummaryValues<S, T, P>;
+  ): SummaryValues<S, T, R, P>;
   /** The current summary values. SHOULD NOT BE OVERWRITTEN OR MODIFIED! */
-  summary: SummaryValues<S, T, P>;
+  summary: SummaryValues<S, T, R, P>;
 };
 export const summaryAccumulatorFactory =
   <
-    S extends SummaryEntry<T, P>,
+    S extends SummaryEntry<T, R, P>,
     T extends TurnData<any, any>,
+    R extends SummaryEntryFields<T>,
     P extends PlayerRequirements = { all: "*" },
   >(
     fields: Omit<S, "score">,
-  ): SummaryAccumulatorFactory<S, T, P> =>
+  ): SummaryAccumulatorFactory<S, T, R, P> =>
   () => {
-    type SVTyp = SummaryValues<S, T, P>;
+    type SVTyp = SummaryValues<S, T, R, P>;
     const fieldEntries = [
       ["score", new NumericSummaryField(({ score }) => score)],
       ...Object.entries(fields),
@@ -206,19 +214,34 @@ type FieldFactoryUtils<T extends TurnData<any, any>> = {
   /** Make boolean stat */
   boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
 };
-export const makeSummaryAccumulatorFactory = <T extends TurnData<any, any, any>>(
-  fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => Omit<SummaryEntry<T, any>, "score" | "wins">,
+export const makeSummaryAccumulatorFactoryFor =
+  <T extends TurnData<any, any, any>>() =>
+  <
+    S extends Record<
+      Exclude<string, "wins" | "score" | "numGames">,
+      SummaryEntryField<T, any, any>
+    >,
+  >(
+    fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
+    winsRequirements: PlayerRequirements = { all: "*" },
+  ) =>
+    makeSummaryAccumulatorFactory<T, S>(fieldFactory, winsRequirements);
+export const makeSummaryAccumulatorFactory = <
+  T extends TurnData<any, any, any>,
+  S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
+>(
+  fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
   winsRequirements: PlayerRequirements = { all: "*" },
 ): SummaryAccumulatorFactory<
-  ReturnType<typeof fieldFactory> &
-    Pick<SummaryEntry<T, typeof winsRequirements>, "score" | "wins">,
+  S & SummaryEntryCore<T, typeof winsRequirements>,
   T,
+  S,
   typeof winsRequirements
 > =>
   summaryAccumulatorFactory<
-    ReturnType<typeof fieldFactory> &
-      Pick<SummaryEntry<T, typeof winsRequirements>, "score" | "wins">,
+    S & SummaryEntryCore<T, typeof winsRequirements>,
     T,
+    S,
     typeof winsRequirements
   >({
     wins: WinSummaryField.create(winsRequirements),
@@ -231,8 +254,8 @@ export const makeSummaryAccumulatorFactory = <T extends TurnData<any, any, any>>
         calculate: (data: PlayerDataForStats<T>) => boolean,
       ) => new BoolSummaryField<T>(calculate),
     }),
-  });
-export default makeSummaryAccumulatorFactory;
+  } as Omit<SummaryEntry<T, S, typeof winsRequirements>, "score">);
+export default makeSummaryAccumulatorFactoryFor;
 
 type FlattenSummaryKeysInternal<S extends SummaryValueRecord, Key = keyof S> = Key extends string
   ? S[Key] extends SummaryValueRecord
@@ -241,7 +264,7 @@ type FlattenSummaryKeysInternal<S extends SummaryValueRecord, Key = keyof S> = K
   : never;
 
 export type SummaryFieldKeys<
-  S extends SummaryEntry<T, P>,
+  S extends SummaryEntry<T, any, P>,
   T extends TurnData<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
-> = FlattenSummaryKeysInternal<SummaryValues<S, T, P>>;
+> = FlattenSummaryKeysInternal<SummaryValues<S, T, any, P>>;
