@@ -230,51 +230,6 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
   },
 );
 
-// type GameSummary = {
-//   score: HLT;
-//   wins: WinCount;
-//   fatNicks: Count & Closest;
-//   cliffs: HLT;
-//   dd: HLT;
-//   hans: HLT;
-//   goblins: Count;
-//   piranhas: Count;
-//   jesus: Count;
-//   dreams: Count & Closest;
-//   allPos: Count & Closest;
-//   hits: {
-//     total: HLT;
-//     rounds: HLT;
-//     cliffs: HLT;
-//     dd: HLT;
-//   };
-// };
-const summaryOrder = [
-  "score.highest",
-  "score.lowest",
-  "score.mean",
-  // REAL WINS?!
-  // "wins.count",
-  "numGames.count",
-  // "wins.rate",
-  "fatNicks.count",
-  "fatNicks.closest",
-  "cliffs.total",
-  "cliffs.meanTotal",
-  "doubleDoubles.total",
-  "doubleDoubles.meanTotal",
-  "hans.total",
-  "goblins.count",
-  "piranhas.count",
-  "jesus.count",
-  "dreams.furthest",
-  "positive.total",
-  "positive.furthest",
-  "hits.highest",
-  "hits.lowest",
-  "hits.mean",
-];
-
 //TODO: REMOVE TEST
 (() => {
   const testSummary = summaryFactory();
