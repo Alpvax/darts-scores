@@ -29,8 +29,41 @@ export const createComponent = <
 
   const turnKey = (playerId: string, roundIdx: number) => `${playerId}:${roundIdx}`;
 
-  return defineComponent(
-    (props, { slots, emit }) => {
+  return defineComponent({
+    props: {
+      players: { type: Array as PropType<string[]>, required: true },
+      // modelValue: {
+      //   type: Object as PropType<Map<string, Partial<T>>>,
+      //   default: () => new Map(),
+      // },
+      editable: { type: Boolean, default: false },
+      displayPositions: {
+        type: String as PropType<DisplayPosRowPositions>,
+        default: "head",
+      },
+    },
+    emits: {
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      //   playerCompleted: (playerId: string, completed: boolean) => true,
+      completed: (completed: boolean) => true,
+      turnTaken: (turnData: TurnData<V, RS>) => true,
+      /** Emitted only when the entire game is complete, then each time the result changes */
+      ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
+        true,
+      ["update:playerStats"]: (playerId: string, stats: PlayerData["stats"]) => true,
+      //   ["update:positions"]: (
+      //     ordered: {
+      //       pos: number;
+      //       posOrdinal: string;
+      //       players: string[];
+      //     }[],
+      //   ) => true,
+      //   ["update:playerScores"]: (result: PlayerData<T>[]) => true,
+      //   ["update:modelValue"]: (values: Map<string, Partial<T>>) => true,
+      //   ["update:modelValueSparse"]: (values: Map<string, Map<RoundKey<T>, RoundsValue<T>>>) => true,
+      /* eslint-enable @typescript-eslint/no-unused-vars */
+    },
+    setup: (props, { slots, emit }) => {
       const turnValues = ref(new Map<string, V>()); //TODO: set from props
 
       /** Map of playerId to Map<index, {score, allTurns, takenTurns, lastPlayedRound}> */
@@ -236,40 +269,5 @@ export const createComponent = <
         </table>
       );
     },
-    {
-      props: {
-        players: { type: Array as PropType<string[]>, required: true },
-        // modelValue: {
-        //   type: Object as PropType<Map<string, Partial<T>>>,
-        //   default: () => new Map(),
-        // },
-        editable: { type: Boolean, default: false },
-        displayPositions: {
-          type: String as PropType<DisplayPosRowPositions>,
-          default: "head",
-        },
-      },
-      emits: {
-        /* eslint-disable @typescript-eslint/no-unused-vars */
-        //   playerCompleted: (playerId: string, completed: boolean) => true,
-        completed: (completed: boolean) => true,
-        turnTaken: (turnData: TurnData<V, RS>) => true,
-        /** Emitted only when the entire game is complete, then each time the result changes */
-        ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
-          true,
-        ["update:playerStats"]: (playerId: string, stats: PlayerData["stats"]) => true,
-        //   ["update:positions"]: (
-        //     ordered: {
-        //       pos: number;
-        //       posOrdinal: string;
-        //       players: string[];
-        //     }[],
-        //   ) => true,
-        //   ["update:playerScores"]: (result: PlayerData<T>[]) => true,
-        //   ["update:modelValue"]: (values: Map<string, Partial<T>>) => true,
-        //   ["update:modelValueSparse"]: (values: Map<string, Map<RoundKey<T>, RoundsValue<T>>>) => true,
-        /* eslint-enable @typescript-eslint/no-unused-vars */
-      },
-    },
-  );
+  });
 };

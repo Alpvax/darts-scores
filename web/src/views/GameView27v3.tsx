@@ -205,7 +205,6 @@ export default defineComponent({
             />
           ) : undefined}
           <Game27
-            // @ts-expect-error
             class="game twentyseven"
             players={players.value}
             // modelValue={gameValues.value}

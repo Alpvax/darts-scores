@@ -16,9 +16,22 @@ export const createSummaryComponent = <
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-) => {
-  return defineComponent(
-    (props, { slots }) => {
+) =>
+  defineComponent({
+    //@ts-ignore due to "Type instantiation is excessively deep and possibly infinite"
+    props: {
+      players: { type: Array as PropType<string[]>, required: true },
+      games: { type: Array as PropType<GameResult<T>[]>, required: true },
+      fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
+      decimalFormat: {
+        type: Object as PropType<Intl.NumberFormat>,
+        default: new Intl.NumberFormat(undefined, {
+          style: "decimal",
+          maximumFractionDigits: 2,
+        }),
+      },
+    },
+    setup: (props, { slots }) => {
       const playerStats = computed(() =>
         props.games.reduce((map, game) => {
           const allPlayers = [...game.results.keys()];
@@ -67,19 +80,4 @@ export const createSummaryComponent = <
         </table>
       );
     },
-    {
-      props: {
-        players: { type: Array as PropType<string[]>, required: true },
-        games: { type: Array as PropType<GameResult<T>[]>, required: true },
-        fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
-        decimalFormat: {
-          type: Object as PropType<Intl.NumberFormat>,
-          default: new Intl.NumberFormat(undefined, {
-            style: "decimal",
-            maximumFractionDigits: 2,
-          }),
-        },
-      },
-    },
-  );
-};
+  });
