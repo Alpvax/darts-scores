@@ -185,7 +185,7 @@ export const gameMeta = normaliseGameMetadata<
   }),
 });
 
-type TurnData27 = TurnDataForGame<typeof gameMeta>;
+export type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
 export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
   ({ countWhile, numeric, boolean }) => ({

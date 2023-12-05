@@ -215,35 +215,60 @@ type FieldFactoryUtils<T extends TurnData<any, any>> = {
   boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
 };
 export const makeSummaryAccumulatorFactoryFor =
-  <T extends TurnData<any, any, any>>() =>
+  <T extends TurnData<any, any, any>>(): {
+    <
+      S extends Record<
+        Exclude<string, "wins" | "score" | "numGames">,
+        SummaryEntryField<T, any, any>
+      >,
+    >(
+      fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
+    ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, { all: "*" }>, T, S, { all: "*" }>;
+    <
+      S extends Record<
+        Exclude<string, "wins" | "score" | "numGames">,
+        SummaryEntryField<T, any, any>
+      >,
+      P extends PlayerRequirements,
+    >(
+      fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
+      winsRequirements: P,
+    ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
+  } =>
   <
     S extends Record<
       Exclude<string, "wins" | "score" | "numGames">,
       SummaryEntryField<T, any, any>
     >,
+    P extends PlayerRequirements,
   >(
     fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-    winsRequirements: PlayerRequirements = { all: "*" },
+    winsRequirements = { all: "*" } as unknown as P,
   ) =>
-    makeSummaryAccumulatorFactory<T, S>(fieldFactory, winsRequirements);
-export const makeSummaryAccumulatorFactory = <
+    makeSummaryAccumulatorFactory<T, S, P>(fieldFactory, winsRequirements);
+export function makeSummaryAccumulatorFactory<
   T extends TurnData<any, any, any>,
   S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
 >(
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-  winsRequirements: PlayerRequirements = { all: "*" },
-): SummaryAccumulatorFactory<
-  S & SummaryEntryCore<T, typeof winsRequirements>,
-  T,
-  S,
-  typeof winsRequirements
-> =>
-  summaryAccumulatorFactory<
-    S & SummaryEntryCore<T, typeof winsRequirements>,
-    T,
-    S,
-    typeof winsRequirements
-  >({
+): SummaryAccumulatorFactory<S & SummaryEntryCore<T, { all: "*" }>, T, S, { all: "*" }>;
+export function makeSummaryAccumulatorFactory<
+  T extends TurnData<any, any, any>,
+  S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
+  P extends PlayerRequirements,
+>(
+  fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
+  winsRequirements: P,
+): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
+export function makeSummaryAccumulatorFactory<
+  T extends TurnData<any, any, any>,
+  S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
+  P extends PlayerRequirements,
+>(
+  fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
+  winsRequirements: P = { all: "*" } as unknown as P,
+): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P> {
+  return summaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>({
     wins: WinSummaryField.create(winsRequirements),
     ...fieldFactory({
       countUntil: countUntil as typeof countUntil<T>,
@@ -254,7 +279,8 @@ export const makeSummaryAccumulatorFactory = <
         calculate: (data: PlayerDataForStats<T>) => boolean,
       ) => new BoolSummaryField<T>(calculate),
     }),
-  } as Omit<SummaryEntry<T, S, typeof winsRequirements>, "score">);
+  } as Omit<SummaryEntry<T, S, P>, "score">);
+}
 export default makeSummaryAccumulatorFactoryFor;
 
 type FlattenSummaryKeysInternal<S extends SummaryValueRecord, Key = keyof S> = Key extends string

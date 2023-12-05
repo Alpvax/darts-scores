@@ -50,10 +50,11 @@ export const createSummaryComponent = <
               const parts = fieldPath.split(".");
               return (
                 <tr>
+                  <td class="rowLabel">{fieldPath}</td>
                   {props.players
                     .flatMap((pid) => playerStats.value.get(pid) ?? [])
-                    .map((stats) => {
-                      let val: any = stats;
+                    .map(({ summary }) => {
+                      let val: any = summary;
                       for (const p of parts) {
                         val = val[p];
                       }

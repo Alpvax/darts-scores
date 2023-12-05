@@ -27,7 +27,7 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
       ? playerData.tied.length < 1
         ? { type: "outright", opponents }
         : { type: "tie", opponents, wonTiebreak: tiebreakWinner === playerData.playerId }
-      : false;
+      : { type: "noWin", opponents };
   }
   emptySummary(): WinsSummaryValues<Outputs> {
     return Object.keys(this.requirements).reduce(
@@ -41,6 +41,7 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
             tiebreakWinRate: 0,
             total: 0,
             mean: 0,
+            gameCount: 0,
           },
         }),
       {} as WinsSummaryValues<Outputs>,
@@ -48,16 +49,14 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
   }
   summary(
     accumulated: WinsSummaryValues<Outputs>,
-    numGames: number,
+    _: number,
     entry: WinsSummaryEntry,
   ): WinsSummaryValues<Outputs> {
-    if (!entry) {
-      return accumulated;
-    }
+    const win = entry.type !== "noWin";
     const { tiebreak, tbWin } =
-      entry.type === "outright"
-        ? { tiebreak: false, tbWin: false }
-        : { tiebreak: true, tbWin: entry.wonTiebreak };
+      entry.type === "tie"
+        ? { tiebreak: true, tbWin: entry.wonTiebreak }
+        : { tiebreak: false, tbWin: false };
     return (Object.entries(this.requirements) as [keyof Outputs, PlayerRequirement][]).reduce(
       (acc, [k, req]) => {
         const players = new Set(entry.opponents);
@@ -69,18 +68,21 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
           req === "*" ||
           (Array.isArray(req) ? checkPlayers(req) : checkPlayers(req.players, req.exact))
         ) {
-          if (tiebreak) {
-            acc[k].tiebreaksPlayed += 1;
-            if (tbWin) {
-              acc[k].tiebreakWins += 1;
+          acc[k].gameCount += 1;
+          if (win) {
+            if (tiebreak) {
+              acc[k].tiebreaksPlayed += 1;
+              if (tbWin) {
+                acc[k].tiebreakWins += 1;
+              }
+              acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
+            } else {
+              acc[k].totalOutright += 1;
+              acc[k].meanOutright = acc[k].totalOutright / acc[k].gameCount;
             }
-            acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
-          } else {
-            acc[k].totalOutright += 1;
-            acc[k].meanOutright = acc[k].totalOutright / numGames;
+            acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
           }
-          acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
-          acc[k].mean = acc[k].total / numGames;
+          acc[k].mean = acc[k].total / acc[k].gameCount;
         }
         return acc;
       },
@@ -91,11 +93,16 @@ export class WinSummaryField<T extends TurnData<any, any>, Outputs extends Playe
 
 /**
  * false = neither win nor in tiebreak
+ * `{ type: "noWin", ... }` = Did not win
  * `{ type: "outright", ... }` = won outright (no tiebreak)
  * `{ type: "tie", ... }` = in tiebreak, but may not have won tiebreak
  */
 type WinsSummaryEntry =
-  | false
+  | {
+      type: "noWin";
+      /** All players in game (except current player) */
+      opponents: string[];
+    }
   | {
       type: "outright";
       /** All players in game (except current player) */
@@ -125,5 +132,7 @@ type WinsSummaryValues<O extends PlayerRequirements> = Record<
     total: number;
     /** Average wins / game (outright + tiebreak wins) */
     mean: number;
+    /** Games played fitting the requirements */
+    gameCount: number;
   }
 >;

@@ -31,6 +31,15 @@ const router = createRouter({
       component: () => import("@/views/GameView27v3"),
     },
     {
+      path: "/twentyseven/summary",
+      alias: "/27/summary",
+      name: "twentysevenSummary",
+      // props: (route) => ({
+      //   gameId: route.query.gameId,
+      // }),
+      component: () => import("@/views/SummaryView27.vue"),
+    },
+    {
       path: "/twentyseven/history",
       alias: "/27/history",
       name: "twentysevenHistory",
