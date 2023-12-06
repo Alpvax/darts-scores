@@ -116,7 +116,8 @@ export const createSummaryComponent = <
                 </tr>
               );
             })}
-            {rounds.flatMap((r) => (
+            {
+              undefined /*rounds.flatMap((r) => (
               <tr class="roundSummaryRow">
                 <th class="rowLabel">{r.label}</th>
                 {props.players.flatMap((pid) => {
@@ -126,7 +127,8 @@ export const createSummaryComponent = <
                   return <td>TODO: round stats</td>;
                 })}
               </tr>
-            ))}
+            ))*/
+            }
           </tbody>
         </table>
       );

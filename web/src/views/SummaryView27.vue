@@ -32,6 +32,7 @@ const Summary27 = createSummaryComponent(
     // "hits.highest",
     // "hits.lowest",
     // "hits.mean",
+    "rounds.1.cliff.total",
   ],
   gameMeta.rounds,
   (stats) => stats.hits,

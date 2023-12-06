@@ -219,9 +219,10 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   /** Make boolean stat */
   boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
   /** Make round stats accumulator */
-  roundStats: (
+  roundStats: <K extends string>(
+    roundKeys: string[],
     defaults: T extends TurnData<any, infer RS, any> ? RS : never,
-  ) => RoundStatsSummaryField<T, T extends TurnData<any, infer RS, any> ? RS : never>;
+  ) => RoundStatsSummaryField<T, T extends TurnData<any, infer RS, any> ? RS : never, K>;
 };
 export const makeSummaryAccumulatorFactoryFor =
   <T extends TurnData<any, any, any>>(): {
@@ -289,8 +290,9 @@ export function makeSummaryAccumulatorFactory<
         calculate: (data: PlayerDataForStats<T>) => boolean,
       ) => new BoolSummaryField<T>(calculate),
       roundStats: <T extends TurnData<any, any, any>>(
+        roundKeys: string[],
         defaults: T extends TurnData<any, infer RS, any> ? RS : never,
-      ) => new RoundStatsSummaryField(defaults),
+      ) => new RoundStatsSummaryField(roundKeys, defaults),
     }),
   } as Omit<SummaryEntry<T, S, P>, "score">);
 }

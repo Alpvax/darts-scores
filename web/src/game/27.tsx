@@ -188,7 +188,7 @@ export const gameMeta = normaliseGameMetadata<
 export type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
 export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
-  ({ countWhile, numeric, boolean }) => ({
+  ({ countWhile, numeric, boolean, roundStats }) => ({
     fatNicks: countWhile(({ value }) => !value),
     dreams: countWhile(({ value }) => value > 0, true),
     allPos: countWhile(({ score }) => score > 0),
@@ -223,6 +223,10 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
       ),
     ),
     // jesus: boolean(data => ),
+    rounds: roundStats(
+      Array.from({ length: 20 }, (_, i) => i.toString()),
+      { cliff: false, doubledouble: false, hits: 0 },
+    ),
   }),
   {
     all: "*",
