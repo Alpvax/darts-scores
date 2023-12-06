@@ -34,7 +34,7 @@ export class ArrayStatsAccumulatorGame<
   private readonly turns = new Map<RK, T>();
   private readonly game = {} as Partial<RoundStatsMapped<T>>;
   private readonly initializedKeys = new Set<keyof RoundStatsMapped<T>>();
-  constructor(private readonly gameStatsFactory: GameStatsFactory<G, TurnData<V, T>, T>) {}
+  constructor(private readonly gameStatsFactory: GameStatsFactory<G, TurnData<V, T, any>, T>) {}
 
   addRound(roundKey: RK, stats: T) {
     this.turns.set(roundKey, stats);
@@ -65,7 +65,10 @@ export class ArrayStatsAccumulatorGame<
     this.incrementBoolCount(`${statKey}CountNZ`, value !== 0);
   }
 
-  result(turns: { all: TurnData<V, T>[]; taken: TakenTurnData<V, T>[] }): GameStats<T, G> {
+  result(turns: {
+    all: TurnData<V, T, any>[];
+    taken: TakenTurnData<V, T, any>[];
+  }): GameStats<T, G> {
     const stats = {
       turnStats: Array.from({ length: this.turns.size }, (_, i) =>
         this.turns.get(i as RK /*TODO: non numeric rounds */),

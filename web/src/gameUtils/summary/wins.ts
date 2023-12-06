@@ -4,14 +4,14 @@ import type { TurnData } from "../roundDeclaration";
 type PlayerRequirement = "*" | string[] | { players: string[]; exact?: boolean };
 export type PlayerRequirements = Record<string, PlayerRequirement>;
 
-export class WinSummaryField<T extends TurnData<any, any>, Outputs extends PlayerRequirements>
+export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends PlayerRequirements>
   implements SummaryEntryField<T, WinsSummaryEntry, WinsSummaryValues<Outputs>>
 {
-  static create<T extends TurnData<any, any>>(): WinSummaryField<T, { all: "*" }>;
-  static create<T extends TurnData<any, any>, O extends PlayerRequirements>(
+  static create<T extends TurnData<any, any, any>>(): WinSummaryField<T, { all: "*" }>;
+  static create<T extends TurnData<any, any, any>, O extends PlayerRequirements>(
     requirements: O,
   ): WinSummaryField<T, O>;
-  static create<T extends TurnData<any, any>, O extends PlayerRequirements = { all: "*" }>(
+  static create<T extends TurnData<any, any, any>, O extends PlayerRequirements = { all: "*" }>(
     requirements?: O,
   ): WinSummaryField<T, O> {
     return new WinSummaryField(requirements ?? ({ all: "*" } as unknown as O));

@@ -10,7 +10,7 @@ type RoundIndexPredicateResult =
       found: false;
       index: undefined;
     };
-export class RoundCountField<T extends TurnData<any, any>>
+export class RoundCountField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, { index: number; allGame: boolean }, RoundCountSummaryValues>
 {
   private readonly findIndex: (data: (T | IntoTaken<T>)[]) => RoundIndexPredicateResult;
@@ -129,16 +129,16 @@ const makeConstructor =
   (
     findFirst: boolean,
   ): {
-    <T extends TurnData<any, any>>(
+    <T extends TurnData<any, any, any>>(
       predicate: (data: IntoTaken<T>) => boolean,
       takenOnly: true,
     ): RoundCountField<T>;
-    <T extends TurnData<any, any>>(
+    <T extends TurnData<any, any, any>>(
       predicate: (data: T) => boolean,
       takenOnly?: false,
     ): RoundCountField<T>;
   } =>
-  <T extends TurnData<any, any>>(
+  <T extends TurnData<any, any, any>>(
     predicate: ((data: IntoTaken<T>) => boolean) | ((data: T) => boolean),
     takenOnly?: Boolean,
   ) =>
@@ -154,11 +154,3 @@ const makeConstructor =
 
 export const countUntil = makeConstructor(true);
 export const countWhile = makeConstructor(false);
-
-// export function countUntil<T extends TurnData<any, any>>(predicate: (data: IntoTaken<T>) => boolean, takenOnly: true): RoundCountField<T>;
-// export function countUntil<T extends TurnData<any, any>>(predicate: (data: T) => boolean, takenOnly?: false): RoundCountField<T>;
-// export function countUntil<T extends TurnData<any, any>>(predicate: ((data: T) => boolean) | ((data: IntoTaken<T>) => boolean), takenOnly?: boolean) {
-//   return takenOnly
-//     ? new RoundCountField<T>(predicate as (data: IntoTaken<T>) => boolean, { findFirst: true, ignoreUntakenRounds: true })
-//     : new RoundCountField<T>(predicate as (data: T) => boolean, { findFirst: true, ignoreUntakenRounds: false })
-// }

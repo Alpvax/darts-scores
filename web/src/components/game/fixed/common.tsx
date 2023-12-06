@@ -21,10 +21,10 @@ export const createComponent = <
 >(
   meta: AnyGameMetadata<V, RS, GS>,
 ) => {
-  type PlayerData = PlayerDataT<RS, TurnData<V, RS>, GS>;
+  type PlayerData = PlayerDataT<RS, TurnData<V, RS, any>, GS>;
   const gameStatsFactory = () =>
     new ArrayStatsAccumulatorGame<V, RS, GS>(
-      meta.gameStatsFactory as GameStatsFactory<GS, TurnData<V, RS>, RS>,
+      meta.gameStatsFactory as GameStatsFactory<GS, TurnData<V, RS, any>, RS>,
     );
 
   const turnKey = (playerId: string, roundIdx: number) => `${playerId}:${roundIdx}`;
@@ -46,7 +46,7 @@ export const createComponent = <
       /* eslint-disable @typescript-eslint/no-unused-vars */
       //   playerCompleted: (playerId: string, completed: boolean) => true,
       completed: (completed: boolean) => true,
-      turnTaken: (turnData: TurnData<V, RS>) => true,
+      turnTaken: (turnData: TurnData<V, RS, any>) => true,
       /** Emitted only when the entire game is complete, then each time the result changes */
       ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
         true,
@@ -83,15 +83,15 @@ export const createComponent = <
                       allTurns.set(i, data);
                     }
                     if (val !== undefined) {
-                      turnsTaken.set(i, data as TakenTurnData<V, RS>);
+                      turnsTaken.set(i, data as TakenTurnData<V, RS, any>);
                       lastPlayedRound = i;
                     }
                     return { score, allTurns, turnsTaken, lastPlayedRound };
                   },
                   {
                     score: meta.startScore(pid),
-                    allTurns: new Map<number, TurnData<V, RS>>(),
-                    turnsTaken: new Map<number, TakenTurnData<V, RS>>(),
+                    allTurns: new Map<number, TurnData<V, RS, any>>(),
+                    turnsTaken: new Map<number, TakenTurnData<V, RS, any>>(),
                     lastPlayedRound: -1,
                   },
                 ),
@@ -220,13 +220,15 @@ export const createComponent = <
               );
               return (
                 <tr
-                  class={(r.rowClass as (data: TurnData<V, RS>[]) => ClassBindings)(playerRowData)}
+                  class={(r.rowClass as (data: TurnData<V, RS, any>[]) => ClassBindings)(
+                    playerRowData,
+                  )}
                 >
                   <td class="rowLabel">{r.label}</td>
                   {playerRowData.map(({ value, ...pData }, pIdx) => {
                     return (
                       <td
-                        class={(r.cellClass as (data: TurnData<V, RS>) => ClassBindings)({
+                        class={(r.cellClass as (data: TurnData<V, RS, any>) => ClassBindings)({
                           value,
                           ...pData,
                         })}

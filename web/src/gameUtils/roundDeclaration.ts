@@ -76,7 +76,7 @@ export function hasStats<V, S extends TurnStats = {}>(
   indexed: IndexedTurnDataNoStats<V> | IndexedTurnDataStats<V, S>,
 ): indexed is IndexedTurnDataStats<V, S>;
 export function hasStats<V, S extends TurnStats = {}>(
-  data: TurnData<V, S>,
+  data: TurnData<V, S, any>,
 ): data is TurnDataBase<V> & TurnDataStats<S> {
   return Object.hasOwn(data, "stats");
 }
@@ -105,7 +105,7 @@ export function isKeyed<V, S extends TurnStats = {}, K extends string = string>(
  *  `editable`: whether the rendered cell should allow editing the value, used to conditionally render input elements
  *  `focus`: a {@link MoveFocus} object to allow changing focus to different turns
  */
-type DisplayFactory<V, T extends TurnData<V, any>> = (
+type DisplayFactory<V, T extends TurnData<V, any, any>> = (
   value: Ref<V | undefined>,
   extra: Omit<T, "value"> & {
     editable: boolean;

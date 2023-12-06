@@ -1,7 +1,7 @@
 import type { PlayerDataForStats, SummaryEntryField } from ".";
 import type { TurnData } from "../roundDeclaration";
 
-export class BoolSummaryField<T extends TurnData<any, any>>
+export class BoolSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, boolean, BooleanSummaryValues>
 {
   constructor(readonly calculate: (data: PlayerDataForStats<T>) => boolean) {}
@@ -28,7 +28,7 @@ type BooleanSummaryValues = {
   mean: number;
 };
 
-export class NumericSummaryField<T extends TurnData<any, any>>
+export class NumericSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, number, NumericSummaryValues>
 {
   constructor(readonly calculate: (data: PlayerDataForStats<T>) => number) {}

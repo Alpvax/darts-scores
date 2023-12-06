@@ -1,13 +1,14 @@
 import type { IntoTaken, TurnData } from "../roundDeclaration";
 import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
+import { RoundStatsSummaryField } from "./roundStats";
 import { WinSummaryField, type PlayerRequirements } from "./wins";
 
 // Re-exports for convenience
 export { type PlayerRequirements } from "./wins";
 
 //TODO: use PlayerData instead of inline type declaration
-export type PlayerDataForStats<T extends TurnData<any, any>> = {
+export type PlayerDataForStats<T extends TurnData<any, any, any>> = {
   playerId: string;
   /** Whether the player has completed all rounds */
   complete: boolean;
@@ -38,7 +39,11 @@ export type GameResult<T extends TurnData<any, any, any>, P extends string = str
 interface SummaryValueRecord {
   [key: string]: SummaryValueRecord | number;
 }
-export interface SummaryEntryField<T extends TurnData<any, any>, E, S extends SummaryValueRecord> {
+export interface SummaryEntryField<
+  T extends TurnData<any, any, any>,
+  E,
+  S extends SummaryValueRecord,
+> {
   /** Create an entry for a single game */
   //TODO: use PlayerData instead of inline type declaration
   entry(playerData: PlayerDataForStats<T>, opponents: string[], tiebreakWinner?: string): E;
@@ -48,23 +53,23 @@ export interface SummaryEntryField<T extends TurnData<any, any>, E, S extends Su
   summary(accumulated: S, numGames: number, entry: E): S;
 }
 
-type SummaryEntryCore<T extends TurnData<any, any>, P extends PlayerRequirements> = {
+type SummaryEntryCore<T extends TurnData<any, any, any>, P extends PlayerRequirements> = {
   score: NumericSummaryField<T>;
   wins: WinSummaryField<T, P>;
 };
-export type SummaryEntryFields<T extends TurnData<any, any>> = Record<
+export type SummaryEntryFields<T extends TurnData<any, any, any>> = Record<
   string,
   SummaryEntryField<T, any, any>
 >;
 export type SummaryEntry<
-  T extends TurnData<any, any>,
+  T extends TurnData<any, any, any>,
   S extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = SummaryEntryCore<T, P> & S;
 
 export type SummaryValues<
   E extends SummaryEntry<T, S, P>,
-  T extends TurnData<any, any>,
+  T extends TurnData<any, any, any>,
   S extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = {
@@ -89,7 +94,7 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
 
 export type SummaryAccumulatorFactory<
   S extends SummaryEntry<T, R, P>,
-  T extends TurnData<any, any>,
+  T extends TurnData<any, any, any>,
   R extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = () => {
@@ -121,7 +126,7 @@ export type SummaryAccumulatorFactory<
 export const summaryAccumulatorFactory =
   <
     S extends SummaryEntry<T, R, P>,
-    T extends TurnData<any, any>,
+    T extends TurnData<any, any, any>,
     R extends SummaryEntryFields<T>,
     P extends PlayerRequirements = { all: "*" },
   >(
@@ -204,7 +209,7 @@ export const summaryAccumulatorFactory =
     };
   };
 
-type FieldFactoryUtils<T extends TurnData<any, any>> = {
+type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   /** Count rounds until the predicate passes, returning the index of the passed round (so 0 would be first round passed) */
   countUntil: typeof countUntil<T>;
   /** Count rounds until the predicate fails, returning the index of the failed round (so 0 would be first round failed) */
@@ -213,6 +218,10 @@ type FieldFactoryUtils<T extends TurnData<any, any>> = {
   numeric: (calculate: (data: PlayerDataForStats<T>) => number) => NumericSummaryField<T>;
   /** Make boolean stat */
   boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
+  /** Make round stats accumulator */
+  roundStats: (
+    defaults: T extends TurnData<any, infer RS, any> ? RS : never,
+  ) => RoundStatsSummaryField<T, T extends TurnData<any, infer RS, any> ? RS : never>;
 };
 export const makeSummaryAccumulatorFactoryFor =
   <T extends TurnData<any, any, any>>(): {
@@ -273,11 +282,15 @@ export function makeSummaryAccumulatorFactory<
     ...fieldFactory({
       countUntil: countUntil as typeof countUntil<T>,
       countWhile: countWhile as typeof countWhile<T>,
-      numeric: <T extends TurnData<any, any>>(calculate: (data: PlayerDataForStats<T>) => number) =>
-        new NumericSummaryField<T>(calculate),
-      boolean: <T extends TurnData<any, any>>(
+      numeric: <T extends TurnData<any, any, any>>(
+        calculate: (data: PlayerDataForStats<T>) => number,
+      ) => new NumericSummaryField<T>(calculate),
+      boolean: <T extends TurnData<any, any, any>>(
         calculate: (data: PlayerDataForStats<T>) => boolean,
       ) => new BoolSummaryField<T>(calculate),
+      roundStats: <T extends TurnData<any, any, any>>(
+        defaults: T extends TurnData<any, infer RS, any> ? RS : never,
+      ) => new RoundStatsSummaryField(defaults),
     }),
   } as Omit<SummaryEntry<T, S, P>, "score">);
 }

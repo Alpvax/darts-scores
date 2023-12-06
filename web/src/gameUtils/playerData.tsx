@@ -17,7 +17,7 @@ import type {
 
 export type PlayerDataT<
   RS extends TurnStats,
-  T extends TurnData<any, RS>,
+  T extends TurnData<any, RS, any>,
   GS extends GameStatsForRounds<RS>,
 > = {
   playerId: string;

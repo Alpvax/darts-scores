@@ -6,31 +6,36 @@ import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import type { GameResult, PlayerDataForStats } from "@/gameUtils/summary";
 import { ref, defineComponent } from "vue";
 
-const Summary27 = createSummaryComponent(summaryFactory, [
-  "score.highest",
-  "score.lowest",
-  "score.mean",
-  // REAL WINS?!
-  "wins.all.total",
-  "numGames",
-  "wins.all.mean",
-  "fatNicks.count",
-  "fatNicks.latest",
-  "cliffs.total",
-  "cliffs.mean",
-  "doubleDoubles.total",
-  "doubleDoubles.mean",
-  "hans.total",
-  "goblins.count",
-  "piranhas.count",
-  // "jesus.count",
-  "dreams.latest",
-  "allPos.count",
-  "allPos.latest",
-  // "hits.highest",
-  // "hits.lowest",
-  // "hits.mean",
-]);
+const Summary27 = createSummaryComponent(
+  summaryFactory,
+  [
+    "score.highest",
+    "score.lowest",
+    "score.mean",
+    // REAL WINS?!
+    "wins.all.total",
+    "numGames",
+    "wins.all.mean",
+    "fatNicks.count",
+    "fatNicks.latest",
+    "cliffs.total",
+    "cliffs.mean",
+    "doubleDoubles.total",
+    "doubleDoubles.mean",
+    "hans.total",
+    "goblins.count",
+    "piranhas.count",
+    // "jesus.count",
+    "dreams.latest",
+    "allPos.count",
+    "allPos.latest",
+    // "hits.highest",
+    // "hits.lowest",
+    // "hits.mean",
+  ],
+  gameMeta.rounds,
+  (stats) => stats.hits,
+);
 
 export default defineComponent({
   components: {

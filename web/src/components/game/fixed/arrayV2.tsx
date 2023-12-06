@@ -33,11 +33,11 @@ export const createComponent = <
   GS extends GameStatsForRounds<RS> = any,
 >(
   meta: ArrayGameMetadata<V, RS> & GameMetaWithStats<V, RS, GS> /*{
-    gameStatsFactory?: (accumulatedStats: ArrayGameStats<RS>, turns: { all: TurnData<V, RS>[]; taken: TurnData<V, RS>[] }) => GS;
-    playerNameClass?: (data: PlayerDataT<RS, TurnData<V, RS>, GS>) => ClassBindings
+    gameStatsFactory?: (accumulatedStats: ArrayGameStats<RS>, turns: { all: TurnData<V, RS, any>[]; taken: TurnData<V, RS>[] }) =, any> GS;
+    playerNameClass?: (data: PlayerDataT<RS, TurnData<V, RS, any>, GS>) => ClassBindings
   },*/,
 ) => {
-  type PlayerData = PlayerDataT<RS, TurnData<V, RS>, GS>;
+  type PlayerData = PlayerDataT<RS, TurnData<V, RS, any>, GS>;
   // type RoundT = Required<Round<V, RS>>;
   // type PlayerData = PlayerDataNoStats<V, RoundT> | PlayerDataWStats<V, RoundT, GS>;
   // const makePlayerData: (playerId: string, )
@@ -83,8 +83,8 @@ export const createComponent = <
                   },
                   {
                     score: meta.startScore(pid),
-                    turns: new Map<number, TurnData<V, RS>>(),
-                    turnsTaken: new Set<TurnData<V, RS>>(),
+                    turns: new Map<number, TurnData<V, RS, any>>(),
+                    turnsTaken: new Set<TurnData<V, RS, any>>(),
                     lastPlayedRound: -1,
                   },
                 ),
@@ -166,13 +166,15 @@ export const createComponent = <
               );
               return (
                 <tr
-                  class={(r.rowClass as (data: TurnData<V, RS>[]) => ClassBindings)(playerRowData)}
+                  class={(r.rowClass as (data: TurnData<V, RS, any>[]) => ClassBindings)(
+                    playerRowData,
+                  )}
                 >
                   <td class="rowLabel">{r.label}</td>
                   {playerRowData.map(({ value, ...pData }, pIdx) => {
                     return (
                       <td
-                        class={(r.cellClass as (data: TurnData<V, RS>) => ClassBindings)({
+                        class={(r.cellClass as (data: TurnData<V, RS, any>) => ClassBindings)({
                           value,
                           ...pData,
                         })}
