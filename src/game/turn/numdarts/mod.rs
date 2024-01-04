@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy)]
 pub enum NumDarts {
     /// 1..=x darts (may not all be required)
     UpTo(u8),
@@ -10,20 +11,18 @@ impl NumDarts {
             NumDarts::UpTo(n) | NumDarts::Exactly(n) => *n,
         }
     }
-}
-impl From<NumDarts> for u8 {
-    fn from(n: NumDarts) -> Self {
-        n.value()
-    }
-}
-impl From<NumDarts> for core::ops::Range<u8> {
-    fn from(n: NumDarts) -> Self {
-        match n {
-            NumDarts::UpTo(n) => 0..n + 1,
-            NumDarts::Exactly(n) => n..n + 1,
+    /// Wrapper function to return an end turn result when all darts have been played
+    pub fn decrement<F>(&mut self, end_turn_factory: F) -> super::DartResult where F: Fn() -> super::TurnResult {
+        *self -= 1;
+        if self.value() > 1 {
+            super::DartResult::Continue(*self)
+        } else {
+            super::DartResult::EndTurn(end_turn_factory())
         }
     }
 }
+mod to_from_impl;
+
 impl core::ops::Sub<u8> for NumDarts {
     type Output = Self;
 
@@ -39,6 +38,11 @@ impl core::ops::Sub<u8> for NumDarts {
             NumDarts::UpTo(n) => res(n, NumDarts::UpTo),
             NumDarts::Exactly(n) => res(n, Self::Exactly),
         }
+    }
+}
+impl core::ops::SubAssign<u8> for NumDarts {
+    fn sub_assign(&mut self, rhs: u8) {
+        *self = *self - rhs
     }
 }
 impl core::cmp::PartialEq<Self> for NumDarts {
@@ -76,6 +80,6 @@ pub trait Turn {
         self.num_darts() - self.darts_thrown()
     }
     fn current_round_num(&self) -> usize;
-    fn score_dart(&mut self, target: crate::target::Target);
+    fn score_dart(&mut self, target: crate::target::BoardSection);
     fn score(self) -> Self::Score;
 }

@@ -1,4 +1,4 @@
-pub mod display;
+// pub mod display;
 mod game;
 mod games;
 mod player;
@@ -7,16 +7,16 @@ mod target;
 
 use player::Player::*;
 
-use crate::game::GameScore;
+use crate::game::{GameScore, gameimpl::GameT};
 
 fn main() {
-    display::new_gui_27();
+    // display::new_gui_27();
 }
 
 #[allow(dead_code)]
 fn main_console() {
-    let mut game_27: game::Game<games::TwentySeven> = game::Game::new([Matt, Nick, Darren], ());
-    println!("Game started at: {}", game_27.date());
+    let mut game_27 = game::ActiveGame::<games::TwentySeven>::new_now([Matt, Nick, Darren], ());
+    println!("Game started at: {}", game_27.date_played());
     println!("pre:\n{}", game_27);
     println!(
         "Current round (Cliff) = {}",

@@ -1,5 +1,5 @@
 pub use crate::{
-    game::{GameDisplay, GameScore, GameType, NumDarts, Turn},
+    game::{GameEnd, GameType, score::{ActiveGameScore, GameScore}, turn::{NumDarts, GameTurn}},
     player::Player,
-    target::Target,
+    target::{BoardSection, Colour, Ring, TargetGroup},
 };

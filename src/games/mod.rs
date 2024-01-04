@@ -25,21 +25,21 @@ impl GameHolder {
     // }
     pub fn column_count(&self) -> usize {
         match self {
-            GameHolder::TwentySeven(g) => g.scores().len() + 1,
+            GameHolder::TwentySeven(g) => todo!(),//g.scores().len() + 1,
         }
     }
     pub fn scores(
         &self,
     ) -> &::indexmap::IndexMap<crate::player::Player, /*TODO: T*/ twentyseven::Score27> {
         match self {
-            GameHolder::TwentySeven(g) => g.scores(),
+            GameHolder::TwentySeven(g) => todo!(),//g.scores(),
         }
     }
     pub fn scores_mut(
         &self,
     ) -> &mut ::indexmap::IndexMap<crate::player::Player, /*TODO: T*/ twentyseven::Score27> {
         match self {
-            GameHolder::TwentySeven(g) => g.scores_mut(),
+            GameHolder::TwentySeven(g) => todo!(),//g.scores_mut(),
         }
     }
 }
