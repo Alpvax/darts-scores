@@ -40,6 +40,14 @@ export const createSummaryComponent = <
           maximumFractionDigits: 2,
         }),
       },
+      deltaFormat: {
+        type: Object as PropType<Intl.NumberFormat>,
+        default: new Intl.NumberFormat(undefined, {
+          style: "decimal",
+          maximumFractionDigits: 2,
+          signDisplay: "exceptZero",
+        }),
+      },
     },
     setup: (props, { slots }) => {
       const playerStats = computed(() =>
@@ -60,11 +68,11 @@ export const createSummaryComponent = <
           new Map(
             props.inProgressGame === null
               ? undefined
-              : [...playerStats.value].map(([pid, summary]) => {
+              : [...playerStats.value].flatMap(([pid, summary]) => {
                   const pData = props.inProgressGame!.results.get(pid);
                   return pData !== undefined
-                    ? [pid, summary.getDeltas(pData, [...props.inProgressGame!.results.keys()])]
-                    : [pid, summary.summary];
+                    ? [[pid, summary.getDeltas(pData, [...props.inProgressGame!.results.keys()])]]
+                    : [];
                 }),
           ),
       );
@@ -77,7 +85,11 @@ export const createSummaryComponent = <
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {props.players.flatMap((pid) =>
                 playerStats.value.has(pid)
-                  ? [<th class="playerName">{playerStore.playerName(pid).value}</th>]
+                  ? [
+                      <th class="playerName" data-player-id={pid}>
+                        {playerStore.playerName(pid).value}
+                      </th>,
+                    ]
                   : [],
               )}
             </tr>
@@ -105,9 +117,11 @@ export const createSummaryComponent = <
                       return (
                         <td>
                           {props.decimalFormat.format(val)}
-                          {delta !== undefined ? (
-                            <span class="summaryDeltaValue">
-                              {props.decimalFormat.format(delta)}
+                          {delta !== undefined && delta !== 0 ? (
+                            <span
+                              class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
+                            >
+                              ({props.deltaFormat.format(delta)})
                             </span>
                           ) : undefined}
                         </td>

@@ -113,11 +113,12 @@ export default defineComponent({
     return {
       players,
       games,
+      inProgress: makeGame(),
     };
   },
 });
 </script>
 
 <template>
-  <Summary27 :players="players" :games="games" />
+  <Summary27 :players="players" :games="games" :in-progress-game="inProgress" />
 </template>
