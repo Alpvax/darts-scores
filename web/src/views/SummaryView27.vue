@@ -32,7 +32,9 @@ const Summary27 = createSummaryComponent(
     // "hits.highest",
     // "hits.lowest",
     // "hits.mean",
-    "rounds.1.cliff.total",
+    // "rounds.1.cliff.count",
+    // @ts-expect-error
+    ...Array.from({ length: 20 }, (_, i) => `rounds.${i + 1}.hits.mean`),
   ],
   gameMeta.rounds,
   (stats) => stats.hits,

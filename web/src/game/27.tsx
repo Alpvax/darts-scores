@@ -224,7 +224,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     ),
     // jesus: boolean(data => ),
     rounds: roundStats(
-      Array.from({ length: 20 }, (_, i) => i.toString()),
+      Array.from({ length: 20 }, (_, i) => (i + 1).toString()),
       { cliff: false, doubledouble: false, hits: 0 },
     ),
   }),
@@ -242,7 +242,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
   const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
     const { turns, score } = gameMeta.rounds.reduce(
       ({ turns, score }, r, i) => {
-        const t = r.turnData(hits[i], score, "", i);
+        const t = r.turnData(hits[i + 1], score, "", i);
         turns.push(t);
         return { turns, score: t.score };
       },

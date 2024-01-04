@@ -15,8 +15,8 @@ export class RoundStatsSummaryField<
     return new Map(
       [...playerData.turns].map(([i, t]) =>
         t.stats !== undefined
-          ? [i.toString() as K, t.stats]
-          : [i.toString() as K, { ...this.statDefaults }],
+          ? [(i + 1).toString() as K, t.stats]
+          : [(i + 1).toString() as K, { ...this.statDefaults }],
       ),
     );
   }
