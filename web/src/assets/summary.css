@@ -1,0 +1,37 @@
+table#gameSummaryTable {
+  & .rowLabel {
+    font-weight: bold;
+    text-align: right;
+  }
+
+  & .playerName {
+    white-space: normal;
+    font-weight: bold;
+    width: 5em; /*4.5em;*/
+    vertical-align: bottom;
+  }
+
+  & .summaryValue {
+    text-align: center;
+  }
+  & .summaryDeltaValue {
+    font-size: 0.8em;
+    vertical-align: calc(1em / 20);
+    padding-left: 0.5ch;
+  }
+  & .summaryDeltaValue.increase {
+    color: green;
+  }
+  & .summaryDeltaValue.decrease {
+    color: red;
+  }
+  & td.best {
+    background-color: #7eff7e;
+  }
+  & td.worst:not(.best) {
+    background-color: #ff7e7e;
+  }
+  & td.favourite:not(.best) {
+    background-color: #ceff7e;
+  }
+}

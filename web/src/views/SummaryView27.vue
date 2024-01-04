@@ -34,7 +34,10 @@ const Summary27 = createSummaryComponent(
     // "hits.mean",
     // "rounds.1.cliff.count",
     // @ts-expect-error
-    ...Array.from({ length: 20 }, (_, i) => `rounds.${i + 1}.hits.mean`),
+    ...Array.from({ length: 20 }).flatMap((_, i) => [
+      `rounds.${i + 1}.hits.total`,
+      `rounds.${i + 1}.hits.mean`,
+    ]),
   ],
   gameMeta.rounds,
   (stats) => stats.hits,
@@ -55,10 +58,10 @@ export default defineComponent({
       "jpBEiBzn9QTVN0C6Hn1m",
       "k7GNyCogBy79JE4qhvAj",
     ]);
-    const makeGame = (index?: number): GameResult<TurnData27> => {
+    const makeGame = (identifier?: number | string, length = 20): GameResult<TurnData27> => {
       const plyrData = players.value.reduce((map, pid) => {
         if (Math.random() < 0.6) {
-          const hits = Array.from({ length: 20 }, () =>
+          const hits = Array.from({ length }, () =>
             Math.random() < 0.3 ? (Math.random() < 0.1 ? (Math.random() < 0.01 ? 3 : 2) : 1) : 0,
           );
           const { turns, score } = gameMeta.rounds.reduce(
@@ -106,14 +109,14 @@ export default defineComponent({
       if (positions.ordered[0].players.length > 1) {
         game.tiebreakWinner = positions.ordered[0].players[0];
       }
-      console.log(`Summary Game ${index} results:`, game.results); //XXX
+      console.log(`Summary Game ${identifier} results:`, game.results); //XXX
       return game;
     };
     const games = ref(Array.from({ length: 10 }, (_, i) => makeGame(i)));
     return {
       players,
       games,
-      inProgress: makeGame(),
+      inProgress: makeGame("partial", 8).results,
     };
   },
 });

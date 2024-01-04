@@ -1,6 +1,7 @@
 import type { NormalisedRound, TurnData } from "@/gameUtils/roundDeclaration";
 import type {
   GameResult,
+  PlayerDataForStats,
   PlayerRequirements,
   SummaryAccumulatorFactory,
   SummaryEntry,
@@ -14,6 +15,7 @@ export const createSummaryComponent = <
   T extends TurnData<any, any, any>,
   R extends NormalisedRound<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
+  PIDs extends string = string,
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
@@ -23,9 +25,12 @@ export const createSummaryComponent = <
   defineComponent({
     // @ts-ignore due to "Type instantiation is excessively deep and possibly infinite"
     props: {
-      players: { type: Array as PropType<string[]>, required: true },
-      games: { type: Array as PropType<GameResult<T>[]>, required: true },
-      inProgressGame: { type: Object as PropType<GameResult<T> | null>, default: null },
+      players: { type: Array as PropType<PIDs[]>, required: true },
+      games: { type: Array as PropType<GameResult<T, PIDs>[]>, required: true },
+      inProgressGame: {
+        type: Object as PropType<Map<PIDs, PlayerDataForStats<T>> | null>,
+        default: null,
+      },
       fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
       roundFields: {
         type: Function as PropType<
@@ -60,7 +65,7 @@ export const createSummaryComponent = <
             map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
           });
           return map;
-        }, new Map<string, ReturnType<typeof summaryFactory>>()),
+        }, new Map<PIDs, ReturnType<typeof summaryFactory>>()),
       );
 
       const playerDeltas = computed(
@@ -69,9 +74,9 @@ export const createSummaryComponent = <
             props.inProgressGame === null
               ? undefined
               : [...playerStats.value].flatMap(([pid, summary]) => {
-                  const pData = props.inProgressGame!.results.get(pid);
+                  const pData = props.inProgressGame!.get(pid);
                   return pData !== undefined
-                    ? [[pid, summary.getDeltas(pData, [...props.inProgressGame!.results.keys()])]]
+                    ? [[pid, summary.getDeltas(pData, [...props.inProgressGame!.keys()])]]
                     : [];
                 }),
           ),
@@ -79,7 +84,7 @@ export const createSummaryComponent = <
 
       const playerStore = usePlayerStore();
       return () => (
-        <table>
+        <table id="gameSummaryTable">
           <thead>
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
@@ -115,7 +120,7 @@ export const createSummaryComponent = <
                         }
                       }
                       return (
-                        <td>
+                        <td class="summaryValue">
                           {props.decimalFormat.format(val)}
                           {delta !== undefined && delta !== 0 ? (
                             <span
