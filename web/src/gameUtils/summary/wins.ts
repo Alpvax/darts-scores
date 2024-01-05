@@ -42,7 +42,7 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
             total: 0,
             mean: 0,
             gameCount: 0,
-          },
+          } satisfies WinsSummaryValues<Outputs>[keyof Outputs],
         }),
       {} as WinsSummaryValues<Outputs>,
     );
@@ -78,11 +78,11 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
               acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
             } else {
               acc[k].totalOutright += 1;
-              acc[k].meanOutright = acc[k].totalOutright / acc[k].gameCount;
             }
             acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
           }
           acc[k].mean = acc[k].total / acc[k].gameCount;
+          acc[k].meanOutright = acc[k].totalOutright / acc[k].gameCount;
         }
         return acc;
       },

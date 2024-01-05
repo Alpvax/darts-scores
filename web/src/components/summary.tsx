@@ -56,7 +56,7 @@ export const createSummaryComponent = <
     },
     setup: (props, { slots }) => {
       const playerStats = computed(() =>
-        props.games.reduce((map, game) => {
+        props.games.reduce((map, game, gameIndex) => {
           const allPlayers = [...game.results.keys()];
           game.results.forEach((pData, pid) => {
             if (!map.has(pid)) {
@@ -64,6 +64,10 @@ export const createSummaryComponent = <
             }
             map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
           });
+          console.log(
+            `Summary post game[${gameIndex}]:`,
+            new Map([...map].map(([k, v]) => [k, v.summary])),
+          ); //XXX
           return map;
         }, new Map<PIDs, ReturnType<typeof summaryFactory>>()),
       );

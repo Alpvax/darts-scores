@@ -237,7 +237,6 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
 //TODO: REMOVE TEST
 (() => {
   const testSummary = summaryFactory();
-  console.log(JSON.stringify(testSummary.summary, null, 2));
   // console.log(testSummary.summary);
   const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
     const { turns, score } = gameMeta.rounds.reduce(
