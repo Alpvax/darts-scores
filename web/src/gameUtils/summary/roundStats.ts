@@ -1,6 +1,8 @@
 import type { PlayerDataForStats, SummaryEntryField } from ".";
 import type { TurnData, TurnStats } from "../roundDeclaration";
 
+export const FAVOURITES_KEY = Symbol("favouriteRoundsData");
+
 export class RoundStatsSummaryField<
   T extends TurnData<any, RS, any>,
   RS extends TurnStats,
@@ -47,7 +49,20 @@ export class RoundStatsSummaryField<
             {} as RoundStatSummaryValues<K, RS>[K],
           ),
         }),
-      {} as RoundStatSummaryValues<K, RS>,
+      {
+        [FAVOURITES_KEY]: (
+          Object.entries(this.statDefaults) as [keyof RS, number | boolean][]
+        ).reduce(
+          (acc, [key, val]) =>
+            Object.assign(acc, {
+              [key]: {
+                favourites: new Set(),
+                count: val,
+              },
+            }),
+          {} as RSFavourites<K, RS>,
+        ),
+      } as RoundStatSummaryValues<K, RS>,
     );
   }
   summary(
@@ -60,9 +75,17 @@ export class RoundStatsSummaryField<
         Object.assign(acc, {
           [idx]: (Object.entries(val) as [keyof RS & string, number | boolean][]).reduce(
             (roundAcc, [key, val]) => {
+              const favourites = acc[FAVOURITES_KEY][key];
               if (isBoolVal(roundAcc, key)) {
                 roundAcc[key].count = roundAcc[key].count + +(val as boolean);
                 roundAcc[key].mean = roundAcc[key].count / numGames;
+                if (roundAcc[key].count === favourites.count) {
+                  favourites.favourites.add(idx);
+                } else if (roundAcc[key].count >= favourites.count) {
+                  favourites.favourites.clear();
+                  favourites.favourites.add(idx);
+                  favourites.count = roundAcc[key].count;
+                }
               } else if (isNumVal(roundAcc, key)) {
                 const num = val as number;
                 roundAcc[key].highest = Math.max(roundAcc[key].highest, num);
@@ -74,6 +97,13 @@ export class RoundStatsSummaryField<
                   count,
                   mean: count / numGames,
                 };
+                if (roundAcc[key].highest === favourites.count) {
+                  favourites.favourites.add(idx);
+                } else if (roundAcc[key].highest >= favourites.count) {
+                  favourites.favourites.clear();
+                  favourites.favourites.add(idx);
+                  favourites.count = roundAcc[key].highest;
+                }
               }
               return roundAcc;
             },
@@ -104,10 +134,18 @@ type NumRSVal = {
     mean: number;
   };
 };
+type RSFavourites<K extends string, RS extends TurnStats> = {
+  [key in keyof RS]: {
+    favourites: Set<K>;
+    count: number;
+  };
+};
 type RoundStatSummaryValues<K extends string, RS extends TurnStats> = {
   [key in K]: {
     [SK in keyof RS & string]: RS[SK] extends boolean ? BoolRSVal : NumRSVal;
   };
+} & {
+  [FAVOURITES_KEY]: RSFavourites<K, RS>;
 };
 
 const isBoolVal = <RS extends TurnStats, K extends keyof RS & string>(

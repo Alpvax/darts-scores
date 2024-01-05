@@ -126,7 +126,7 @@ export const createSummaryComponent = <
                             <span
                               class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
                             >
-                              ({props.deltaFormat.format(delta)})
+                              {props.deltaFormat.format(delta)}
                             </span>
                           ) : undefined}
                         </td>

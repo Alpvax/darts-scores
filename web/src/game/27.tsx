@@ -268,7 +268,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     const g = { ...testGame(...hits), ...gameModifier };
     console.log("Adding Game:", g, "\n\thits:", hits);
     console.log("\tDelta:", testSummary.addGame(g, players ?? [g.playerId, ...g.tied], g.playerId));
-    console.log("\tSummary:", JSON.parse(JSON.stringify(testSummary.summary)));
+    console.log("\tSummary:", structuredClone(testSummary.summary));
   };
 
   addTestGame([0, 1, 2, 0, 0, 0, 1, 0, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 1, 0]);

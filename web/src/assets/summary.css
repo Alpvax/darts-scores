@@ -1,4 +1,10 @@
 table#gameSummaryTable {
+  & tbody {
+    font-size: 1.3vb;
+  }
+  & tr:hover {
+    background-color: bisque;
+  }
   & .rowLabel {
     font-weight: bold;
     text-align: right;
@@ -7,17 +13,20 @@ table#gameSummaryTable {
   & .playerName {
     white-space: normal;
     font-weight: bold;
-    width: 5em; /*4.5em;*/
+    width: 7em; /*4.5em;*/
     vertical-align: bottom;
   }
 
   & .summaryValue {
     text-align: center;
+    position: relative;
   }
   & .summaryDeltaValue {
     font-size: 0.8em;
-    vertical-align: calc(1em / 20);
+    /* vertical-align: calc(1em / 20); */
     padding-left: 0.5ch;
+    position: absolute;
+    top: 15%;
   }
   & .summaryDeltaValue.increase {
     color: green;

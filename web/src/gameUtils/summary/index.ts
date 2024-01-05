@@ -153,8 +153,11 @@ export const summaryAccumulatorFactory =
             players.filter((pid) => pid !== pData.playerId),
             tbWinner,
           );
-          // Deep clone previous value
-          const prev = JSON.parse(JSON.stringify(summary[key]));
+          // Deep clone previous value, keep symbol keys (top level only)
+          const prev = structuredClone(summary[key]);
+          for (const sym of Object.getOwnPropertySymbols(summary[key])) {
+            Object.defineProperty(prev, sym, Object.getOwnPropertyDescriptor(summary[key], sym)!);
+          }
           newSummary[key] = field.summary(prev, newSummary.numGames, entry);
           deltas[key] =
             summary.numGames < 1
@@ -190,7 +193,7 @@ export const summaryAccumulatorFactory =
         //       tbWinner,
         //     );
         //     // Deep clone previous value
-        //     const prev = JSON.parse(JSON.stringify(summary[key]));
+        //     const prev = structuredClone(summary[key]);
         //     summary[key] = field.summary(prev, summary.numGames, entry);
         //     deltas[key] = Object.entries(summary[key]).reduce(
         //       (acc, [k, v]) =>
