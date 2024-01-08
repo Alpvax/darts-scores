@@ -6,6 +6,7 @@ import { initializeApp } from "firebase/app";
 
 import App from "./App.vue";
 import router from "./router";
+import initialiseAPI from "./utils/consoleAPI";
 
 initializeApp({
   apiKey: "AIzaSyDlxprk1nL3NfhOjvvv8t7b_849NS9hndA",
@@ -23,3 +24,5 @@ app.use(createPinia());
 app.use(router);
 
 app.mount("#app");
+
+initialiseAPI();

@@ -1,5 +1,5 @@
 import { nextTick, type Ref } from "vue";
-import type { NormalisedRoundsArray } from "./gameUtils/roundDeclaration";
+import type { NormalisedRoundsArray } from "../gameUtils/roundDeclaration";
 
 export type ClassBindings = undefined | string | Record<string, boolean> | string[];
 
