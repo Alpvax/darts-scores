@@ -250,6 +250,9 @@ export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
     ...rateFieldMeta("hans", "Hans", { plural: "{}" }),
     ...rateFieldMeta("goblins", "Goblin", {}),
     ...rateFieldMeta("piranhas", "Piranha", {}),
+    "dreams.latest": defaultedSummaryFieldMeta("Furthest Dream"),
+    "allPos.count": defaultedSummaryFieldMeta("All Positives"),
+    "allPos.latest": defaultedSummaryFieldMeta("Furthest positive"),
   },
 );
 
