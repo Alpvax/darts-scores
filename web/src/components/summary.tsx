@@ -47,7 +47,7 @@ export const createSummaryComponent = <
         }),
       },
       deltaFormat: {
-        type: Object as PropType<Intl.NumberFormat>,
+        type: Object as PropType<Intl.NumberFormat | null>,
         default: new Intl.NumberFormat(undefined, {
           style: "decimal",
           maximumFractionDigits: 2,
@@ -110,7 +110,10 @@ export const createSummaryComponent = <
 
       const playerStore = usePlayerStore();
       return () => (
-        <table id="gameSummaryTable">
+        <table
+          id="gameSummaryTable"
+          class={props.deltaFormat !== null && props.inProgressGame ? "hasDeltas" : ""}
+        >
           <thead>
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
@@ -147,7 +150,7 @@ export const createSummaryComponent = <
                       return (
                         <td class="summaryValue">
                           {format.format(val)}
-                          {delta !== undefined && delta !== 0 ? (
+                          {props.deltaFormat !== null && delta !== undefined && delta !== 0 ? (
                             <span
                               class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
                             >

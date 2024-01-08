@@ -125,4 +125,10 @@ export default defineComponent({
 
 <template>
   <Summary27 :players="players" :games="games" :in-progress-game="inProgress" />
+  <!-- <Summary27
+    :players="players"
+    :games="games"
+    :in-progress-game="inProgress"
+    :delta-format="null"
+  /> -->
 </template>
