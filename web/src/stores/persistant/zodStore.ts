@@ -53,7 +53,7 @@ addEventListener("storage", ({ key, newValue }) => {
 });
 
 /** A persistent (sessionStorage or localStorage backed) store where each property is stored under [key].[prop] = val by converting to/from json */
-export const objZodStore = <K extends string, S extends ZodObject<any>>(
+export const defineObjZodStore = <K extends string, S extends ZodObject<any>>(
   key: K,
   type: "local" | "session",
   schema: S,

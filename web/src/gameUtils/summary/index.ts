@@ -312,3 +312,8 @@ export type SummaryFieldKeys<
   T extends TurnData<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
 > = FlattenSummaryKeysInternal<SummaryValues<S, T, any, P>>;
+
+export type SummaryFieldKeysFor<F extends SummaryAccumulatorFactory<any, any, any, any>> =
+  F extends SummaryAccumulatorFactory<infer S, infer T, any, infer P>
+    ? SummaryFieldKeys<S, T, P>
+    : never;

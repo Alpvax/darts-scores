@@ -1,6 +1,11 @@
 import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import makeSummaryAccumulatorFactoryFor, { type PlayerDataForStats } from "@/gameUtils/summary";
+import {
+  defaultedSummaryFieldMeta,
+  makeSummaryMetaStore,
+  rateFieldMeta,
+} from "@/gameUtils/summary/displayMeta";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -231,6 +236,20 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
   {
     all: "*",
     solo: { players: [], exact: true },
+  },
+);
+
+export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
+  "twentysevenSummary",
+  "twentyseven",
+  {
+    "fatNicks.count": defaultedSummaryFieldMeta("Fat Nicks"),
+    "fatNicks.latest": defaultedSummaryFieldMeta("Furthest without hitting"),
+    ...rateFieldMeta("cliffs", "Cliff", {}),
+    ...rateFieldMeta("doubleDoubles", "Double Double", {}),
+    ...rateFieldMeta("hans", "Hans", { plural: "{}" }),
+    ...rateFieldMeta("goblins", "Goblin", {}),
+    ...rateFieldMeta("piranhas", "Piranha", {}),
   },
 );
 

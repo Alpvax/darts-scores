@@ -19,6 +19,7 @@ export const createSummaryComponent = <
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
+  fieldMeta: any, //TODO: type
   rounds: R[],
   roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
@@ -86,6 +87,27 @@ export const createSummaryComponent = <
           ),
       );
 
+      console.log("FIELD META:", fieldMeta); //XXX
+      for (const f of defaultFields) {
+        console.log(f, fieldMeta[f]); //XXX
+      }
+
+      const fields = computed(() =>
+        props.fields.map((fieldPath) => {
+          // eslint-disable-next-line prefer-const
+          let { label, format } = fieldMeta[fieldPath] ?? { label: fieldPath, format: "!baseFmt" };
+          while (typeof format === "string") {
+            format = fieldMeta[format]?.format ?? props.decimalFormat;
+          }
+          return {
+            path: fieldPath,
+            parts: fieldPath.split("."),
+            label,
+            format,
+          };
+        }),
+      );
+
       const playerStore = usePlayerStore();
       return () => (
         <table id="gameSummaryTable">
@@ -104,11 +126,10 @@ export const createSummaryComponent = <
             </tr>
           </thead>
           <tbody>
-            {props.fields.map((fieldPath) => {
-              const parts = fieldPath.split(".");
+            {fields.value.map(({ parts, label, format }) => {
               return (
                 <tr>
-                  <th class="rowLabel">{fieldPath}</th>
+                  <th class="rowLabel">{label}</th>
                   {props.players
                     .flatMap((pid) => {
                       const pData = playerStats.value.get(pid);
@@ -125,7 +146,7 @@ export const createSummaryComponent = <
                       }
                       return (
                         <td class="summaryValue">
-                          {props.decimalFormat.format(val)}
+                          {format.format(val)}
                           {delta !== undefined && delta !== 0 ? (
                             <span
                               class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
