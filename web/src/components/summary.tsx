@@ -47,12 +47,8 @@ export const createSummaryComponent = <
         }),
       },
       deltaFormat: {
-        type: Object as PropType<Intl.NumberFormat | null>,
-        default: new Intl.NumberFormat(undefined, {
-          style: "decimal",
-          maximumFractionDigits: 2,
-          signDisplay: "exceptZero",
-        }),
+        type: Object as PropType<Intl.NumberFormat | Partial<Intl.NumberFormatOptions> | null>,
+        default: () => ({ signDisplay: "exceptZero" }),
       },
     },
     setup: (props, { slots }) => {
@@ -94,11 +90,22 @@ export const createSummaryComponent = <
           while (typeof format === "string") {
             format = fieldMeta[format]?.format ?? props.decimalFormat;
           }
+          let deltaFmt = null;
+          if (props.deltaFormat !== null) {
+            const { locale, ...fOpts } = format.resolvedOptions();
+            if (props.deltaFormat instanceof Intl.NumberFormat) {
+              const { locale, ...pOpts } = props.deltaFormat.resolvedOptions();
+              deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...pOpts });
+            } else {
+              deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...props.deltaFormat });
+            }
+          }
           return {
             path: fieldPath,
             parts: fieldPath.split("."),
             label,
             format,
+            deltaFmt,
           };
         }),
       );
@@ -124,7 +131,7 @@ export const createSummaryComponent = <
             </tr>
           </thead>
           <tbody>
-            {fields.value.map(({ parts, label, format }) => {
+            {fields.value.map(({ parts, label, format, deltaFmt }) => {
               return (
                 <tr>
                   <th class="rowLabel">{label}</th>
@@ -145,11 +152,11 @@ export const createSummaryComponent = <
                       return (
                         <td class="summaryValue">
                           {format.format(val)}
-                          {props.deltaFormat !== null && delta !== undefined && delta !== 0 ? (
+                          {deltaFmt !== null && delta !== undefined && delta !== 0 ? (
                             <span
                               class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
                             >
-                              {props.deltaFormat.format(delta)}
+                              {deltaFmt.format(delta)}
                             </span>
                           ) : undefined}
                         </td>
