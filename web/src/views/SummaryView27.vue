@@ -29,9 +29,9 @@ const Summary27 = createSummaryComponent(
     "dreams.latest",
     "allPos.count",
     "allPos.latest",
-    // "hits.highest",
-    // "hits.lowest",
-    // "hits.mean",
+    "hits.highest",
+    "hits.lowest",
+    "hits.mean",
     // "rounds.1.cliff.count",
     // @ts-expect-error
     ...Array.from({ length: 20 }).flatMap((_, i) => [
@@ -110,7 +110,7 @@ export default defineComponent({
       if (positions.ordered[0].players.length > 1) {
         game.tiebreakWinner = positions.ordered[0].players[0];
       }
-      console.log(`Summary Game ${identifier} results:`, game.results); //XXX
+      // console.log(`Summary Game ${identifier} results:`, game.results); //XXX
       return game;
     };
     const games = ref(Array.from({ length: 10 }, (_, i) => makeGame(i)));

@@ -228,6 +228,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
       ),
     ),
     // jesus: boolean(data => ),
+    hits: numeric((data) => [...data.turns.values()].reduce((hits, turn) => hits + turn.value, 0)),
     rounds: roundStats(
       Array.from({ length: 20 }, (_, i) => (i + 1).toString()),
       { cliff: false, doubledouble: false, hits: 0 },
@@ -253,6 +254,9 @@ export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
     "dreams.latest": defaultedSummaryFieldMeta("Furthest Dream"),
     "allPos.count": defaultedSummaryFieldMeta("All Positives"),
     "allPos.latest": defaultedSummaryFieldMeta("Furthest positive"),
+    "hits.highest": defaultedSummaryFieldMeta("Most Hits"),
+    "hits.lowest": defaultedSummaryFieldMeta("Least Hits"),
+    "hits.mean": defaultedSummaryFieldMeta("Average Hits"),
   },
 );
 

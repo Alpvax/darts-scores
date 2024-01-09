@@ -71,7 +71,7 @@ export const defineObjZodStore = <K extends string, S extends ZodObject<any>>(
       r: current,
       s: propSchema,
     });
-    console.log(`Loaded value: darts.${key}.${propKey} =`, current.value); //XXX
+    console.debug(`Loaded value: darts.${key}.${propKey} =`, current.value); //XXX
     return computed({
       get: () => current.value,
       set: (val) => {

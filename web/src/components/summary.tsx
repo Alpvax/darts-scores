@@ -65,7 +65,7 @@ export const createSummaryComponent = <
             }
             map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
           });
-          console.log(
+          console.debug(
             `Summary post game[${gameIndex}]:`,
             new Map([...map].map(([k, v]) => [k, v.summary])),
           ); //XXX
@@ -86,11 +86,6 @@ export const createSummaryComponent = <
                 }),
           ),
       );
-
-      console.log("FIELD META:", fieldMeta); //XXX
-      for (const f of defaultFields) {
-        console.log(f, fieldMeta[f]); //XXX
-      }
 
       const fields = computed(() =>
         props.fields.map((fieldPath) => {
