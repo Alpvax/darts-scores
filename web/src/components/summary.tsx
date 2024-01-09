@@ -7,6 +7,7 @@ import type {
   SummaryEntry,
   SummaryFieldKeys,
 } from "@/gameUtils/summary";
+import type { SummaryFieldMeta } from "@/gameUtils/summary/displayMeta";
 import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
 
@@ -19,7 +20,7 @@ export const createSummaryComponent = <
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-  fieldMeta: any, //TODO: type
+  fieldMeta: Record<string, SummaryFieldMeta>, //TODO: type
   rounds: R[],
   roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
@@ -83,10 +84,13 @@ export const createSummaryComponent = <
           ),
       );
 
-      const fields = computed(() =>
+      const fieldsMeta = computed(() =>
         props.fields.map((fieldPath) => {
           // eslint-disable-next-line prefer-const
-          let { label, format } = fieldMeta[fieldPath] ?? { label: fieldPath, format: "!baseFmt" };
+          let { label, format, best, highlight } = fieldMeta[fieldPath] ?? {
+            label: fieldPath,
+            format: "!baseFmt",
+          };
           while (typeof format === "string") {
             format = fieldMeta[format]?.format ?? props.decimalFormat;
           }
@@ -100,15 +104,71 @@ export const createSummaryComponent = <
               deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...props.deltaFormat });
             }
           }
+          const worst = best === "highest" ? "lowest" : "highest";
           return {
             path: fieldPath,
             parts: fieldPath.split("."),
             label,
             format,
             deltaFmt,
+            zero: summaryFactory.lookupZeroVal(fieldPath),
+            best,
+            highlight:
+              highlight === undefined
+                ? {}
+                : typeof highlight === "string"
+                  ? highlight === "best"
+                    ? { best }
+                    : ({ worst } as Record<string, "highest" | "lowest">)
+                  : Array.isArray(highlight)
+                    ? highlight.reduce(
+                        (acc, h) => Object.assign(acc, h === "best" ? { best } : { worst }),
+                        {} as Record<string, "highest" | "lowest">,
+                      )
+                    : highlight,
           };
         }),
       );
+
+      const fieldData = computed(() => {
+        const playerData = props.players.flatMap((pid) => {
+          const pData = playerStats.value.get(pid);
+          return pData ? { pid, summary: pData.summary, deltas: playerDeltas.value.get(pid) } : [];
+        });
+        return props.fields.map((fieldPath, index) => {
+          const parts = fieldPath.split(".");
+          return Object.assign(
+            playerData
+              .map(({ pid, summary, deltas }) => {
+                let value: any = summary;
+                let delta: any = deltas;
+                for (const p of parts) {
+                  value = value[p];
+                  if (deltas !== undefined) {
+                    delta = delta[p];
+                  }
+                }
+                return { pid, value, delta };
+              })
+              .reduce(
+                ({ lowest, highest, playerValues }, pData) => {
+                  playerValues.push(pData);
+                  return {
+                    highest: Math.max(highest, pData.value),
+                    lowest: Math.min(lowest, pData.value),
+                    playerValues,
+                  };
+                },
+                {
+                  highest: Number.MIN_SAFE_INTEGER,
+                  lowest: Number.MAX_SAFE_INTEGER,
+                  playerValues: [] as { pid: string; value: number; delta: number | undefined }[],
+                },
+              ),
+            fieldsMeta.value[index],
+          );
+        });
+      });
 
       const playerStore = usePlayerStore();
       return () => (
@@ -131,30 +191,51 @@ export const createSummaryComponent = <
             </tr>
           </thead>
           <tbody>
-            {fields.value.map(({ parts, label, format, deltaFmt }) => {
-              return (
-                <tr>
-                  <th class="rowLabel">{label}</th>
-                  {props.players
-                    .flatMap((pid) => {
-                      const pData = playerStats.value.get(pid);
-                      return pData ? { ...pData, deltas: playerDeltas.value.get(pid) } : [];
-                    })
-                    .map(({ summary, deltas }) => {
-                      let val: any = summary;
-                      let delta: any = deltas;
-                      for (const p of parts) {
-                        val = val[p];
-                        if (deltas !== undefined) {
-                          delta = delta[p];
-                        }
-                      }
+            {fieldData.value.map(
+              ({
+                label,
+                format,
+                deltaFmt,
+                highlight,
+                highest,
+                lowest,
+                zero,
+                best,
+                playerValues,
+              }) => {
+                return (
+                  <tr>
+                    <th class="rowLabel">{label}</th>
+                    {playerValues.map(({ value, delta }) => {
                       return (
-                        <td class="summaryValue">
-                          {format.format(val)}
+                        <td
+                          class={[
+                            "summaryValue",
+                            ...(value === zero
+                              ? []
+                              : [...Object.entries(highlight)].flatMap(([k, v]) =>
+                                  (v === "highest" && value === highest) ||
+                                  (v === "lowest" && value === lowest)
+                                    ? [k]
+                                    : [],
+                                )),
+                          ]}
+                        >
+                          {format.format(value)}
                           {deltaFmt !== null && delta !== undefined && delta !== 0 ? (
                             <span
-                              class={["summaryDeltaValue", delta > 0 ? "increase" : "decrease"]}
+                              class={[
+                                "summaryDeltaValue",
+                                best === "none"
+                                  ? "neutral"
+                                  : delta > 0
+                                    ? best === "highest"
+                                      ? "better"
+                                      : "worse"
+                                    : best === "highest"
+                                      ? "worse"
+                                      : "better",
+                              ]}
                             >
                               {deltaFmt.format(delta)}
                             </span>
@@ -162,9 +243,10 @@ export const createSummaryComponent = <
                         </td>
                       );
                     })}
-                </tr>
-              );
-            })}
+                  </tr>
+                );
+              },
+            )}
             {
               undefined /*rounds.flatMap((r) => (
               <tr class="roundSummaryRow">

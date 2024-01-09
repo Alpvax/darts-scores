@@ -31,11 +31,14 @@ table#gameSummaryTable {
     position: absolute;
     top: 15%;
   }
-  & .summaryDeltaValue.increase {
+  & .summaryDeltaValue.better {
     color: green;
   }
-  & .summaryDeltaValue.decrease {
+  & .summaryDeltaValue.worse {
     color: red;
+  }
+  & .summaryDeltaValue.neutral {
+    color: blue;
   }
   & td.best {
     background-color: #7eff7e;

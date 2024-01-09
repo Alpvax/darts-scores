@@ -92,7 +92,7 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
   }
 };
 
-export type SummaryAccumulatorFactory<
+type SummaryAccumulatorFactoryFunc<
   S extends SummaryEntry<T, R, P>,
   T extends TurnData<any, any, any>,
   R extends SummaryEntryFields<T>,
@@ -123,21 +123,54 @@ export type SummaryAccumulatorFactory<
   /** The current summary values. SHOULD NOT BE OVERWRITTEN OR MODIFIED! */
   summary: SummaryValues<S, T, R, P>;
 };
-export const summaryAccumulatorFactory =
-  <
-    S extends SummaryEntry<T, R, P>,
-    T extends TurnData<any, any, any>,
-    R extends SummaryEntryFields<T>,
-    P extends PlayerRequirements = { all: "*" },
-  >(
-    fields: Omit<S, "score">,
-  ): SummaryAccumulatorFactory<S, T, R, P> =>
-  () => {
-    type SVTyp = SummaryValues<S, T, R, P>;
-    const fieldEntries = [
-      ["score", new NumericSummaryField(({ score }) => score)],
-      ...Object.entries(fields),
-    ] as [keyof S, SummaryEntryField<T, any, any>][];
+export type SummaryAccumulatorFactory<
+  S extends SummaryEntry<T, R, P>,
+  T extends TurnData<any, any, any>,
+  R extends SummaryEntryFields<T>,
+  P extends PlayerRequirements = { all: "*" },
+> = SummaryAccumulatorFactoryFunc<S, T, R, P> & {
+  /**
+   * Look up the start value for a given field
+   * @param key the field key to look for
+   */
+  lookupZeroVal(key: SummaryFieldKeys<S, T, P>): number;
+};
+export const summaryAccumulatorFactory = <
+  S extends SummaryEntry<T, R, P>,
+  T extends TurnData<any, any, any>,
+  R extends SummaryEntryFields<T>,
+  P extends PlayerRequirements = { all: "*" },
+>(
+  fields: Omit<S, "score">,
+): SummaryAccumulatorFactory<S, T, R, P> => {
+  type SVTyp = SummaryValues<S, T, R, P>;
+  const fieldEntries = [
+    ["score", new NumericSummaryField(({ score }) => score)],
+    ...Object.entries(fields),
+  ] as [keyof S, SummaryEntryField<T, any, any>][];
+  const makeEmpty = () =>
+    fieldEntries.reduce(
+      (summary, [k, field]) =>
+        Object.assign(summary, {
+          [k]: field.emptySummary(),
+        }),
+      { numGames: 0 } as SVTyp,
+    );
+
+  const startValues = makeEmpty();
+  const cachedStartValue = new Map<SummaryFieldKeys<S, T, P>, number>();
+  const lookupZeroVal = (key: SummaryFieldKeys<S, T, P>) => {
+    if (cachedStartValue.has(key)) {
+      return cachedStartValue.get(key);
+    }
+    let val: any = startValues;
+    for (const p of key.split(".")) {
+      val = val[p];
+    }
+    cachedStartValue.set(key, val);
+    return val;
+  };
+  const factory: SummaryAccumulatorFactoryFunc<S, T, R, P> = () => {
     const summary = fieldEntries.reduce(
       (summary, [k, field]) =>
         Object.assign(summary, {
@@ -211,6 +244,8 @@ export const summaryAccumulatorFactory =
       summary,
     };
   };
+  return Object.assign(factory, { lookupZeroVal });
+};
 
 type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   /** Count rounds until the predicate passes, returning the index of the passed round (so 0 would be first round passed) */

@@ -31,28 +31,58 @@ const formatSchema = z
 
 const summaryMetaLabelSchema = z.string().min(1);
 const summaryMetaFormatSchema = formatSchema.or(z.string().startsWith("!").min(2));
+const BWSchema = z.enum(["best", "worst"]);
+const highlightSchema = z
+  .record(z.enum(["highest", "lowest"]))
+  .or(
+    z
+      .array(BWSchema)
+      .min(1)
+      .max(2)
+      .refine((items) => items.length === 1 || items.length === new Set(items).size, {
+        message: "each criteria can only be specified once",
+      }),
+  )
+  .or(BWSchema);
 export const defaultedSummaryFieldMeta = (
   label: string,
-  format: string | z.input<typeof formatSchema> = "!baseFmt",
+  options?: {
+    format?: string | z.input<typeof formatSchema>;
+    best?: "highest" | "lowest" | "none";
+    highlight?: Record<string, "highest" | "lowest"> | ("best" | "worst")[] | "best" | "worst";
+  },
 ) =>
   z
     .object({
       label: summaryMetaLabelSchema.default(label),
-      format: summaryMetaFormatSchema.default(format),
+      format: summaryMetaFormatSchema.default(options?.format ?? "!baseFmt"),
+      best: z.enum(["highest", "lowest", "none"]).default(options?.best ?? "highest"),
+      highlight: highlightSchema.default(options?.highlight ?? {}),
     })
     .default({});
+export type SummaryFieldMeta = z.infer<ReturnType<typeof defaultedSummaryFieldMeta>>;
 
 export const rateFieldMeta = <K extends string>(
   key: K,
   labelBase: string,
-  { plural = "{}s", rate = "{} Rate" }: { plural?: string; rate?: string },
-  format = "!rate",
+  options?: {
+    label?: { plural?: string; rate?: string };
+    format?: string | z.input<typeof formatSchema>;
+    best?: "highest" | "lowest" | "none";
+    highlight?: Record<string, "highest" | "lowest"> | ("best" | "worst")[] | "best" | "worst";
+  },
 ) => {
-  const pluralMeta = defaultedSummaryFieldMeta(plural.replaceAll("{}", labelBase));
+  const pluralMeta = defaultedSummaryFieldMeta(
+    (options?.label?.plural ?? "{}s").replaceAll("{}", labelBase),
+    { best: options?.best, highlight: options?.highlight },
+  );
   return {
     [`${key}.total`]: pluralMeta,
     [`${key}.count`]: pluralMeta,
-    [`${key}.mean`]: defaultedSummaryFieldMeta(rate.replaceAll("{}", labelBase), format),
+    [`${key}.mean`]: defaultedSummaryFieldMeta(
+      (options?.label?.rate ?? "{} Rate").replaceAll("{}", labelBase),
+      { format: options?.format ?? "!rate", best: options?.best, highlight: options?.highlight },
+    ),
   } as Record<
     `${K}.total` | `${K}.count` | `${K}.mean`,
     ReturnType<typeof defaultedSummaryFieldMeta>
@@ -66,7 +96,7 @@ export const useSummaryCoreStore = defineObjZodStore(
     "score.highest": defaultedSummaryFieldMeta("Personal Best"),
     "score.lowest": defaultedSummaryFieldMeta("Personal Worst"),
     "score.mean": defaultedSummaryFieldMeta("Average Score"),
-    numGames: defaultedSummaryFieldMeta("Num games played"),
+    numGames: defaultedSummaryFieldMeta("Num games played", { best: "none" }),
     ...rateFieldMeta("wins.all", "Win", {}),
     // "wins.all.total": z.object({
     //   label: z.string().min(1)
