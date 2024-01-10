@@ -1,4 +1,4 @@
-import type { NormalisedRound, TurnData } from "@/gameUtils/roundDeclaration";
+import type { TurnData } from "@/gameUtils/roundDeclaration";
 import type {
   GameResult,
   PlayerDataForStats,
@@ -14,32 +14,34 @@ import { computed, defineComponent, type PropType } from "vue";
 export const createSummaryComponent = <
   S extends SummaryEntry<T, any, P>,
   T extends TurnData<any, any, any>,
-  R extends NormalisedRound<any, any, any>,
+  // R extends NormalisedRound<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
   PIDs extends string = string,
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-  fieldMeta: Record<string, SummaryFieldMeta>, //TODO: type
-  rounds: R[],
-  roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
+  fieldMeta: Record<string, SummaryFieldMeta>,
+  // rounds: R[],
+  // roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
   defineComponent({
-    // @ts-ignore due to "Type instantiation is excessively deep and possibly infinite"
+    // @ts-ignore
+    // due to "Type instantiation is excessively deep and possibly infinite"
     props: {
       players: { type: Array as PropType<PIDs[]>, required: true },
       games: { type: Array as PropType<GameResult<T, PIDs>[]>, required: true },
+      includeAllPlayers: { type: Boolean, default: false },
       inProgressGame: {
         type: Object as PropType<Map<PIDs, PlayerDataForStats<T>> | null>,
         default: null,
       },
       fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
-      roundFields: {
-        type: Function as PropType<
-          T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any
-        >,
-        default: roundFields,
-      },
+      // roundFields: {
+      //   type: Function as PropType<
+      //     T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any
+      //   >,
+      //   default: roundFields,
+      // },
       decimalFormat: {
         type: Object as PropType<Intl.NumberFormat>,
         default: new Intl.NumberFormat(undefined, {
@@ -54,20 +56,27 @@ export const createSummaryComponent = <
     },
     setup: (props, { slots }) => {
       const playerStats = computed(() =>
-        props.games.reduce((map, game, gameIndex) => {
-          const allPlayers = [...game.results.keys()];
-          game.results.forEach((pData, pid) => {
-            if (!map.has(pid)) {
-              map.set(pid, summaryFactory());
-            }
-            map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
-          });
-          console.debug(
-            `Summary post game[${gameIndex}]:`,
-            new Map([...map].map(([k, v]) => [k, v.summary])),
-          ); //XXX
-          return map;
-        }, new Map<PIDs, ReturnType<typeof summaryFactory>>()),
+        props.games.reduce(
+          (map, game, gameIndex) => {
+            const allPlayers = [...game.results.keys()];
+            game.results.forEach((pData, pid) => {
+              if (!map.has(pid)) {
+                map.set(pid, summaryFactory());
+              }
+              map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
+            });
+            console.debug(
+              `Summary post game[${gameIndex}]:`,
+              new Map([...map].map(([k, v]) => [k, v.summary])),
+            ); //XXX
+            return map;
+          },
+          new Map<PIDs, ReturnType<typeof summaryFactory>>(
+            props.includeAllPlayers
+              ? props.players.map((pid) => [pid, summaryFactory()])
+              : undefined,
+          ),
+        ),
       );
 
       const playerDeltas = computed(
@@ -140,10 +149,12 @@ export const createSummaryComponent = <
           return Object.assign(
             playerData
               .map(({ pid, summary, deltas }) => {
-                let value: any = summary;
+                let value: any = summary.numGames > 0 ? summary : undefined;
                 let delta: any = deltas;
                 for (const p of parts) {
-                  value = value[p];
+                  if (value !== undefined) {
+                    value = value[p];
+                  }
                   if (deltas !== undefined) {
                     delta = delta[p];
                   }
@@ -154,15 +165,19 @@ export const createSummaryComponent = <
                 ({ lowest, highest, playerValues }, pData) => {
                   playerValues.push(pData);
                   return {
-                    highest: Math.max(highest, pData.value),
-                    lowest: Math.min(lowest, pData.value),
+                    highest: pData.value === undefined ? highest : Math.max(highest, pData.value),
+                    lowest: pData.value === undefined ? lowest : Math.min(lowest, pData.value),
                     playerValues,
                   };
                 },
                 {
                   highest: Number.MIN_SAFE_INTEGER,
                   lowest: Number.MAX_SAFE_INTEGER,
-                  playerValues: [] as { pid: string; value: number; delta: number | undefined }[],
+                  playerValues: [] as {
+                    pid: string;
+                    value: number | undefined;
+                    delta: number | undefined;
+                  }[],
                 },
               ),
             fieldsMeta.value[index],
@@ -180,7 +195,7 @@ export const createSummaryComponent = <
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {props.players.flatMap((pid) =>
-                playerStats.value.has(pid)
+                props.includeAllPlayers || playerStats.value.has(pid)
                   ? [
                       <th class="playerName" data-player-id={pid}>
                         {playerStore.playerName(pid).value}
@@ -207,6 +222,7 @@ export const createSummaryComponent = <
                   <tr>
                     <th class="rowLabel">{label}</th>
                     {playerValues.map(({ value, delta }) => {
+                      const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
                       return (
                         <td
                           class={[
@@ -221,8 +237,12 @@ export const createSummaryComponent = <
                                 )),
                           ]}
                         >
-                          {format.format(value)}
-                          {deltaFmt !== null && delta !== undefined && delta !== 0 ? (
+                          {value !== undefined
+                            ? format.format(value)
+                            : hasDelta
+                              ? format.format(delta)
+                              : "N/A"}
+                          {hasDelta && value !== undefined ? (
                             <span
                               class={[
                                 "summaryDeltaValue",

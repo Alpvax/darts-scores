@@ -3,10 +3,47 @@ import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
-import { DATE_DM_FORMAT, gameMeta } from "@/game/27";
+import { DATE_DM_FORMAT, gameMeta, summaryFactory, summaryMeta, type TurnData27 } from "@/game/27";
 import type { PlayerDataFor } from "@/gameUtils/playerData";
+import { createSummaryComponent } from "@/components/summary";
+import type { PlayerDataForStats } from "@/gameUtils/summary";
 
 const Game27 = createComponent(gameMeta);
+const Summary27 = createSummaryComponent(
+  summaryFactory,
+  [
+    "score.highest",
+    "score.lowest",
+    "score.mean",
+    // REAL WINS?!
+    "wins.all.total",
+    "numGames",
+    "wins.all.mean",
+    "fatNicks.count",
+    "fatNicks.latest",
+    "cliffs.total",
+    "cliffs.mean",
+    "doubleDoubles.total",
+    "doubleDoubles.mean",
+    "hans.total",
+    "goblins.count",
+    "piranhas.count",
+    // "jesus.count",
+    "dreams.latest",
+    "allPos.count",
+    "allPos.latest",
+    "hits.highest",
+    "hits.lowest",
+    "hits.mean",
+    // "rounds.1.cliff.count",
+    // @ts-expect-error
+    ...Array.from({ length: 20 }).flatMap((_, i) => [
+      `rounds.${i + 1}.hits.total`,
+      `rounds.${i + 1}.hits.mean`,
+    ]),
+  ],
+  summaryMeta(),
+);
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
 
@@ -40,6 +77,7 @@ export default defineComponent({
   components: {
     Game27,
     PlayerSelection,
+    Summary27,
   },
   props: {
     gameId: { type: String, default: "" },
@@ -93,6 +131,7 @@ export default defineComponent({
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
 
     const gameResult = ref(null as null | Map<string, PlayerData>);
+    const partialGameResult = ref(new Map<string, PlayerDataForStats<TurnData27>>());
 
     const playerStats = ref(new Map<string, PlayerData["stats"]>());
 
@@ -222,6 +261,9 @@ export default defineComponent({
               gameResult.value = data;
               positions.value = p;
             }}
+            onUpdate:partialSummary={(data) =>
+              (partialGameResult.value = data as Map<string, PlayerDataForStats<TurnData27>>)
+            }
             onUpdate:playerStats={(pid, stats) => playerStats.value.set(pid, stats)}
           >
             {{
@@ -288,6 +330,12 @@ export default defineComponent({
               ),
             }}
           </Game27>
+          <Summary27
+            players={players.value}
+            includeAllPlayers
+            games={[]}
+            inProgressGame={partialGameResult.value}
+          />
           {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
             <div class="completed">
               Game Completed!{" "}

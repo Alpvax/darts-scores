@@ -6,6 +6,7 @@ import {
   makeSummaryMetaStore,
   rateFieldMeta,
 } from "@/gameUtils/summary/displayMeta";
+import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
@@ -221,7 +222,14 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
           { count: 0, preDD: 0 },
         ).count,
     ),
-    goblins: boolean((data) => [...data.turns.values()].every(({ value }) => !value || value >= 2)),
+    goblins: boolean((data) =>
+      shortCircuitReduce(
+        data.turns.values(),
+        (abort, dd, { value, stats: { doubledouble } }) =>
+          value === 1 ? abort(false) : dd || doubledouble,
+        false,
+      ),
+    ),
     piranhas: boolean((data) =>
       [...data.turns.values()].every(
         ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
@@ -269,7 +277,7 @@ export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
 //TODO: REMOVE TEST
 (() => {
   const testSummary = summaryFactory();
-  // console.log(testSummary.summary);
+  console.log(structuredClone(testSummary.summary.goblins)); //XXX
   const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
     const { turns, score } = gameMeta.rounds.reduce(
       ({ turns, score }, r, i) => {

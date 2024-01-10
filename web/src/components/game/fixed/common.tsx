@@ -51,6 +51,7 @@ export const createComponent = <
       ["update:gameResult"]: (result: { data: Map<string, PlayerData>; positions: Position[] }) =>
         true,
       ["update:playerStats"]: (playerId: string, stats: PlayerData["stats"]) => true,
+      ["update:partialSummary"]: (data: Map<string, PlayerData>) => true,
       //   ["update:positions"]: (
       //     ordered: {
       //       pos: number;
@@ -173,6 +174,12 @@ export const createComponent = <
               positions: playerPositions.value.ordered,
             });
           }
+          emit(
+            "update:partialSummary",
+            new Map<string, PlayerData>(
+              props.players.map((pid) => [pid, playerData.value.get(pid)!]),
+            ),
+          );
         },
       );
       watch(

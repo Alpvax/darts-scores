@@ -149,3 +149,62 @@ export function* nonEmptyPowerSet<T>(array: T[]) {
     calculated = [...calculated, [item], ...toAdd];
   }
 }
+
+type SSReduceCallback<T, I> = (
+  abort: (result: T) => T,
+  previousValue: T,
+  currentValue: I,
+  currentIndex: number,
+) => T;
+export function shortCircuitReduce<T>(
+  items: Iterator<T> | Iterable<T>,
+  callback: SSReduceCallback<T, T>,
+  initial?: T,
+): T;
+export function shortCircuitReduce<T, I>(
+  items: Iterator<I> | Iterable<I>,
+  callback: SSReduceCallback<T, I>,
+  initial: T,
+): T;
+export function shortCircuitReduce<T, I>(
+  items: Iterator<I> | Iterable<I>,
+  callback: SSReduceCallback<T, I>,
+  initial?: T,
+): T {
+  const iter = "next" in items ? items : items[Symbol.iterator]();
+  console.log(items, iter); //XXX
+  let result = iter.next();
+  if (result.done) {
+    if (initial !== undefined) {
+      return initial;
+    } else {
+      // Undefined calling without initial value with no items
+      return undefined as T;
+    }
+  } else {
+    let exit = false;
+    let exitResult: T | undefined = undefined;
+    const abort = (result: T) => {
+      exit = true;
+      exitResult = result;
+      return result;
+    };
+    let i = 0;
+    let acc: T;
+    if (initial === undefined) {
+      acc = result.value as unknown as T;
+      result = iter.next();
+      i++;
+    } else {
+      acc = initial;
+    }
+    while (!result.done) {
+      acc = callback(abort, acc, result.value, i);
+      if (exit) {
+        return exitResult!;
+      }
+      result = iter.next();
+    }
+    return acc;
+  }
+}

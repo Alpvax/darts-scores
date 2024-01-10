@@ -40,8 +40,6 @@ const Summary27 = createSummaryComponent(
     ]),
   ],
   summaryMeta(),
-  gameMeta.rounds,
-  (stats) => stats.hits,
 );
 
 export default defineComponent({
