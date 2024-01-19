@@ -13,6 +13,7 @@ const Summary27 = createSummaryComponent(
     "score.lowest",
     "score.mean",
     // REAL WINS?!
+    "wins.real.total",
     "wins.all.total",
     "numGames",
     "wins.all.mean",
@@ -57,9 +58,13 @@ export default defineComponent({
       "jpBEiBzn9QTVN0C6Hn1m",
       "k7GNyCogBy79JE4qhvAj",
     ]);
-    const makeGame = (identifier?: number | string, length = 20): GameResult<TurnData27> => {
+    const makeGame = (
+      identifier?: number | string,
+      length = 20,
+      all = false,
+    ): GameResult<TurnData27> => {
       const plyrData = players.value.reduce((map, pid) => {
-        if (Math.random() < 0.6) {
+        if (all || Math.random() < 0.6) {
           const hits = Array.from({ length }, () =>
             Math.random() < 0.3 ? (Math.random() < 0.1 ? (Math.random() < 0.01 ? 3 : 2) : 1) : 0,
           );
@@ -112,6 +117,7 @@ export default defineComponent({
       return game;
     };
     const games = ref(Array.from({ length: 10 }, (_, i) => makeGame(i)));
+    games.value.push(makeGame("all players", 20, true));
     return {
       players,
       games,

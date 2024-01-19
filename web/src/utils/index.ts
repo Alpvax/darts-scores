@@ -172,7 +172,6 @@ export function shortCircuitReduce<T, I>(
   initial?: T,
 ): T {
   const iter = "next" in items ? items : items[Symbol.iterator]();
-  console.log(items, iter); //XXX
   let result = iter.next();
   if (result.done) {
     if (initial !== undefined) {

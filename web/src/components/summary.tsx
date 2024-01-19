@@ -24,6 +24,7 @@ export const createSummaryComponent = <
   // rounds: R[],
   // roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
+  // @ts-ignore
   defineComponent({
     // @ts-ignore
     // due to "Type instantiation is excessively deep and possibly infinite"
@@ -35,6 +36,7 @@ export const createSummaryComponent = <
         type: Object as PropType<Map<PIDs, PlayerDataForStats<T>> | null>,
         default: null,
       },
+      // @ts-ignore
       fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
       // roundFields: {
       //   type: Function as PropType<

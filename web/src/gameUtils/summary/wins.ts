@@ -1,8 +1,25 @@
 import type { SummaryEntryField, PlayerDataForStats } from ".";
 import type { TurnData } from "../roundDeclaration";
 
-type PlayerRequirement = "*" | string[] | { players: string[]; exact?: boolean };
+type PlayerRequirement =
+  | "*"
+  | string[]
+  | { players: string[]; exact?: boolean }
+  | ((opponents: Set<string>) => boolean);
 export type PlayerRequirements = Record<string, PlayerRequirement>;
+type PlayerReqsInternal<O extends PlayerRequirements> = {
+  [K in keyof O]: (opponents: Set<string>) => boolean;
+};
+
+const reqTrue = () => true;
+const checkPlayers =
+  (required: string[], exact = false) =>
+  (opponents: Set<string>) => {
+    const hasAll = required.filter((pid) => !opponents.has(pid)).length < 1;
+    return exact ? required.length === opponents.size && hasAll : hasAll;
+  };
+const isObjReq = (req: PlayerRequirement): req is { players: string[]; exact?: boolean } =>
+  typeof req === "object" && Object.hasOwn(req, "players");
 
 export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends PlayerRequirements>
   implements SummaryEntryField<T, WinsSummaryEntry, WinsSummaryValues<Outputs>>
@@ -17,7 +34,22 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
     return new WinSummaryField(requirements ?? ({ all: "*" } as unknown as O));
   }
 
-  constructor(readonly requirements: Outputs) {}
+  readonly requirements: PlayerReqsInternal<Outputs>;
+  constructor(requirements: Outputs) {
+    this.requirements = Object.entries(requirements).reduce(
+      (reqs, [k, req]: [keyof Outputs, PlayerRequirement]) =>
+        Object.assign(reqs, {
+          [k]: (req === "*"
+            ? reqTrue
+            : Array.isArray(req)
+              ? checkPlayers(req)
+              : isObjReq(req)
+                ? checkPlayers(req.players, req.exact)
+                : req) satisfies (opponents: Set<string>) => boolean,
+        }),
+      {} as PlayerReqsInternal<Outputs>,
+    );
+  }
   entry(
     playerData: PlayerDataForStats<T>,
     opponents: string[],
@@ -57,37 +89,29 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
       entry.type === "tie"
         ? { tiebreak: true, tbWin: entry.wonTiebreak }
         : { tiebreak: false, tbWin: false };
-    return (Object.entries(this.requirements) as [keyof Outputs, PlayerRequirement][]).reduce(
-      (acc, [k, req]) => {
-        const players = new Set(entry.opponents);
-        const checkPlayers = (required: string[], exact = false) => {
-          const hasAll = required.filter((pid) => !players.has(pid)).length < 1;
-          return exact ? required.length === players.size && hasAll : hasAll;
-        };
-        if (
-          req === "*" ||
-          (Array.isArray(req) ? checkPlayers(req) : checkPlayers(req.players, req.exact))
-        ) {
-          acc[k].gameCount += 1;
-          if (win) {
-            if (tiebreak) {
-              acc[k].tiebreaksPlayed += 1;
-              if (tbWin) {
-                acc[k].tiebreakWins += 1;
-              }
-              acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
-            } else {
-              acc[k].totalOutright += 1;
+    return (
+      Object.entries(this.requirements) as [keyof Outputs, (opponents: Set<string>) => boolean][]
+    ).reduce((acc, [k, req]) => {
+      const opponents = new Set(entry.opponents);
+      if (req(opponents)) {
+        acc[k].gameCount += 1;
+        if (win) {
+          if (tiebreak) {
+            acc[k].tiebreaksPlayed += 1;
+            if (tbWin) {
+              acc[k].tiebreakWins += 1;
             }
-            acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
+            acc[k].tiebreakWinRate = acc[k].tiebreakWins / acc[k].tiebreaksPlayed;
+          } else {
+            acc[k].totalOutright += 1;
           }
-          acc[k].mean = acc[k].total / acc[k].gameCount;
-          acc[k].meanOutright = acc[k].totalOutright / acc[k].gameCount;
+          acc[k].total = acc[k].totalOutright + acc[k].tiebreakWins;
         }
-        return acc;
-      },
-      accumulated,
-    );
+        acc[k].mean = acc[k].total / acc[k].gameCount;
+        acc[k].meanOutright = acc[k].totalOutright / acc[k].gameCount;
+      }
+      return acc;
+    }, accumulated);
   }
 }
 
