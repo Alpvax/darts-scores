@@ -107,7 +107,7 @@ export default defineComponent({
           );
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
-            (pid) => [playerStore.defaultOrder(pid).value, pid] as [number, string],
+            (pid) => [playerStore.playerOrder(pid).value, pid] as [number, string],
           );
           plyrs.sort(([a], [b]) => (a ?? 0) - (b ?? 0));
           players.value = plyrs.map((p) => p[1]);
@@ -238,7 +238,7 @@ export default defineComponent({
               modelValue={players.value}
               onUpdate:modelValue={(p: string[]) =>
                 (players.value = p.toSorted(
-                  (a, b) => playerStore.defaultOrder(a).value - playerStore.defaultOrder(b).value,
+                  (a, b) => playerStore.playerOrder(a).value - playerStore.playerOrder(b).value,
                 ))
               }
             />

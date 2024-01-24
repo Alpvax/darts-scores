@@ -182,7 +182,7 @@ export default defineComponent({
           );
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
-            (pid) => [playerStore.defaultOrder(pid).value, pid] as [number, string],
+            (pid) => [playerStore.playerOrder(pid).value, pid] as [number, string],
           );
           plyrs.sort(([a], [b]) => (a ?? 0) - (b ?? 0));
           players.value = plyrs.map((p) => p[1]);
