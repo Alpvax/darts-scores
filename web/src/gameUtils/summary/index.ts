@@ -1,7 +1,10 @@
+import type { Ref } from "vue";
 import type { IntoTaken, TurnData } from "../roundDeclaration";
+import type { HighlightRules } from "./displayMetaV2";
 import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
 import { RoundStatsSummaryField } from "./roundStats";
+import { ScoreSummaryField } from "./score";
 import { WinSummaryField, type PlayerRequirements } from "./wins";
 
 // Re-exports for convenience
@@ -39,6 +42,14 @@ export type GameResult<T extends TurnData<any, any, any>, P extends string = str
 interface SummaryValueRecord {
   [key: string]: SummaryValueRecord | number;
 }
+
+/**
+ * Which value is the best value.
+ * e.g. in golf, "lowest" score is the winning score.
+ * but in 27, "highest" score is the winning score.
+ */
+export type ScoreDirection = "highest" | "lowest";
+
 export interface SummaryEntryField<
   T extends TurnData<any, any, any>,
   E,
@@ -51,10 +62,133 @@ export interface SummaryEntryField<
   emptySummary(): S;
   /** Accumulate an entry into the summary */
   summary(accumulated: S, numGames: number, entry: E): S;
+  /** Default display data */
+  display: SummaryDisplayMetadata<S>;
 }
 
+export type SummaryDisplayMetadata<S extends SummaryValueRecord> = {
+  [K in FlattenSummaryKeysInternal<S>]?: FieldDisplayMetadata;
+};
+export type FieldDisplayMetadata = {
+  label?: string | Ref<string>;
+  formatArgs?: Intl.NumberFormatOptions | Ref<Intl.NumberFormatOptions>;
+  highlight?: HighlightRules | Ref<HighlightRules>;
+};
+export type DisplayMetaArg<T, Keys extends string> =
+  | T
+  | { [K in Keys]?: T }
+  | [T, { [K in Keys]?: T }];
+export type DisplayMetaInputs<T extends Record<string, any>> = {
+  best: ScoreDirection;
+  label: DisplayMetaArg<string, keyof T & string>;
+  format?: DisplayMetaArg<Intl.NumberFormatOptions, keyof T & string>;
+  highlight?: DisplayMetaArg<HighlightRules, keyof T & string>;
+};
+type DisplayMetaInputsFor<T extends SummaryEntryField<any, any, any>> = T extends SummaryEntryField<
+  any,
+  any,
+  infer S
+>
+  ? DisplayMetaInputs<S>
+  : never;
+type DMIGetter<T extends Record<string, any>, V, U = V> = (
+  key: keyof T & string,
+  fallback?: (def: U, best: ScoreDirection) => V,
+) => V;
+export type NormalisedDisplayMetaInputs<T extends Record<string, any>> = {
+  best: ScoreDirection;
+  getLabel: DMIGetter<T, string | undefined, string>;
+  getFormatArgs: DMIGetter<T, Intl.NumberFormatOptions | undefined>;
+  getHighlight: DMIGetter<T, HighlightRules | undefined>;
+  getMeta: (
+    key: keyof T & string,
+    fallbacks?: {
+      label?: (def: string, best: ScoreDirection) => string | undefined;
+      format?: (
+        def: Intl.NumberFormatOptions | undefined,
+        best: ScoreDirection,
+      ) => Intl.NumberFormatOptions | undefined;
+      highlight?: (
+        def: HighlightRules | undefined,
+        best: ScoreDirection,
+      ) => HighlightRules | undefined;
+    },
+  ) => {
+    label: string | undefined;
+    formatArgs: Intl.NumberFormatOptions | undefined;
+    highlight: HighlightRules | undefined;
+  };
+};
+export const defaultHighlight = (
+  h: HighlightRules | undefined,
+  best: ScoreDirection,
+): HighlightRules => ({
+  best,
+});
+export const defaultRateFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
+  Object.assign({ style: "percent" }, f);
+export const normaliseDMI = <T extends Record<string, any>>(
+  inputs: DisplayMetaInputs<T>,
+): NormalisedDisplayMetaInputs<T> => {
+  const makeFB = <T>(
+    fallback?: (a: T, best: ScoreDirection) => T | undefined,
+  ): ((a: T | undefined) => T | undefined) =>
+    fallback ? (a) => fallback(a!, inputs.best) : (a) => a;
+  const getLabel: DMIGetter<T, string | undefined, string> = (key, fallback) => {
+    const fb = makeFB(fallback);
+    switch (typeof inputs.label) {
+      case "string":
+        return fb(inputs.label);
+      case "object":
+        if (Array.isArray(inputs.label)) {
+          return inputs.label[1][key] ?? fb(inputs.label[0]);
+        }
+        return inputs.label[key];
+    }
+  };
+  const getFormatArgs: DMIGetter<T, Intl.NumberFormatOptions | undefined> = (key, fallback) => {
+    const fb = makeFB(fallback);
+    if (inputs.format === undefined) {
+      return fb(undefined);
+    } else if (Array.isArray(inputs.format)) {
+      return inputs.format[1][key] ?? fb(inputs.format[0]);
+    } else if (Object.hasOwn(inputs.format, key)) {
+      return (inputs.format as { [K in keyof T]?: Intl.NumberFormatOptions })[key];
+    }
+    return fb(inputs.format);
+  };
+  const getHighlight: DMIGetter<T, HighlightRules | undefined> = (key, fallback) => {
+    const fb = makeFB(fallback ?? defaultHighlight);
+    if (inputs.highlight === undefined) {
+      return fb(undefined);
+    } else if (typeof inputs.highlight === "string") {
+      return fb(inputs.highlight);
+    } else if (Array.isArray(inputs.highlight)) {
+      if (inputs.highlight.length === 2 && typeof inputs.highlight[1] === "object") {
+        return inputs.highlight[1][key] ?? fb(inputs.highlight[0]);
+      } else {
+        return fb(inputs.highlight as HighlightRules);
+      }
+    } else if (Object.hasOwn(inputs.highlight, key)) {
+      return (inputs.highlight as { [K in keyof T]?: HighlightRules })[key];
+    }
+    return fb(inputs.highlight as HighlightRules | undefined);
+  };
+  return {
+    best: inputs.best,
+    getLabel,
+    getFormatArgs,
+    getHighlight,
+    getMeta: (key, fb) => ({
+      label: getLabel(key, fb?.label),
+      formatArgs: getFormatArgs(key, fb?.format),
+      highlight: getHighlight(key, fb?.highlight),
+    }),
+  };
+};
+
 type SummaryEntryCore<T extends TurnData<any, any, any>, P extends PlayerRequirements> = {
-  score: NumericSummaryField<T>;
+  score: ScoreSummaryField<T>;
   wins: WinSummaryField<T, P>;
 };
 export type SummaryEntryFields<T extends TurnData<any, any, any>> = Record<
@@ -141,11 +275,13 @@ export const summaryAccumulatorFactory = <
   R extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 >(
+  /** is higher score better, or lower score */
+  scoreDirection: ScoreDirection,
   fields: Omit<S, "score">,
 ): SummaryAccumulatorFactory<S, T, R, P> => {
   type SVTyp = SummaryValues<S, T, R, P>;
   const fieldEntries = [
-    ["score", new NumericSummaryField(({ score }) => score)],
+    ["score", new ScoreSummaryField(scoreDirection)],
     ...Object.entries(fields),
   ] as [keyof S, SummaryEntryField<T, any, any>][];
   const makeEmpty = () =>
@@ -156,6 +292,10 @@ export const summaryAccumulatorFactory = <
         }),
       { numGames: 0 } as SVTyp,
     );
+  console.log(
+    "DEBUGGING FIELD DISPLAY:",
+    new Map(Object.entries(fields).map(([k, { display }]) => [k, display])),
+  ); //XXX
 
   const startValues = makeEmpty();
   const cachedStartValue = new Map<SummaryFieldKeys<S, T, P>, number>();
@@ -253,9 +393,15 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   /** Count rounds until the predicate fails, returning the index of the failed round (so 0 would be first round failed) */
   countWhile: typeof countWhile<T>;
   /** Make numeric stat */
-  numeric: (calculate: (data: PlayerDataForStats<T>) => number) => NumericSummaryField<T>;
+  numeric: (
+    calculate: (data: PlayerDataForStats<T>) => number,
+    displayMeta: DisplayMetaInputsFor<NumericSummaryField<T>>,
+  ) => NumericSummaryField<T>;
   /** Make boolean stat */
-  boolean: (calculate: (data: PlayerDataForStats<T>) => boolean) => BoolSummaryField<T>;
+  boolean: (
+    calculate: (data: PlayerDataForStats<T>) => boolean,
+    displayMeta: DisplayMetaInputsFor<BoolSummaryField<T>>,
+  ) => BoolSummaryField<T>;
   /** Make round stats accumulator */
   roundStats: <K extends string>(
     roundKeys: string[],
@@ -270,6 +416,8 @@ export const makeSummaryAccumulatorFactoryFor =
         SummaryEntryField<T, any, any>
       >,
     >(
+      /** is higher score better, or lower score */
+      scoreDirection: ScoreDirection,
       fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
     ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, { all: "*" }>, T, S, { all: "*" }>;
     <
@@ -279,6 +427,8 @@ export const makeSummaryAccumulatorFactoryFor =
       >,
       P extends PlayerRequirements,
     >(
+      /** is higher score better, or lower score */
+      scoreDirection: ScoreDirection,
       fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
       winsRequirements: P,
     ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
@@ -290,14 +440,18 @@ export const makeSummaryAccumulatorFactoryFor =
     >,
     P extends PlayerRequirements,
   >(
+    /** is higher score better, or lower score */
+    scoreDirection: ScoreDirection,
     fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
     winsRequirements = { all: "*" } as unknown as P,
   ) =>
-    makeSummaryAccumulatorFactory<T, S, P>(fieldFactory, winsRequirements);
+    makeSummaryAccumulatorFactory<T, S, P>(scoreDirection, fieldFactory, winsRequirements);
 export function makeSummaryAccumulatorFactory<
   T extends TurnData<any, any, any>,
   S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
 >(
+  /** is higher score better, or lower score */
+  scoreDirection: ScoreDirection,
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
 ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, { all: "*" }>, T, S, { all: "*" }>;
 export function makeSummaryAccumulatorFactory<
@@ -305,6 +459,8 @@ export function makeSummaryAccumulatorFactory<
   S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
   P extends PlayerRequirements,
 >(
+  /** is higher score better, or lower score */
+  scoreDirection: ScoreDirection,
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
   winsRequirements: P,
 ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
@@ -313,20 +469,24 @@ export function makeSummaryAccumulatorFactory<
   S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
   P extends PlayerRequirements,
 >(
+  /** is higher score better, or lower score */
+  scoreDirection: ScoreDirection,
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
   winsRequirements: P = { all: "*" } as unknown as P,
 ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P> {
-  return summaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>({
+  return summaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>(scoreDirection, {
     wins: WinSummaryField.create(winsRequirements),
     ...fieldFactory({
       countUntil: countUntil as typeof countUntil<T>,
       countWhile: countWhile as typeof countWhile<T>,
       numeric: <T extends TurnData<any, any, any>>(
         calculate: (data: PlayerDataForStats<T>) => number,
-      ) => new NumericSummaryField<T>(calculate),
+        displayMeta: DisplayMetaInputsFor<NumericSummaryField<T>>,
+      ) => new NumericSummaryField<T>(calculate, normaliseDMI(displayMeta)),
       boolean: <T extends TurnData<any, any, any>>(
         calculate: (data: PlayerDataForStats<T>) => boolean,
-      ) => new BoolSummaryField<T>(calculate),
+        displayMeta: DisplayMetaInputsFor<BoolSummaryField<T>>,
+      ) => new BoolSummaryField<T>(calculate, normaliseDMI(displayMeta)),
       roundStats: <T extends TurnData<any, any, any>>(
         roundKeys: string[],
         defaults: T extends TurnData<any, infer RS, any> ? RS : never,

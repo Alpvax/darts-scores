@@ -1,4 +1,12 @@
-import type { PlayerDataForStats, SummaryEntryField } from ".";
+import {
+  defaultRateFmt,
+  normaliseDMI,
+  type DisplayMetaInputs,
+  type NormalisedDisplayMetaInputs,
+  type PlayerDataForStats,
+  type SummaryDisplayMetadata,
+  type SummaryEntryField,
+} from ".";
 import type { TurnData, IntoTaken } from "../roundDeclaration";
 
 type RoundIndexPredicateResult =
@@ -17,8 +25,10 @@ export class RoundCountField<T extends TurnData<any, any, any>>
   private readonly predicate: (data: T | IntoTaken<T>) => boolean;
   private readonly findFirst: boolean;
   private readonly takenOnly: boolean;
+  display: SummaryDisplayMetadata<RoundCountSummaryValues>;
   constructor(
     predicate: (data: IntoTaken<T>) => boolean,
+    displayMeta: NormalisedDisplayMetaInputs<RoundCountSummaryValues>,
     options: {
       /**
        * Find the index of the first round where the predicate returns true.
@@ -34,6 +44,7 @@ export class RoundCountField<T extends TurnData<any, any, any>>
   );
   constructor(
     predicate: (data: T) => boolean,
+    displayMeta: NormalisedDisplayMetaInputs<RoundCountSummaryValues>,
     options?: {
       /**
        * Find the index of the first round where the predicate returns true.
@@ -49,6 +60,7 @@ export class RoundCountField<T extends TurnData<any, any, any>>
   );
   constructor(
     predicate: ((data: T) => boolean) | ((data: IntoTaken<T>) => boolean),
+    displayMeta: NormalisedDisplayMetaInputs<RoundCountSummaryValues>,
     options?: {
       /**
        * Find the index of the first round where the predicate returns true.
@@ -66,7 +78,7 @@ export class RoundCountField<T extends TurnData<any, any, any>>
     this.findFirst = options?.findFirst ?? false;
     this.takenOnly = options?.ignoreUntakenRounds ?? false;
 
-    this.findIndex = options?.findFirst
+    this.findIndex = this.findFirst
       ? (data) => {
           const idx = data.findIndex(this.predicate);
           // Return first index where predicate passed
@@ -77,6 +89,22 @@ export class RoundCountField<T extends TurnData<any, any, any>>
           // Return first index where predicate failed
           return idx < 0 ? { found: false } : { found: true, index: idx };
         };
+
+    this.display = {
+      count: displayMeta.getMeta("count", {
+        label: (l) => `${l}s`,
+      }),
+      earliest: displayMeta.getMeta("earliest", {
+        label: (l) => `Earliest ${l}`,
+      }),
+      latest: displayMeta.getMeta("latest", {
+        label: (l) => `Furthest ${l}`,
+      }),
+      mean: displayMeta.getMeta("mean", {
+        label: (l) => `${l} Rate`,
+        format: defaultRateFmt,
+      }),
+    };
   }
 
   entry({ turns, allTurns }: PlayerDataForStats<T>) {
@@ -131,23 +159,30 @@ const makeConstructor =
   ): {
     <T extends TurnData<any, any, any>>(
       predicate: (data: IntoTaken<T>) => boolean,
+      displayMeta: DisplayMetaInputs<RoundCountSummaryValues>,
       takenOnly: true,
     ): RoundCountField<T>;
     <T extends TurnData<any, any, any>>(
       predicate: (data: T) => boolean,
+      displayMeta: DisplayMetaInputs<RoundCountSummaryValues>,
       takenOnly?: false,
     ): RoundCountField<T>;
   } =>
   <T extends TurnData<any, any, any>>(
     predicate: ((data: IntoTaken<T>) => boolean) | ((data: T) => boolean),
+    displayMeta: DisplayMetaInputs<RoundCountSummaryValues>,
     takenOnly?: Boolean,
   ) =>
     takenOnly
-      ? new RoundCountField<T>(predicate as (data: IntoTaken<T>) => boolean, {
-          findFirst,
-          ignoreUntakenRounds: true,
-        })
-      : new RoundCountField<T>(predicate as (data: T) => boolean, {
+      ? new RoundCountField<T>(
+          predicate as (data: IntoTaken<T>) => boolean,
+          normaliseDMI(displayMeta),
+          {
+            findFirst,
+            ignoreUntakenRounds: true,
+          },
+        )
+      : new RoundCountField<T>(predicate as (data: T) => boolean, normaliseDMI(displayMeta), {
           findFirst,
           ignoreUntakenRounds: false,
         });

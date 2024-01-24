@@ -194,16 +194,28 @@ export const gameMeta = normaliseGameMetadata<
 export type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
 export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
+  "highest",
   ({ countWhile, numeric, boolean, roundStats }) => ({
-    fatNicks: countWhile(({ value }) => !value),
-    dreams: countWhile(({ value }) => value > 0, true),
-    allPos: countWhile(({ score }) => score > 0),
+    fatNicks: countWhile(({ value }) => !value, {
+      best: "lowest",
+      label: [
+        "Fat Nick",
+        {
+          latest: "Furthest without hitting",
+        },
+      ],
+      highlight: "worst",
+    }),
+    dreams: countWhile(({ value }) => value > 0, { best: "highest", label: "Dream" }, true),
+    allPos: countWhile(({ score }) => score > 0, { best: "highest", label: "All Positive" }),
     cliffs: numeric(
       (data) => [...data.turns.values()].filter(({ stats: { cliff } }) => cliff).length,
+      { best: "highest", label: "Cliff" },
     ),
     doubleDoubles: numeric(
       (data) =>
         [...data.turns.values()].filter(({ stats: { doubledouble } }) => doubledouble).length,
+      { best: "highest", label: "Double Double" },
     ),
     hans: numeric(
       (data) =>
@@ -221,22 +233,32 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
           },
           { count: 0, preDD: 0 },
         ).count,
+      { best: "highest", label: ["Hans", { total: "Hans" }] },
     ),
-    goblins: boolean((data) =>
-      shortCircuitReduce(
-        data.turns.values(),
-        (abort, dd, { value, stats: { doubledouble } }) =>
-          value === 1 ? abort(false) : dd || doubledouble,
-        false,
-      ),
+    goblins: boolean(
+      (data) =>
+        shortCircuitReduce(
+          data.turns.values(),
+          (abort, dd, { value, stats: { doubledouble } }) =>
+            value === 1 ? abort(false) : dd || doubledouble,
+          false,
+        ),
+      { best: "highest", label: "Goblin" },
     ),
-    piranhas: boolean((data) =>
-      [...data.turns.values()].every(
-        ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
-      ),
+    piranhas: boolean(
+      (data) =>
+        [...data.turns.values()].every(
+          ({ roundIndex, value }) => Boolean(value) === (roundIndex === 0),
+        ),
+      { best: "highest", label: "Piranha" },
     ),
     // jesus: boolean(data => ),
-    hits: numeric((data) => [...data.turns.values()].reduce((hits, turn) => hits + turn.value, 0)),
+    hits: numeric((data) => [...data.turns.values()].reduce((hits, turn) => hits + turn.value, 0), {
+      best: "highest",
+      label: ["Hit", { mean: "Average Hits" }],
+      format: { mean: { style: "decimal" } },
+    }),
+    // @ts-ignore
     rounds: roundStats(
       Array.from({ length: 20 }, (_, i) => (i + 1).toString()),
       { cliff: false, doubledouble: false, hits: 0 },
@@ -287,7 +309,6 @@ export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
 //TODO: REMOVE TEST
 (() => {
   const testSummary = summaryFactory();
-  console.log(structuredClone(testSummary.summary.goblins)); //XXX
   const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
     const { turns, score } = gameMeta.rounds.reduce(
       ({ turns, score }, r, i) => {

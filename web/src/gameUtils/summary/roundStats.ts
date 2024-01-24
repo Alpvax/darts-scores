@@ -1,4 +1,4 @@
-import type { PlayerDataForStats, SummaryEntryField } from ".";
+import type { PlayerDataForStats, SummaryDisplayMetadata, SummaryEntryField } from ".";
 import type { TurnData, TurnStats } from "../roundDeclaration";
 
 export const FAVOURITES_KEY = Symbol("favouriteRoundsData");
@@ -9,6 +9,7 @@ export class RoundStatsSummaryField<
   K extends string,
 > implements SummaryEntryField<T, Map<K, RS>, RoundStatSummaryValues<K, RS>>
 {
+  display: SummaryDisplayMetadata<RoundStatSummaryValues<K, RS>> = {}; //TODO: round stats display
   constructor(
     private readonly roundKeys: string[],
     private readonly statDefaults: RS,

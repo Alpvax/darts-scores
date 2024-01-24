@@ -1,10 +1,30 @@
-import type { PlayerDataForStats, SummaryEntryField } from ".";
+import {
+  defaultRateFmt,
+  type NormalisedDisplayMetaInputs,
+  type PlayerDataForStats,
+  type SummaryDisplayMetadata,
+  type SummaryEntryField,
+} from ".";
 import type { TurnData } from "../roundDeclaration";
 
 export class BoolSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, boolean, BooleanSummaryValues>
 {
-  constructor(readonly calculate: (data: PlayerDataForStats<T>) => boolean) {}
+  display: SummaryDisplayMetadata<BooleanSummaryValues>;
+  constructor(
+    readonly calculate: (data: PlayerDataForStats<T>) => boolean,
+    displayMeta: NormalisedDisplayMetaInputs<BooleanSummaryValues>,
+  ) {
+    this.display = {
+      count: displayMeta.getMeta("count", {
+        label: (l) => `${l}s`,
+      }),
+      mean: displayMeta.getMeta("mean", {
+        label: (l) => `${l} Rate`,
+        format: defaultRateFmt,
+      }),
+    };
+  }
   entry(playerData: PlayerDataForStats<T>) {
     return this.calculate(playerData);
   }
@@ -31,7 +51,27 @@ type BooleanSummaryValues = {
 export class NumericSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, number, NumericSummaryValues>
 {
-  constructor(readonly calculate: (data: PlayerDataForStats<T>) => number) {}
+  display: SummaryDisplayMetadata<NumericSummaryValues>;
+  constructor(
+    readonly calculate: (data: PlayerDataForStats<T>) => number,
+    displayMeta: NormalisedDisplayMetaInputs<NumericSummaryValues>,
+  ) {
+    this.display = {
+      highest: displayMeta.getMeta("highest", {
+        label: (l) => `Most ${l}s`,
+      }),
+      lowest: displayMeta.getMeta("lowest", {
+        label: (l) => `Least ${l}s`,
+      }),
+      total: displayMeta.getMeta("total", {
+        label: (l) => `${l}s`,
+      }),
+      mean: displayMeta.getMeta("mean", {
+        label: (l) => `${l} Rate`,
+        format: defaultRateFmt,
+      }),
+    };
+  }
   entry(playerData: PlayerDataForStats<T>) {
     return this.calculate(playerData);
   }
