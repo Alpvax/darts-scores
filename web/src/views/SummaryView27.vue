@@ -1,45 +1,18 @@
 <script lang="ts">
 import { createSummaryComponent } from "@/components/summary";
-import { gameMeta, summaryFactory, summaryMeta, type TurnData27 } from "@/game/27";
+import {
+  defaultSummaryFields,
+  gameMeta,
+  summaryFactory,
+  summaryMeta,
+  type TurnData27,
+} from "@/game/27";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import type { GameResult, PlayerDataForStats } from "@/gameUtils/summary";
 import { ref, defineComponent } from "vue";
 
-const Summary27 = createSummaryComponent(
-  summaryFactory,
-  [
-    "score.best",
-    "score.worst",
-    "score.mean",
-    // REAL WINS?!
-    "wins.real.total",
-    "wins.all.totalOutright",
-    "wins.all.tiebreakWins",
-    "numGames",
-    "wins.all.mean",
-    "fatNicks.count",
-    "fatNicks.latest",
-    "cliffs.total",
-    "cliffs.mean",
-    "doubleDoubles.total",
-    "doubleDoubles.mean",
-    "hans.total",
-    "goblins.count",
-    "piranhas.count",
-    // "jesus.count",
-    "dreams.latest",
-    "allPos.count",
-    "allPos.latest",
-    "hits.highest",
-    "hits.lowest",
-    "hits.mean",
-    // "rounds.1.cliff.count",
-    // @ts-expect-error
-    ...Array.from({ length: 20 }).flatMap((_, i) => [`rounds.${i + 1}.hits.mean`]),
-  ],
-  summaryMeta(),
-);
+const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
 
 export default defineComponent({
   components: {

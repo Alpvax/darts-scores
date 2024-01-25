@@ -3,7 +3,7 @@
 @import "./game27.css";
 
 #app {
-  max-width: 1280px;
+  /* max-width: 100%; */
   margin: 0 auto;
   padding: 2rem;
   padding-top: 0px;
@@ -31,8 +31,10 @@ a,
   }
 
   #app {
+    width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 10% 1fr;
+    justify-content: space-around;
     padding: 0 2rem;
   }
 }

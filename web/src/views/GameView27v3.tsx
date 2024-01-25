@@ -3,47 +3,19 @@ import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { usePlayerStore } from "@/stores/player";
-import { DATE_DM_FORMAT, gameMeta, summaryFactory, summaryMeta, type TurnData27 } from "@/game/27";
+import {
+  DATE_DM_FORMAT,
+  defaultSummaryFields,
+  gameMeta,
+  summaryFactory,
+  type TurnData27,
+} from "@/game/27";
 import type { PlayerDataFor } from "@/gameUtils/playerData";
 import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 
 const Game27 = createComponent(gameMeta);
-const Summary27 = createSummaryComponent(
-  summaryFactory,
-  [
-    "score.highest",
-    "score.lowest",
-    "score.mean",
-    // REAL WINS?!
-    "wins.all.total",
-    "numGames",
-    "wins.all.mean",
-    "fatNicks.count",
-    "fatNicks.latest",
-    "cliffs.total",
-    "cliffs.mean",
-    "doubleDoubles.total",
-    "doubleDoubles.mean",
-    "hans.total",
-    "goblins.count",
-    "piranhas.count",
-    // "jesus.count",
-    "dreams.latest",
-    "allPos.count",
-    "allPos.latest",
-    "hits.highest",
-    "hits.lowest",
-    "hits.mean",
-    // "rounds.1.cliff.count",
-    // @ts-expect-error
-    ...Array.from({ length: 20 }).flatMap((_, i) => [
-      `rounds.${i + 1}.hits.total`,
-      `rounds.${i + 1}.hits.mean`,
-    ]),
-  ],
-  summaryMeta(),
-);
+const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
 

@@ -131,6 +131,8 @@ export const defaultHighlight = (
           best,
         }
     : h;
+export const defaultFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
+  Object.assign({ maximumFractionDigits: 2 }, f);
 export const defaultRateFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
   Object.assign({ style: "percent" }, f);
 export const normaliseDMI = <T extends Record<string, any>>(
@@ -153,13 +155,13 @@ export const normaliseDMI = <T extends Record<string, any>>(
     }
   };
   const getFormatArgs: DMIGetter<T, Intl.NumberFormatOptions | undefined> = (key, fallback) => {
-    const fb = makeFB(fallback);
+    const fb = makeFB(fallback ?? defaultFmt);
     if (inputs.format === undefined) {
       return fb(undefined);
     } else if (Array.isArray(inputs.format)) {
-      return inputs.format[1][key] ?? fb(inputs.format[0]);
+      return defaultFmt(inputs.format[1][key]) ?? fb(inputs.format[0]);
     } else if (Object.hasOwn(inputs.format, key)) {
-      return (inputs.format as { [K in keyof T]?: Intl.NumberFormatOptions })[key];
+      return defaultFmt((inputs.format as { [K in keyof T]?: Intl.NumberFormatOptions })[key]);
     }
     return fb(inputs.format);
   };
@@ -337,6 +339,8 @@ export const summaryAccumulatorFactory = <
   ); //XXX
 
   const factory: SummaryAccumulatorFactoryFunc<S, T, R, P> = () => {
+    // due to "Type instantiation is excessively deep and possibly infinite"
+    // @ts-ignore
     const summary = fieldEntries.reduce(
       (summary, [k, field]) =>
         Object.assign(summary, {
@@ -421,6 +425,7 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   /** Make numeric stat */
   numeric: (
     calculate: (data: PlayerDataForStats<T>) => number,
+    // @ts-ignore
     displayMeta: DisplayMetaInputsFor<NumericSummaryField<T>>,
   ) => NumericSummaryField<T>;
   /** Make boolean stat */
@@ -430,9 +435,12 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   ) => BoolSummaryField<T>;
   /** Make round stats accumulator */
   roundStats: <K extends string>(
-    roundKeys: string[],
+    roundKeys: K[],
     defaults: T extends TurnData<any, infer RS, any> ? RS : never,
-    displayMeta?: RoundStatsDisplayMetaInput<T extends TurnData<any, infer RS, any> ? RS : never>,
+    displayMeta?: RoundStatsDisplayMetaInput<
+      T extends TurnData<any, infer RS, any> ? RS : never,
+      K
+    >,
   ) => RoundStatsSummaryField<T, T extends TurnData<any, infer RS, any> ? RS : never, K>;
 };
 export const makeSummaryAccumulatorFactoryFor =
@@ -535,8 +543,8 @@ export function makeSummaryAccumulatorFactory<
         calculate: (data: PlayerDataForStats<T>) => boolean,
         displayMeta: DisplayMetaInputsFor<BoolSummaryField<T>>,
       ) => new BoolSummaryField<T>(calculate, normaliseDMI(displayMeta)),
-      roundStats: <T extends TurnData<any, any, any>>(
-        roundKeys: string[],
+      roundStats: <T extends TurnData<any, any, any>, K extends string>(
+        roundKeys: K[],
         defaults: T extends TurnData<any, infer RS, any> ? RS : never,
         displayMeta: any,
       ) => new RoundStatsSummaryField(roundKeys, defaults, displayMeta),

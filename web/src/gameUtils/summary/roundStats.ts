@@ -12,15 +12,15 @@ import type { HighlightRules } from "./displayMetaV2";
 
 export const FAVOURITES_KEY = Symbol("favouriteRoundsData");
 
-type DisplayMetaRoundArg<RS extends TurnStats, T> = (
-  key: string,
+type DisplayMetaRoundArg<RS extends TurnStats, T, K extends string> = (
+  key: K,
   index: number,
 ) => DisplayMetaArg<T, keyof RSSummaryVal<RS> & string>;
-export type RoundStatsDisplayMetaInput<RS extends TurnStats> = {
+export type RoundStatsDisplayMetaInput<RS extends TurnStats, K extends string> = {
   best: ScoreDirection;
-  label: DisplayMetaRoundArg<RS, string>;
-  format?: DisplayMetaRoundArg<RS, Intl.NumberFormatOptions>;
-  highlight?: DisplayMetaRoundArg<RS, HighlightRules>;
+  label: DisplayMetaRoundArg<RS, string, K>;
+  format?: DisplayMetaRoundArg<RS, Intl.NumberFormatOptions, K>;
+  highlight?: DisplayMetaRoundArg<RS, HighlightRules, K>;
 };
 export class RoundStatsSummaryField<
   T extends TurnData<any, RS, any>,
@@ -30,9 +30,9 @@ export class RoundStatsSummaryField<
 {
   display: SummaryDisplayMetadata<RoundStatSummaryValues<K, RS>>;
   constructor(
-    private readonly roundKeys: string[],
+    private readonly roundKeys: K[],
     private readonly statDefaults: RS,
-    displayMeta?: RoundStatsDisplayMetaInput<RS>,
+    displayMeta?: RoundStatsDisplayMetaInput<RS, K>,
   ) {
     this.display = {};
     if (displayMeta) {

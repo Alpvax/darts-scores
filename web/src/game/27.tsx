@@ -1,6 +1,9 @@
 import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
-import makeSummaryAccumulatorFactoryFor, { type PlayerDataForStats } from "@/gameUtils/summary";
+import makeSummaryAccumulatorFactoryFor, {
+  type PlayerDataForStats,
+  type SummaryFieldKeysFor,
+} from "@/gameUtils/summary";
 import {
   defaultedSummaryFieldMeta,
   makeSummaryMetaStore,
@@ -289,6 +292,36 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     },
   },
 );
+
+export const defaultSummaryFields: SummaryFieldKeysFor<typeof summaryFactory>[] = [
+  "score.best",
+  "score.worst",
+  "score.mean",
+  "wins.real.total",
+  "wins.all.totalOutright",
+  "wins.all.tiebreakWins",
+  "numGames",
+  "wins.all.mean",
+  "fatNicks.count",
+  "fatNicks.latest",
+  "cliffs.total",
+  "cliffs.mean",
+  "doubleDoubles.total",
+  "doubleDoubles.mean",
+  "hans.total",
+  "goblins.count",
+  "piranhas.count",
+  // "jesus.count",
+  "dreams.latest",
+  "allPos.count",
+  "allPos.latest",
+  "hits.highest",
+  "hits.lowest",
+  "hits.mean",
+  ...Array.from({ length: 20 }).flatMap((_, i) => [
+    `rounds.${i + 1}.hits.mean` satisfies SummaryFieldKeysFor<typeof summaryFactory>,
+  ]),
+];
 
 export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
   "twentysevenSummary",

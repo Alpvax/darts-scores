@@ -20,14 +20,14 @@ export const createSummaryComponent = <
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-  fieldMeta: Record<string, SummaryFieldMeta>,
+  fieldMeta?: Record<string, SummaryFieldMeta>,
   // rounds: R[],
   // roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
   // @ts-ignore
   defineComponent({
-    // @ts-ignore
     // due to "Type instantiation is excessively deep and possibly infinite"
+    // @ts-ignore
     props: {
       players: { type: Array as PropType<PIDs[]>, required: true },
       games: { type: Array as PropType<GameResult<T, PIDs>[]>, required: true },
@@ -36,14 +36,7 @@ export const createSummaryComponent = <
         type: Object as PropType<Map<PIDs, PlayerDataForStats<T>> | null>,
         default: null,
       },
-      // @ts-ignore
       fields: { type: Array as PropType<SummaryFieldKeys<S, T, P>[]>, default: defaultFields },
-      // roundFields: {
-      //   type: Function as PropType<
-      //     T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any
-      //   >,
-      //   default: roundFields,
-      // },
       decimalFormat: {
         type: Object as PropType<Intl.NumberFormat>,
         default: new Intl.NumberFormat(undefined, {
@@ -98,8 +91,9 @@ export const createSummaryComponent = <
       const fieldsMeta = computed(() =>
         props.fields.map((fieldPath) => {
           const meta = summaryFactory.getDisplayMetadata(fieldPath);
+          const fMeta: SummaryFieldMeta | undefined = fieldMeta ? fieldMeta[fieldPath] : undefined;
           const best = meta.best ?? "highest";
-          const label = meta.label ?? fieldMeta[fieldPath]?.label ?? fieldPath;
+          const label = meta.label ?? fMeta?.label ?? fieldPath;
           let format: Intl.NumberFormat;
           let deltaFmt: Intl.NumberFormat;
           const makeDeltaFmt = (opts: Intl.NumberFormatOptions) => {
@@ -114,9 +108,9 @@ export const createSummaryComponent = <
             format = new Intl.NumberFormat(undefined, meta.formatArgs);
             deltaFmt = makeDeltaFmt(meta.formatArgs);
           } else {
-            let fmt = fieldMeta[fieldPath]?.format ?? "!baseFmt";
+            let fmt = fMeta?.format ?? "!baseFmt";
             while (typeof fmt === "string") {
-              fmt = fieldMeta[fmt]?.format ?? props.decimalFormat;
+              fmt = fMeta?.format ?? props.decimalFormat;
             }
             format = fmt;
             deltaFmt = makeDeltaFmt(fmt.resolvedOptions());
