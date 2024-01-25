@@ -124,11 +124,13 @@ export const defaultHighlight = (
   h: HighlightRules | undefined,
   best: ScoreDirection,
 ): HighlightRules =>
-  best === "none"
-    ? {}
-    : {
-        best,
-      };
+  h === undefined
+    ? best === "none"
+      ? {}
+      : {
+          best,
+        }
+    : h;
 export const defaultRateFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
   Object.assign({ style: "percent" }, f);
 export const normaliseDMI = <T extends Record<string, any>>(

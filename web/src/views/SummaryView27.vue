@@ -116,6 +116,7 @@ export default defineComponent({
     };
     const games = ref(Array.from({ length: 10 }, (_, i) => makeGame(i)));
     games.value.push(makeGame("all players", 20, true));
+    games.value.push(makeGame("fatnicks", 0));
     return {
       players,
       games,
