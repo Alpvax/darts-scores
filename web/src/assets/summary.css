@@ -1,6 +1,8 @@
 table#gameSummaryTable {
+  font-size: 1.9vh;
   & tbody {
-    font-size: 1.3vb;
+    font-size: 0.8em;
+    line-height: 1.2;
   }
   & tr:hover {
     background-color: bisque;
@@ -49,5 +51,14 @@ table#gameSummaryTable {
   }
   & td.favourite:not(.best) {
     background-color: #ceff7e;
+  }
+  & tr[data-summary-row^="rounds"] {
+    font-size: 0.9em;
+  }
+  & tr:not([data-summary-row^="rounds"]) + tr[data-summary-row^="rounds"] {
+    & th,
+    & td {
+      border-top: grey 1px dashed;
+    }
   }
 }

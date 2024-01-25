@@ -229,6 +229,7 @@ export const createSummaryComponent = <
           <tbody>
             {fieldData.value.map(
               ({
+                path,
                 label,
                 format,
                 deltaFmt,
@@ -240,7 +241,7 @@ export const createSummaryComponent = <
                 playerValues,
               }) => {
                 return (
-                  <tr>
+                  <tr data-summary-row={path}>
                     <th class="rowLabel">{label}</th>
                     {playerValues.map(({ value, delta }) => {
                       const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
