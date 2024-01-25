@@ -36,10 +36,7 @@ const Summary27 = createSummaryComponent(
     "hits.mean",
     // "rounds.1.cliff.count",
     // @ts-expect-error
-    ...Array.from({ length: 20 }).flatMap((_, i) => [
-      `rounds.${i + 1}.hits.total`,
-      `rounds.${i + 1}.hits.mean`,
-    ]),
+    ...Array.from({ length: 20 }).flatMap((_, i) => [`rounds.${i + 1}.hits.mean`]),
   ],
   summaryMeta(),
 );

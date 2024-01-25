@@ -1,9 +1,8 @@
-import type { Ref } from "vue";
 import type { IntoTaken, TurnData } from "../roundDeclaration";
 import type { HighlightRules } from "./displayMetaV2";
 import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
-import { RoundStatsSummaryField } from "./roundStats";
+import { RoundStatsSummaryField, type RoundStatsDisplayMetaInput } from "./roundStats";
 import { ScoreSummaryField } from "./score";
 import { WinSummaryField, type PlayerRequirements, type WinsDisplayMeta } from "./wins";
 
@@ -48,7 +47,7 @@ interface SummaryValueRecord {
  * e.g. in golf, "lowest" score is the winning score.
  * but in 27, "highest" score is the winning score.
  */
-export type ScoreDirection = "highest" | "lowest";
+export type ScoreDirection = "highest" | "lowest" | "none";
 
 export interface SummaryEntryField<
   T extends TurnData<any, any, any>,
@@ -70,9 +69,10 @@ export type SummaryDisplayMetadata<S extends SummaryValueRecord> = {
   [K in FlattenSummaryKeysInternal<S>]?: FieldDisplayMetadata;
 };
 export type FieldDisplayMetadata = {
-  label?: string | Ref<string>;
-  formatArgs?: Intl.NumberFormatOptions | Ref<Intl.NumberFormatOptions>;
-  highlight?: HighlightRules | Ref<HighlightRules>;
+  best?: ScoreDirection; // | Ref<ScoreDirection>;
+  label?: string; // | Ref<string>;
+  formatArgs?: Intl.NumberFormatOptions; // | Ref<Intl.NumberFormatOptions>;
+  highlight?: HighlightRules; // | Ref<HighlightRules>;
 };
 export type DisplayMetaArg<T, Keys extends string> =
   | T
@@ -114,6 +114,7 @@ export type NormalisedDisplayMetaInputs<T extends Record<string, any>> = {
       ) => HighlightRules | undefined;
     },
   ) => {
+    best: ScoreDirection;
     label: string | undefined;
     formatArgs: Intl.NumberFormatOptions | undefined;
     highlight: HighlightRules | undefined;
@@ -122,9 +123,12 @@ export type NormalisedDisplayMetaInputs<T extends Record<string, any>> = {
 export const defaultHighlight = (
   h: HighlightRules | undefined,
   best: ScoreDirection,
-): HighlightRules => ({
-  best,
-});
+): HighlightRules =>
+  best === "none"
+    ? {}
+    : {
+        best,
+      };
 export const defaultRateFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
   Object.assign({ style: "percent" }, f);
 export const normaliseDMI = <T extends Record<string, any>>(
@@ -180,6 +184,7 @@ export const normaliseDMI = <T extends Record<string, any>>(
     getFormatArgs,
     getHighlight,
     getMeta: (key, fb) => ({
+      best: inputs.best,
       label: getLabel(key, fb?.label),
       formatArgs: getFormatArgs(key, fb?.format),
       highlight: getHighlight(key, fb?.highlight),
@@ -268,6 +273,11 @@ export type SummaryAccumulatorFactory<
    * @param key the field key to look for
    */
   lookupZeroVal(key: SummaryFieldKeys<S, T, P>): number;
+  /**
+   * Look up the display metadata for a given field
+   * @param key the field key to look for
+   */
+  getDisplayMetadata(key: SummaryFieldKeys<S, T, P>): FieldDisplayMetadata;
 };
 export const summaryAccumulatorFactory = <
   S extends SummaryEntry<T, R, P>,
@@ -292,10 +302,6 @@ export const summaryAccumulatorFactory = <
         }),
       { numGames: 0 } as SVTyp,
     );
-  console.log(
-    "DEBUGGING FIELD DISPLAY:",
-    new Map(Object.entries(fields).map(([k, { display }]) => [k, display])),
-  ); //XXX
 
   const startValues = makeEmpty();
   const cachedStartValue = new Map<SummaryFieldKeys<S, T, P>, number>();
@@ -310,6 +316,24 @@ export const summaryAccumulatorFactory = <
     cachedStartValue.set(key, val);
     return val;
   };
+
+  const displayMetadata = fieldEntries.reduce(
+    (acc, [k, { display }]) => {
+      for (const [dk, df] of Object.entries(display)) {
+        if (df !== undefined) {
+          acc[`${k as string}.${dk}` as SummaryFieldKeys<S, T, P>] = df;
+        }
+      }
+      return acc;
+    },
+    {} as { [K in SummaryFieldKeys<S, T, P>]?: FieldDisplayMetadata },
+  );
+  const getDisplayMetadata = (key: SummaryFieldKeys<S, T, P>) => displayMetadata[key] ?? {};
+  console.log(
+    "DEBUGGING FIELD DISPLAY:",
+    new Map(Object.entries(fields).map(([k, { display }]) => [k, display])),
+  ); //XXX
+
   const factory: SummaryAccumulatorFactoryFunc<S, T, R, P> = () => {
     const summary = fieldEntries.reduce(
       (summary, [k, field]) =>
@@ -384,7 +408,7 @@ export const summaryAccumulatorFactory = <
       summary,
     };
   };
-  return Object.assign(factory, { lookupZeroVal });
+  return Object.assign(factory, { lookupZeroVal, getDisplayMetadata });
 };
 
 type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
@@ -406,6 +430,7 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
   roundStats: <K extends string>(
     roundKeys: string[],
     defaults: T extends TurnData<any, infer RS, any> ? RS : never,
+    displayMeta?: RoundStatsDisplayMetaInput<T extends TurnData<any, infer RS, any> ? RS : never>,
   ) => RoundStatsSummaryField<T, T extends TurnData<any, infer RS, any> ? RS : never, K>;
 };
 export const makeSummaryAccumulatorFactoryFor =
@@ -511,7 +536,8 @@ export function makeSummaryAccumulatorFactory<
       roundStats: <T extends TurnData<any, any, any>>(
         roundKeys: string[],
         defaults: T extends TurnData<any, infer RS, any> ? RS : never,
-      ) => new RoundStatsSummaryField(roundKeys, defaults),
+        displayMeta: any,
+      ) => new RoundStatsSummaryField(roundKeys, defaults, displayMeta),
     }),
   } as Omit<SummaryEntry<T, S, P>, "score">);
 }

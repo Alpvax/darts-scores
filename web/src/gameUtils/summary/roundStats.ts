@@ -1,19 +1,71 @@
-import type { PlayerDataForStats, SummaryDisplayMetadata, SummaryEntryField } from ".";
+import {
+  normaliseDMI,
+  type DisplayMetaArg,
+  type PlayerDataForStats,
+  type ScoreDirection,
+  type SummaryDisplayMetadata,
+  type SummaryEntryField,
+  defaultRateFmt,
+} from ".";
 import type { TurnData, TurnStats } from "../roundDeclaration";
+import type { HighlightRules } from "./displayMetaV2";
 
 export const FAVOURITES_KEY = Symbol("favouriteRoundsData");
 
+type DisplayMetaRoundArg<RS extends TurnStats, T> = (
+  key: string,
+  index: number,
+) => DisplayMetaArg<T, keyof RSSummaryVal<RS> & string>;
+export type RoundStatsDisplayMetaInput<RS extends TurnStats> = {
+  best: ScoreDirection;
+  label: DisplayMetaRoundArg<RS, string>;
+  format?: DisplayMetaRoundArg<RS, Intl.NumberFormatOptions>;
+  highlight?: DisplayMetaRoundArg<RS, HighlightRules>;
+};
 export class RoundStatsSummaryField<
   T extends TurnData<any, RS, any>,
   RS extends TurnStats,
   K extends string,
 > implements SummaryEntryField<T, Map<K, RS>, RoundStatSummaryValues<K, RS>>
 {
-  display: SummaryDisplayMetadata<RoundStatSummaryValues<K, RS>> = {}; //TODO: round stats display
+  display: SummaryDisplayMetadata<RoundStatSummaryValues<K, RS>>;
   constructor(
     private readonly roundKeys: string[],
     private readonly statDefaults: RS,
-  ) {}
+    displayMeta?: RoundStatsDisplayMetaInput<RS>,
+  ) {
+    this.display = {};
+    if (displayMeta) {
+      roundKeys.forEach((key, index) => {
+        const meta = normaliseDMI<RSSummaryVal<RS>>({
+          best: displayMeta.best,
+          label: displayMeta.label(key, index),
+          format: displayMeta.format ? displayMeta.format(key, index) : undefined,
+          highlight: displayMeta.highlight ? displayMeta.highlight(key, index) : undefined,
+        });
+        for (const [k, v] of Object.entries(statDefaults)) {
+          this.display[`${key}.${k}.mean` as keyof typeof this.display] = meta.getMeta("mean", {
+            format: defaultRateFmt,
+          });
+          if (typeof v === "boolean") {
+            this.display[`${key}.${k}.count` as keyof typeof this.display] = meta.getMeta("count");
+          } else {
+            this.display[`${key}.${k}.highest` as keyof typeof this.display] =
+              meta.getMeta("highest");
+            this.display[`${key}.${k}.lowest` as keyof typeof this.display] =
+              meta.getMeta("lowest");
+            this.display[`${key}.${k}.total` as keyof typeof this.display] = meta.getMeta("total");
+            this.display[`${key}.${k}.nonZero.count` as keyof typeof this.display] =
+              meta.getMeta("nonZero.count");
+            this.display[`${key}.${k}.nonZero.mean` as keyof typeof this.display] = meta.getMeta(
+              "nonZero.mean",
+              { format: defaultRateFmt },
+            );
+          }
+        }
+      });
+    }
+  }
   entry(playerData: PlayerDataForStats<T>) {
     return new Map(
       [...playerData.turns].map(([i, t]) =>
@@ -165,11 +217,12 @@ type RSFavourites<K extends string, RS extends TurnStats> = {
   };
 };
 type RoundStatSummaryValues<K extends string, RS extends TurnStats> = {
-  [key in K]: {
-    [SK in keyof RS & string]: RS[SK] extends boolean ? BoolRSVal : NumRSVal;
-  };
+  [key in K]: RSSummaryVal<RS>;
 } & {
   [FAVOURITES_KEY]: RSFavourites<K, RS>;
+};
+type RSSummaryVal<RS extends TurnStats> = {
+  [SK in keyof RS & string]: RS[SK] extends boolean ? BoolRSVal : NumRSVal;
 };
 
 const isBoolVal = <RS extends TurnStats, K extends keyof RS & string>(

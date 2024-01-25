@@ -97,24 +97,49 @@ export const createSummaryComponent = <
 
       const fieldsMeta = computed(() =>
         props.fields.map((fieldPath) => {
-          // eslint-disable-next-line prefer-const
-          let { label, format, best, highlight } = fieldMeta[fieldPath] ?? {
-            label: fieldPath,
-            format: "!baseFmt",
-          };
-          while (typeof format === "string") {
-            format = fieldMeta[format]?.format ?? props.decimalFormat;
-          }
-          let deltaFmt = null;
-          if (props.deltaFormat !== null) {
-            const { locale, ...fOpts } = format.resolvedOptions();
+          const meta = summaryFactory.getDisplayMetadata(fieldPath);
+          const best = meta.best ?? "highest";
+          const label = meta.label ?? fieldMeta[fieldPath]?.label ?? fieldPath;
+          let format: Intl.NumberFormat;
+          let deltaFmt: Intl.NumberFormat;
+          const makeDeltaFmt = (opts: Intl.NumberFormatOptions) => {
             if (props.deltaFormat instanceof Intl.NumberFormat) {
               const { locale, ...pOpts } = props.deltaFormat.resolvedOptions();
-              deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...pOpts });
+              return new Intl.NumberFormat(locale, { ...opts, ...pOpts });
             } else {
-              deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...props.deltaFormat });
+              return new Intl.NumberFormat(undefined, { ...opts, ...props.deltaFormat });
             }
+          };
+          if (meta.formatArgs) {
+            format = new Intl.NumberFormat(undefined, meta.formatArgs);
+            deltaFmt = makeDeltaFmt(meta.formatArgs);
+          } else {
+            let fmt = fieldMeta[fieldPath]?.format ?? "!baseFmt";
+            while (typeof fmt === "string") {
+              fmt = fieldMeta[fmt]?.format ?? props.decimalFormat;
+            }
+            format = fmt;
+            deltaFmt = makeDeltaFmt(fmt.resolvedOptions());
           }
+          const highlight = meta.highlight;
+          // // eslint-disable-next-line prefer-const
+          // let { /*label, format,*/ best, highlight } = fieldMeta[fieldPath] ?? {
+          //   label: fieldPath,
+          //   format: "!baseFmt",
+          // };
+          // while (typeof format === "string") {
+          //   format = fieldMeta[format]?.format ?? props.decimalFormat;
+          // }
+          // let deltaFmt = null;
+          // if (props.deltaFormat !== null) {
+          //   const { locale, ...fOpts } = format.resolvedOptions();
+          //   if (props.deltaFormat instanceof Intl.NumberFormat) {
+          //     const { locale, ...pOpts } = props.deltaFormat.resolvedOptions();
+          //     deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...pOpts });
+          //   } else {
+          //     deltaFmt = new Intl.NumberFormat(locale, { ...fOpts, ...props.deltaFormat });
+          //   }
+          // }
           const worst = best === "highest" ? "lowest" : "highest";
           return {
             path: fieldPath,

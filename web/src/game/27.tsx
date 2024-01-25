@@ -262,6 +262,10 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     rounds: roundStats(
       Array.from({ length: 20 }, (_, i) => (i + 1).toString()),
       { cliff: false, doubledouble: false, hits: 0 },
+      {
+        best: "highest",
+        label: (k) => k,
+      },
     ),
   }),
   {

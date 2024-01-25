@@ -1,4 +1,9 @@
-import type { PlayerDataForStats, ScoreDirection, SummaryEntryField } from ".";
+import type {
+  PlayerDataForStats,
+  ScoreDirection,
+  SummaryDisplayMetadata,
+  SummaryEntryField,
+} from ".";
 import type { TurnData } from "../roundDeclaration";
 import type { HighlightRules } from "./displayMetaV2";
 
@@ -7,12 +12,30 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
 {
   readonly minScore: number;
   readonly maxScore: number;
+  display: SummaryDisplayMetadata<ScoreSummaryValues>;
   constructor(
     readonly scoreDirection: ScoreDirection,
     options?: { minScore?: number; maxScore?: number },
   ) {
     this.minScore = options?.minScore ?? Number.MIN_SAFE_INTEGER;
     this.maxScore = options?.maxScore ?? Number.MAX_SAFE_INTEGER;
+    this.display = {
+      best: {
+        best: scoreDirection,
+        label: "Personal Best",
+        highlight: "best" as HighlightRules,
+      },
+      worst: {
+        best: scoreDirection,
+        label: "Personal Worst",
+        highlight: "best" as HighlightRules,
+      },
+      mean: {
+        best: scoreDirection,
+        label: "Average score",
+        highlight: "best" as HighlightRules,
+      },
+    };
   }
   entry({ score }: PlayerDataForStats<T>) {
     return score;
@@ -43,20 +66,6 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
       mean: tot / numGames,
     };
   }
-  display = {
-    best: {
-      label: "Personal Best",
-      highlight: "best" as HighlightRules,
-    },
-    worst: {
-      label: "Personal Worst",
-      highlight: "best" as HighlightRules,
-    },
-    mean: {
-      label: "Average score",
-      highlight: "best" as HighlightRules,
-    },
-  };
 }
 type ScoreSummaryValues = {
   /** The best score in a single game */
