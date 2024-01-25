@@ -268,6 +268,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
       {
         best: "highest",
         label: (k) => k,
+        highlight: () => ({}),
       },
     ),
   }),
