@@ -9,12 +9,13 @@ import { ref, defineComponent } from "vue";
 const Summary27 = createSummaryComponent(
   summaryFactory,
   [
-    "score.highest",
-    "score.lowest",
+    "score.best",
+    "score.worst",
     "score.mean",
     // REAL WINS?!
     "wins.real.total",
-    "wins.all.total",
+    "wins.all.totalOutright",
+    "wins.all.tiebreakWins",
     "numGames",
     "wins.all.mean",
     "fatNicks.count",

@@ -265,17 +265,24 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     ),
   }),
   {
-    all: "*",
-    solo: { players: [], exact: true },
-    real: (opponents) =>
-      [
-        //TODO: not hardcode real wins players
-        "y5IM9Fi0VhqwZ6gAjil6",
-        "6LuRdib3wFxhbcjjh0au",
-        "Gt8I7XPbPWiQ92FGsTtR",
-        "jcfFkGCY81brr8agA3g3",
-        "jpBEiBzn9QTVN0C6Hn1m",
-      ].every((pid) => opponents.has(pid)),
+    requirements: {
+      all: "*",
+      solo: { players: [], exact: true },
+      real: (opponents) =>
+        [
+          //TODO: not hardcode real wins players
+          "y5IM9Fi0VhqwZ6gAjil6",
+          "6LuRdib3wFxhbcjjh0au",
+          "Gt8I7XPbPWiQ92FGsTtR",
+          "jcfFkGCY81brr8agA3g3",
+          "jpBEiBzn9QTVN0C6Hn1m",
+        ].every((pid) => opponents.has(pid)),
+    },
+    displayMeta: {
+      real: {
+        label: "Real",
+      },
+    },
   },
 );
 

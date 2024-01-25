@@ -1,4 +1,13 @@
-import type { SummaryEntryField, PlayerDataForStats } from ".";
+import {
+  type SummaryEntryField,
+  type PlayerDataForStats,
+  type SummaryDisplayMetadata,
+  type NormalisedDisplayMetaInputs,
+  defaultRateFmt,
+  type DisplayMetaInputs,
+  normaliseDMI,
+  type ScoreDirection,
+} from ".";
 import type { TurnData } from "../roundDeclaration";
 
 type PlayerRequirement =
@@ -10,6 +19,25 @@ export type PlayerRequirements = Record<string, PlayerRequirement>;
 type PlayerReqsInternal<O extends PlayerRequirements> = {
   [K in keyof O]: (opponents: Set<string>) => boolean;
 };
+
+type WinsDMI = Omit<DisplayMetaInputs<WinsSummaryValuesEntry>, "best"> & { best?: ScoreDirection };
+type WinsDMIs<O extends PlayerRequirements> = {
+  [K in keyof O]?: WinsDMI;
+};
+
+export namespace WinsDisplayMeta {
+  export type Single = WinsDMI;
+  export type Record<O extends PlayerRequirements> = WinsDMIs<O>;
+  export type Data<O extends PlayerRequirements> =
+    | {
+        requirements: O;
+        displayMeta?: Record<O>;
+      }
+    | {
+        requirements?: never;
+        displayMeta: Single;
+      };
+}
 
 const reqTrue = () => true;
 const checkPlayers =
@@ -24,18 +52,53 @@ const isObjReq = (req: PlayerRequirement): req is { players: string[]; exact?: b
 export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends PlayerRequirements>
   implements SummaryEntryField<T, WinsSummaryEntry, WinsSummaryValues<Outputs>>
 {
-  static create<T extends TurnData<any, any, any>>(): WinSummaryField<T, { all: "*" }>;
+  static create<T extends TurnData<any, any, any>>(
+    displayMeta?: WinsDMI,
+  ): WinSummaryField<T, { all: "*" }>;
   static create<T extends TurnData<any, any, any>, O extends PlayerRequirements>(
     requirements: O,
+    displayMeta?: WinsDMIs<O>,
   ): WinSummaryField<T, O>;
   static create<T extends TurnData<any, any, any>, O extends PlayerRequirements = { all: "*" }>(
     requirements?: O,
+    displayMeta?: WinsDMI | WinsDMIs<O>,
   ): WinSummaryField<T, O> {
-    return new WinSummaryField(requirements ?? ({ all: "*" } as unknown as O));
+    let req: O;
+    let dmi: { [K in keyof O]?: NormalisedDisplayMetaInputs<WinsSummaryValuesEntry> };
+    const defaultAll = (allMeta?: WinsDMI) => ({
+      all: normaliseDMI(
+        allMeta ? { best: "highest", ...(allMeta as WinsDMI) } : { best: "highest", label: "" },
+      ),
+    });
+    if (requirements === undefined) {
+      req = { all: "*" } as unknown as O;
+      dmi = defaultAll(displayMeta as WinsDMI);
+    } else {
+      req = requirements;
+      dmi = displayMeta
+        ? Object.entries(displayMeta).reduce(
+            (acc, [k, meta]: [keyof O, WinsDMI]) =>
+              Object.assign(acc, {
+                [k]: normaliseDMI({
+                  best: "highest",
+                  ...meta,
+                }),
+              }),
+            defaultAll() as {
+              [K in keyof O]?: NormalisedDisplayMetaInputs<WinsSummaryValuesEntry>;
+            },
+          )
+        : defaultAll();
+    }
+    return new WinSummaryField(req, dmi);
   }
 
+  display: SummaryDisplayMetadata<WinsSummaryValues<Outputs>>;
   readonly requirements: PlayerReqsInternal<Outputs>;
-  constructor(requirements: Outputs) {
+  constructor(
+    requirements: Outputs,
+    displayMeta?: { [K in keyof Outputs]?: NormalisedDisplayMetaInputs<WinsSummaryValuesEntry> },
+  ) {
     this.requirements = Object.entries(requirements).reduce(
       (reqs, [k, req]: [keyof Outputs, PlayerRequirement]) =>
         Object.assign(reqs, {
@@ -49,6 +112,43 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
         }),
       {} as PlayerReqsInternal<Outputs>,
     );
+    this.display = {};
+    if (displayMeta) {
+      const fmt = (template: string) => (l: string) =>
+        l.length > 0 ? `${l} ${template}` : template;
+      for (const [k, meta] of Object.entries(displayMeta) as [
+        keyof Outputs & string,
+        NormalisedDisplayMetaInputs<WinsSummaryValuesEntry>,
+      ][]) {
+        this.display[`${k}.totalOutright` as keyof typeof this.display] = meta.getMeta(
+          "totalOutright",
+          { label: fmt("Outright Wins") },
+        );
+        this.display[`${k}.meanOutright` as keyof typeof this.display] = meta.getMeta(
+          "meanOutright",
+          { label: fmt("Outright Win Rate"), format: defaultRateFmt },
+        );
+        this.display[`${k}.tiebreakWins` as keyof typeof this.display] = meta.getMeta(
+          "tiebreakWins",
+          { label: fmt("Tiebreak Wins") },
+        );
+        this.display[`${k}.tiebreaksPlayed` as keyof typeof this.display] = meta.getMeta(
+          "tiebreaksPlayed",
+          { label: fmt("Tiebreak Wins") },
+        );
+        this.display[`${k}.tiebreakWinRate` as keyof typeof this.display] = meta.getMeta(
+          "tiebreakWinRate",
+          { label: fmt("Tiebreak Win Rate"), format: defaultRateFmt },
+        );
+        this.display[`${k}.total` as keyof typeof this.display] = meta.getMeta("total", {
+          label: fmt("Wins"),
+        });
+        this.display[`${k}.mean` as keyof typeof this.display] = meta.getMeta("mean", {
+          label: fmt("Win Rate"),
+          format: defaultRateFmt,
+        });
+      }
+    }
   }
   entry(
     playerData: PlayerDataForStats<T>,
@@ -139,24 +239,22 @@ type WinsSummaryEntry =
       opponents: string[];
     };
 
-type WinsSummaryValues<O extends PlayerRequirements> = Record<
-  keyof O,
-  {
-    /** Number of times won outright */
-    totalOutright: number;
-    /** Average outright win rate (not including draws/tiebreaks) */
-    meanOutright: number;
-    /** Number of times won tiebreaks */
-    tiebreakWins: number;
-    /** Total number of tiebreaks played */
-    tiebreaksPlayed: number;
-    /** tiebreakWins / tiebreaksPlayed */
-    tiebreakWinRate: number;
-    /** Total wins (outright + tiebreak wins) */
-    total: number;
-    /** Average wins / game (outright + tiebreak wins) */
-    mean: number;
-    /** Games played fitting the requirements */
-    gameCount: number;
-  }
->;
+type WinsSummaryValues<O extends PlayerRequirements> = Record<keyof O, WinsSummaryValuesEntry>;
+type WinsSummaryValuesEntry = {
+  /** Number of times won outright */
+  totalOutright: number;
+  /** Average outright win rate (not including draws/tiebreaks) */
+  meanOutright: number;
+  /** Number of times won tiebreaks */
+  tiebreakWins: number;
+  /** Total number of tiebreaks played */
+  tiebreaksPlayed: number;
+  /** tiebreakWins / tiebreaksPlayed */
+  tiebreakWinRate: number;
+  /** Total wins (outright + tiebreak wins) */
+  total: number;
+  /** Average wins / game (outright + tiebreak wins) */
+  mean: number;
+  /** Games played fitting the requirements */
+  gameCount: number;
+};

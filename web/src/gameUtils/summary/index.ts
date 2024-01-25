@@ -5,7 +5,7 @@ import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
 import { RoundStatsSummaryField } from "./roundStats";
 import { ScoreSummaryField } from "./score";
-import { WinSummaryField, type PlayerRequirements } from "./wins";
+import { WinSummaryField, type PlayerRequirements, type WinsDisplayMeta } from "./wins";
 
 // Re-exports for convenience
 export { type PlayerRequirements } from "./wins";
@@ -430,7 +430,7 @@ export const makeSummaryAccumulatorFactoryFor =
       /** is higher score better, or lower score */
       scoreDirection: ScoreDirection,
       fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-      winsRequirements: P,
+      winsData?: P | WinsDisplayMeta.Data<P>,
     ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
   } =>
   <
@@ -443,9 +443,9 @@ export const makeSummaryAccumulatorFactoryFor =
     /** is higher score better, or lower score */
     scoreDirection: ScoreDirection,
     fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-    winsRequirements = { all: "*" } as unknown as P,
+    winsData?: P | WinsDisplayMeta.Data<P>,
   ) =>
-    makeSummaryAccumulatorFactory<T, S, P>(scoreDirection, fieldFactory, winsRequirements);
+    makeSummaryAccumulatorFactory<T, S, P>(scoreDirection, fieldFactory, winsData);
 export function makeSummaryAccumulatorFactory<
   T extends TurnData<any, any, any>,
   S extends Record<Exclude<string, "wins" | "score" | "numGames">, SummaryEntryField<T, any, any>>,
@@ -462,7 +462,7 @@ export function makeSummaryAccumulatorFactory<
   /** is higher score better, or lower score */
   scoreDirection: ScoreDirection,
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-  winsRequirements: P,
+  winsData?: P | WinsDisplayMeta.Data<P>,
 ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>;
 export function makeSummaryAccumulatorFactory<
   T extends TurnData<any, any, any>,
@@ -472,10 +472,31 @@ export function makeSummaryAccumulatorFactory<
   /** is higher score better, or lower score */
   scoreDirection: ScoreDirection,
   fieldFactory: (fieldUtils: FieldFactoryUtils<T>) => S,
-  winsRequirements: P = { all: "*" } as unknown as P,
+  winsData?: P | WinsDisplayMeta.Data<P>,
 ): SummaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P> {
+  let wins: WinSummaryField<T, P>;
+  if (winsData) {
+    const isData = (wd: typeof winsData): wd is WinsDisplayMeta.Data<P> =>
+      Object.hasOwn(wd, "requirements") || Object.hasOwn(wd, "displayMeta");
+    if (isData(winsData)) {
+      if (winsData.requirements) {
+        wins = WinSummaryField.create(
+          winsData.requirements,
+          winsData.displayMeta as WinsDisplayMeta.Record<P> | undefined,
+        );
+      } else {
+        wins = WinSummaryField.create(
+          winsData.displayMeta as WinsDisplayMeta.Single | undefined,
+        ) as WinSummaryField<T, P>;
+      }
+    } else {
+      wins = WinSummaryField.create(winsData);
+    }
+  } else {
+    wins = WinSummaryField.create() as WinSummaryField<T, P>;
+  }
   return summaryAccumulatorFactory<S & SummaryEntryCore<T, P>, T, S, P>(scoreDirection, {
-    wins: WinSummaryField.create(winsRequirements),
+    wins,
     ...fieldFactory({
       countUntil: countUntil as typeof countUntil<T>,
       countWhile: countWhile as typeof countWhile<T>,
