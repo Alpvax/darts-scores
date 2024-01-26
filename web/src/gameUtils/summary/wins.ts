@@ -50,7 +50,7 @@ const isObjReq = (req: PlayerRequirement): req is { players: string[]; exact?: b
   typeof req === "object" && Object.hasOwn(req, "players");
 
 export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends PlayerRequirements>
-  implements SummaryEntryField<T, WinsSummaryEntry, WinsSummaryValues<Outputs>>
+  implements SummaryEntryField<T, WinsSummaryDefinition, WinsSummaryValues<Outputs>>
 {
   static create<T extends TurnData<any, any, any>>(
     displayMeta?: WinsDMI,
@@ -154,7 +154,7 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
     playerData: PlayerDataForStats<T>,
     opponents: string[],
     tiebreakWinner?: string,
-  ): WinsSummaryEntry {
+  ): WinsSummaryDefinition {
     return playerData.position === 1
       ? playerData.tied.length < 1
         ? { type: "outright", opponents }
@@ -182,7 +182,7 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
   summary(
     accumulated: WinsSummaryValues<Outputs>,
     _: number,
-    entry: WinsSummaryEntry,
+    entry: WinsSummaryDefinition,
   ): WinsSummaryValues<Outputs> {
     const win = entry.type !== "noWin";
     const { tiebreak, tbWin } =
@@ -221,7 +221,7 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
  * `{ type: "outright", ... }` = won outright (no tiebreak)
  * `{ type: "tie", ... }` = in tiebreak, but may not have won tiebreak
  */
-type WinsSummaryEntry =
+type WinsSummaryDefinition =
   | {
       type: "noWin";
       /** All players in game (except current player) */

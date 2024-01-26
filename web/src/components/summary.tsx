@@ -4,7 +4,7 @@ import type {
   PlayerDataForStats,
   PlayerRequirements,
   SummaryAccumulatorFactory,
-  SummaryEntry,
+  SummaryDefinition,
   SummaryFieldKeys,
 } from "@/gameUtils/summary";
 import type { SummaryFieldMeta } from "@/gameUtils/summary/displayMeta";
@@ -12,7 +12,7 @@ import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
 
 export const createSummaryComponent = <
-  S extends SummaryEntry<T, any, P>,
+  S extends SummaryDefinition<T, any, P>,
   T extends TurnData<any, any, any>,
   // R extends NormalisedRound<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
@@ -89,6 +89,7 @@ export const createSummaryComponent = <
       );
 
       const fieldsMeta = computed(() =>
+        // @ts-ignore
         props.fields.map((fieldPath) => {
           const meta = summaryFactory.getDisplayMetadata(fieldPath);
           const fMeta: SummaryFieldMeta | undefined = fieldMeta ? fieldMeta[fieldPath] : undefined;
@@ -210,7 +211,10 @@ export const createSummaryComponent = <
       return () => (
         <table
           id="gameSummaryTable"
-          class={props.deltaFormat !== null && props.inProgressGame ? "hasDeltas" : ""}
+          class={[
+            props.games.length > 0 ? "hasValues" : "",
+            props.deltaFormat !== null && props.inProgressGame ? "hasDeltas" : "",
+          ]}
         >
           <thead>
             <tr>

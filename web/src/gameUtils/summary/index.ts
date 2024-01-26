@@ -204,14 +204,14 @@ export type SummaryEntryFields<T extends TurnData<any, any, any>> = Record<
   string,
   SummaryEntryField<T, any, any>
 >;
-export type SummaryEntry<
+export type SummaryDefinition<
   T extends TurnData<any, any, any>,
   S extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 > = SummaryEntryCore<T, P> & S;
 
 export type SummaryValues<
-  E extends SummaryEntry<T, S, P>,
+  E extends SummaryDefinition<T, S, P>,
   T extends TurnData<any, any, any>,
   S extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
@@ -219,6 +219,16 @@ export type SummaryValues<
   [Key in keyof E]: E[Key] extends SummaryEntryField<T, any, infer S> ? S : never;
 } & {
   numGames: number;
+};
+export type SummaryEntryValues<
+  S extends SummaryDefinition<T, E, P>,
+  T extends TurnData<any, any, any>,
+  E extends SummaryEntryFields<T>,
+  P extends PlayerRequirements = { all: "*" },
+> = {
+  [Key in keyof S]: S[Key] extends SummaryEntryField<T, infer Entry, any> ? Entry : never;
+} & {
+  numGames: 1;
 };
 
 const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V => {
@@ -236,7 +246,7 @@ const calcDeltaVal = <V extends number | SummaryValueRecord>(prev: V, val: V): V
 };
 
 type SummaryAccumulatorFactoryFunc<
-  S extends SummaryEntry<T, R, P>,
+  S extends SummaryDefinition<T, R, P>,
   T extends TurnData<any, any, any>,
   R extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
@@ -266,12 +276,17 @@ type SummaryAccumulatorFactoryFunc<
   /** The current summary values. SHOULD NOT BE OVERWRITTEN OR MODIFIED! */
   summary: SummaryValues<S, T, R, P>;
 };
+// export const SummaryFieldEntriesKeySymbol = Symbol("summary field entries");
 export type SummaryAccumulatorFactory<
-  S extends SummaryEntry<T, R, P>,
+  S extends SummaryDefinition<T, E, P>,
   T extends TurnData<any, any, any>,
-  R extends SummaryEntryFields<T>,
+  E extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
-> = SummaryAccumulatorFactoryFunc<S, T, R, P> & {
+> = SummaryAccumulatorFactoryFunc<S, T, E, P> & {
+  // [SummaryFieldEntriesKeySymbol]: [keyof S, SummaryEntryField<T, any, any>][];
+  entriesForGame<Pid extends string = string>(
+    game: GameResult<T, Pid>,
+  ): Map<Pid, SummaryEntryValues<S, T, E, P>>;
   /**
    * Look up the start value for a given field
    * @param key the field key to look for
@@ -284,16 +299,16 @@ export type SummaryAccumulatorFactory<
   getDisplayMetadata(key: SummaryFieldKeys<S, T, P>): FieldDisplayMetadata;
 };
 export const summaryAccumulatorFactory = <
-  S extends SummaryEntry<T, R, P>,
+  S extends SummaryDefinition<T, E, P>,
   T extends TurnData<any, any, any>,
-  R extends SummaryEntryFields<T>,
+  E extends SummaryEntryFields<T>,
   P extends PlayerRequirements = { all: "*" },
 >(
   /** is higher score better, or lower score */
   scoreDirection: ScoreDirection,
   fields: Omit<S, "score">,
-): SummaryAccumulatorFactory<S, T, R, P> => {
-  type SVTyp = SummaryValues<S, T, R, P>;
+): SummaryAccumulatorFactory<S, T, E, P> => {
+  type SVTyp = SummaryValues<S, T, E, P>;
   const fieldEntries = [
     ["score", new ScoreSummaryField(scoreDirection)],
     ...Object.entries(fields),
@@ -322,6 +337,7 @@ export const summaryAccumulatorFactory = <
   };
 
   const displayMetadata = fieldEntries.reduce(
+    // @ts-ignore
     (acc, [k, { display }]) => {
       for (const [dk, df] of Object.entries(display)) {
         if (df !== undefined) {
@@ -332,14 +348,14 @@ export const summaryAccumulatorFactory = <
     },
     {} as { [K in SummaryFieldKeys<S, T, P>]?: FieldDisplayMetadata },
   );
-  const getDisplayMetadata = (key: SummaryFieldKeys<S, T, P>) =>
+  const getDisplayMetadata = (key: SummaryFieldKeys<S, T, P>): FieldDisplayMetadata =>
     key === "numGames" ? { best: "none", label: "Total Games Played" } : displayMetadata[key] ?? {};
   console.log(
     "DEBUGGING FIELD DISPLAY:",
     new Map(Object.entries(fields).map(([k, { display }]) => [k, display])),
   ); //XXX
 
-  const factory: SummaryAccumulatorFactoryFunc<S, T, R, P> = () => {
+  const factory: SummaryAccumulatorFactoryFunc<S, T, E, P> = () => {
     // due to "Type instantiation is excessively deep and possibly infinite"
     // @ts-ignore
     const summary = fieldEntries.reduce(
@@ -388,34 +404,36 @@ export const summaryAccumulatorFactory = <
           summary[k] = v;
         }
         return deltas;
-        // summary.numGames += 1;
-        // return fieldEntries.reduce(
-        //   (deltas, [key, field]) => {
-        //     const entry = field.entry(
-        //       pData,
-        //       players.filter((pid) => pid !== pData.playerId),
-        //       tbWinner,
-        //     );
-        //     // Deep clone previous value
-        //     const prev = structuredClone(summary[key]);
-        //     summary[key] = field.summary(prev, summary.numGames, entry);
-        //     deltas[key] = Object.entries(summary[key]).reduce(
-        //       (acc, [k, v]) =>
-        //         Object.assign(acc, {
-        //           [k]: calcDeltaVal(prev[k], v),
-        //         }),
-        //       {} as SVTyp[typeof key],
-        //     );
-        //     return deltas;
-        //   },
-        //   { numGames: 1 } as SVTyp,
-        // );
       },
       getDeltas: (pData, players, tbWinner) => makeGameDeltas(pData, players, tbWinner).deltas,
       summary,
     };
   };
-  return Object.assign(factory, { lookupZeroVal, getDisplayMetadata });
+  return Object.assign(factory, {
+    // [SummaryFieldEntriesKeySymbol]: fieldEntries,
+    entriesForGame: <Pid extends string = string>(game: GameResult<T, Pid>) => {
+      const players = [...game.results.keys()];
+      return new Map(
+        [...game.results].map(([pid, pData]) => [
+          pid,
+          // @ts-ignore
+          fieldEntries.reduce(
+            (acc, [key, field]) =>
+              Object.assign(acc, {
+                [key]: field.entry(
+                  pData,
+                  players.filter((pid) => pid !== pData.playerId),
+                  game.tiebreakWinner,
+                ),
+              }),
+            { numGames: 1 } as SummaryEntryValues<S, T, E, P>,
+          ),
+        ]),
+      );
+    },
+    lookupZeroVal,
+    getDisplayMetadata,
+  });
 };
 
 type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
@@ -550,7 +568,7 @@ export function makeSummaryAccumulatorFactory<
         displayMeta: any,
       ) => new RoundStatsSummaryField(roundKeys, defaults, displayMeta),
     }),
-  } as Omit<SummaryEntry<T, S, P>, "score">);
+  } as Omit<SummaryDefinition<T, S, P>, "score">);
 }
 export default makeSummaryAccumulatorFactoryFor;
 
@@ -561,7 +579,7 @@ type FlattenSummaryKeysInternal<S extends SummaryValueRecord, Key = keyof S> = K
   : never;
 
 export type SummaryFieldKeys<
-  S extends SummaryEntry<T, any, P>,
+  S extends SummaryDefinition<T, any, P>,
   T extends TurnData<any, any, any>,
   P extends PlayerRequirements = { all: "*" },
 > = FlattenSummaryKeysInternal<SummaryValues<S, T, any, P>>;

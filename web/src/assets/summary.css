@@ -19,7 +19,7 @@ table#gameSummaryTable {
     width: 4.5em;
     vertical-align: bottom;
   }
-  &.hasDeltas .playerName {
+  &.hasDeltas.hasValues .playerName {
     width: 7em; /*4.5em;*/
   }
 
