@@ -50,6 +50,43 @@ export const createGameEntriesComponent = <
               ]
             : [...props.gameResults.keys()],
       );
+      //TODO: add to preferences
+      const teamDisplay = (() => {
+        const usePos = (() => {
+          const key = "darts.ingame.teamPosition";
+          const s = sessionStorage.getItem(key);
+          const val = s ?? localStorage.getItem(key);
+          if (val) {
+            if (/f(irst)?|0|s(tart)?/.test(val)) {
+              return "first";
+            }
+            if (/l(ast)?|1|e(nd)?/.test(val)) {
+              return "last";
+            }
+            console.warn(
+              `Invalid value for storage property "${key}": "${val}"\n Deleted property!`,
+            );
+            (s !== null ? sessionStorage : localStorage).removeItem(key);
+          }
+          return "first";
+        })();
+        return (pos: "first" | "last", type: "head" | "value", value?: any) => {
+          if (pos === usePos) {
+            switch (type) {
+              case "head":
+                return (
+                  <th class="playerName teamColumn" data-player-id={"combinedTeamColumn"}>
+                    Team
+                  </th>
+                );
+              case "value":
+                return <td class="summaryValue teamColumn">{value}</td>;
+            }
+          }
+          return undefined;
+        };
+      })();
+
       const entries = computed(() => summaryFactory.entriesFor(props.gameResults));
       const fieldsMeta = computed(() =>
         // @ts-ignore
@@ -72,7 +109,6 @@ export const createGameEntriesComponent = <
           const highlight = displayField?.highlight;
           const best = displayField?.best ?? "none";
           const worst = best === "highest" ? "lowest" : best === "lowest" ? "highest" : "none";
-          console.log("making highlight:", fieldPath, highlight); //XXX
           return {
             field,
             path: fieldPath,
@@ -159,14 +195,13 @@ export const createGameEntriesComponent = <
           <thead>
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
+              {teamDisplay("first", "head")}
               {players.value.map((pid) => (
                 <th class="playerName" data-player-id={pid}>
                   {playerStore.playerName(pid).value}
                 </th>
               ))}
-              <th class="playerName teamColumn" data-player-id={"combinedTeamColumn"}>
-                Team
-              </th>
+              {teamDisplay("last", "head")}
             </tr>
           </thead>
           <tbody>
@@ -183,9 +218,16 @@ export const createGameEntriesComponent = <
                 combinedDisplay,
                 ignoreHighlight,
               }) => {
+                const teamValue =
+                  combined !== undefined
+                    ? combinedDisplay
+                      ? combinedDisplay(combined, playerValues.length, props.decimalFormat)
+                      : display(combined)
+                    : "N/A";
                 return (
                   <tr data-summary-row={path}>
                     <th class="rowLabel">{label}</th>
+                    {teamDisplay("first", "value", teamValue)}
                     {playerValues.map(({ value }) => {
                       return (
                         <td
@@ -207,13 +249,7 @@ export const createGameEntriesComponent = <
                         </td>
                       );
                     })}
-                    <td class="summaryValue teamColumn">
-                      {combined !== undefined
-                        ? combinedDisplay
-                          ? combinedDisplay(combined, playerValues.length, props.decimalFormat)
-                          : display(combined)
-                        : "N/A"}
-                    </td>
+                    {teamDisplay("last", "value", teamValue)}
                   </tr>
                 );
               },

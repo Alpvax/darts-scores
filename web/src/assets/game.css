@@ -3,8 +3,9 @@ div.gameDiv {
   width: max-content;
   grid-template-areas:
     "pselect side"
-    "game side";
-  grid-template-rows: max-content max-content;
+    "game side"
+    "game _";
+  grid-template-rows: max-content max-content 1fr;
   grid-template-columns: max-content max-content;
 
   & .playerSelect {
