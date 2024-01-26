@@ -1,5 +1,6 @@
 @import "./base.css";
 @import "./summary.css";
+@import "./game.css";
 @import "./game27.css";
 
 #app {
@@ -24,7 +25,7 @@ a,
   }
 }
 
-@media (min-width: 1024px) {
+/* @media (min-width: 1024px) {
   body {
     display: flex;
     place-items: center;
@@ -37,4 +38,4 @@ a,
     justify-content: space-around;
     padding: 0 2rem;
   }
-}
+} */

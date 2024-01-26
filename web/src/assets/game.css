@@ -1,0 +1,19 @@
+div.gameDiv {
+  display: grid;
+  width: max-content;
+  grid-template-areas:
+    "pselect side"
+    "game side";
+  grid-template-rows: max-content max-content;
+  grid-template-columns: max-content max-content;
+
+  & .playerSelect {
+    grid-area: pselect;
+  }
+  & table.game {
+    grid-area: game;
+  }
+  & table:not(.game) {
+    grid-area: side;
+  }
+}

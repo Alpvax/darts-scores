@@ -305,7 +305,7 @@ export default defineComponent({
           <Summary27
             players={players.value}
             includeAllPlayers
-            games={[]}
+            games={[] /* TODO: past games? */}
             inProgressGame={partialGameResult.value}
           />
           {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
@@ -323,38 +323,6 @@ export default defineComponent({
             </div>
           ) : undefined}
         </div>
-        <table class="playerGameStats">
-          <thead>
-            <tr>
-              <th>&nbsp;</th>
-              {players.value.map((pid) => (
-                <th class="playerName">{playerStore.playerName(pid).value}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(playerStats.value.values().next().value ?? { loading: undefined }).flatMap(
-              (key) =>
-                key === "turnStats" ? (
-                  []
-                ) : (
-                  <tr>
-                    <td class="rowLabel">{key}</td>
-                    {players.value.map((pid) => {
-                      const stats = playerStats.value.get(pid);
-                      if (stats !== undefined) {
-                        const value = stats[key as keyof PlayerData["stats"]];
-                        if (value !== undefined || value !== null) {
-                          return <td>{value.toString()}</td>;
-                        }
-                      }
-                      return <td>&nbsp;</td>;
-                    })}
-                  </tr>
-                ),
-            )}
-          </tbody>
-        </table>
       </>
     );
   },
