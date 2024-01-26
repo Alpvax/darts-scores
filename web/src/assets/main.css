@@ -1,7 +1,8 @@
 @import "./base.css";
-@import "./summary.css";
 @import "./game.css";
 @import "./game27.css";
+@import "./ingameEntry.css";
+@import "./summary.css";
 
 #app {
   /* max-width: 100%; */

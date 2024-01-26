@@ -255,7 +255,7 @@ export const createSummaryComponent = <
                             "summaryValue",
                             ...(value === zero
                               ? []
-                              : [...Object.entries(highlight)].flatMap(([k, v]) =>
+                              : Object.entries(highlight).flatMap(([k, v]) =>
                                   (v === "highest" && value === highest) ||
                                   (v === "lowest" && value === lowest)
                                     ? [k]

@@ -1,5 +1,6 @@
 import {
   defaultRateFmt,
+  type EntryDisplayMetadata,
   type NormalisedDisplayMetaInputs,
   type PlayerDataForStats,
   type SummaryDisplayMetadata,
@@ -11,6 +12,7 @@ export class BoolSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, boolean, BooleanSummaryValues>
 {
   display: SummaryDisplayMetadata<BooleanSummaryValues>;
+  entryFieldDisplay: EntryDisplayMetadata<boolean>;
   constructor(
     readonly calculate: (data: PlayerDataForStats<T>) => boolean,
     displayMeta: NormalisedDisplayMetaInputs<BooleanSummaryValues>,
@@ -23,6 +25,11 @@ export class BoolSummaryField<T extends TurnData<any, any, any>>
         label: (l) => `${l} Rate`,
         format: defaultRateFmt,
       }),
+    };
+    this.entryFieldDisplay = {
+      label: displayMeta.getLabel("count", (l) => `${l}`)!,
+      display: (val) => (val ? "Yes" : "No"),
+      combineTeamValues: (a, b) => a || b,
     };
   }
   entry(playerData: PlayerDataForStats<T>) {
@@ -52,6 +59,7 @@ export class NumericSummaryField<T extends TurnData<any, any, any>>
   implements SummaryEntryField<T, number, NumericSummaryValues>
 {
   display: SummaryDisplayMetadata<NumericSummaryValues>;
+  entryFieldDisplay: EntryDisplayMetadata<number>;
   constructor(
     readonly calculate: (data: PlayerDataForStats<T>) => number,
     displayMeta: NormalisedDisplayMetaInputs<NumericSummaryValues>,
@@ -70,6 +78,11 @@ export class NumericSummaryField<T extends TurnData<any, any, any>>
         label: (l) => `${l} Rate`,
         format: defaultRateFmt,
       }),
+    };
+    this.entryFieldDisplay = {
+      label: displayMeta.getLabel("total", (l) => `${l}s`)!,
+      combineTeamValues: (a, b) => a + b,
+      ignoreHighlight: (val) => val < 1,
     };
   }
   entry(playerData: PlayerDataForStats<T>) {

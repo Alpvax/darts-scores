@@ -6,6 +6,7 @@ import {
   type PlayerDataForStats,
   type SummaryDisplayMetadata,
   type SummaryEntryField,
+  type EntryDisplayMetadata,
 } from ".";
 import type { TurnData, IntoTaken } from "../roundDeclaration";
 
@@ -26,6 +27,7 @@ export class RoundCountField<T extends TurnData<any, any, any>>
   private readonly findFirst: boolean;
   private readonly takenOnly: boolean;
   display: SummaryDisplayMetadata<RoundCountSummaryValues>;
+  entryFieldDisplay: EntryDisplayMetadata<{ index: number; allGame: boolean }>;
   constructor(
     predicate: (data: IntoTaken<T>) => boolean,
     displayMeta: NormalisedDisplayMetaInputs<RoundCountSummaryValues>,
@@ -104,6 +106,17 @@ export class RoundCountField<T extends TurnData<any, any, any>>
         label: (l) => `${l} Rate`,
         format: defaultRateFmt,
       }),
+    };
+    this.entryFieldDisplay = {
+      index: {
+        label: displayMeta.getLabel("count", (l) => `${l} until round`)!,
+        combineTeamValues: this.findFirst ? Math.min : Math.max,
+      },
+      allGame: {
+        label: displayMeta.getLabel("count"),
+        display: (val) => (val ? "Yes" : "No"),
+        combineTeamValues: this.findFirst ? (a, b) => a || b : (a, b) => a && b,
+      },
     };
   }
 

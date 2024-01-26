@@ -197,7 +197,7 @@ export const gameMeta = normaliseGameMetadata<
 export type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
 export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
-  "highest",
+  { best: "highest", min: -393, max: 1287 },
   ({ countWhile, numeric, boolean, roundStats }) => ({
     fatNicks: countWhile(({ value }) => !value, {
       best: "lowest",

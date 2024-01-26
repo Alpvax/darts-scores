@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, type Ref, computed } from "vue";
+import { defineComponent, ref, watch, type Ref, computed, type PropType } from "vue";
 import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
@@ -13,9 +13,22 @@ import {
 import type { PlayerDataFor } from "@/gameUtils/playerData";
 import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
+import { createGameEntriesComponent } from "@/components/gameEntry";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
+const GameEntry27 = createGameEntriesComponent(summaryFactory, [
+  "score",
+  "hits",
+  "cliffs",
+  "doubleDoubles",
+  "fatNicks.allGame",
+  "piranhas",
+  "goblins",
+  "hans",
+  "allPos.allGame",
+  "dreams.allGame",
+]);
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
 
@@ -50,9 +63,11 @@ export default defineComponent({
     Game27,
     PlayerSelection,
     Summary27,
+    GameEntry27,
   },
   props: {
     gameId: { type: String, default: "" },
+    sideDisplay: { type: String as PropType<"summary" | "entries">, default: "entries" },
   },
   setup(props) {
     type PlayerData = PlayerDataFor<typeof gameMeta>;
@@ -302,12 +317,20 @@ export default defineComponent({
               ),
             }}
           </Game27>
-          <Summary27
-            players={players.value}
-            includeAllPlayers
-            games={[] /* TODO: past games? */}
-            inProgressGame={partialGameResult.value}
-          />
+          {props.sideDisplay === "summary" ? (
+            <Summary27
+              players={players.value}
+              includeAllPlayers
+              games={[] /* TODO: past games? */}
+              inProgressGame={partialGameResult.value}
+            />
+          ) : (
+            <GameEntry27
+              players={players.value}
+              includeAllPlayers
+              gameResults={partialGameResult.value}
+            />
+          )}
           {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
             <div class="completed">
               Game Completed!{" "}

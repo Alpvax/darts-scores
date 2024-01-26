@@ -1,4 +1,5 @@
 import type {
+  EntryDisplayMetadata,
   PlayerDataForStats,
   ScoreDirection,
   SummaryDisplayMetadata,
@@ -13,6 +14,7 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
   readonly minScore: number;
   readonly maxScore: number;
   display: SummaryDisplayMetadata<ScoreSummaryValues>;
+  entryFieldDisplay: EntryDisplayMetadata<number>;
   constructor(
     readonly scoreDirection: ScoreDirection,
     options?: { minScore?: number; maxScore?: number },
@@ -34,6 +36,21 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
         best: scoreDirection,
         label: "Average score",
         highlight: "best" as HighlightRules,
+      },
+    };
+    this.entryFieldDisplay = {
+      label: "Score",
+      combineTeamValues: (a, b) => a + b,
+      combinedDisplay: (total, count, numFmt) => `Average = ${numFmt.format(total / count)}`,
+      ignoreHighlight: (val) => {
+        switch (scoreDirection) {
+          case "highest":
+            return val <= this.minScore;
+          case "lowest":
+            return val >= this.maxScore;
+          case "none":
+            return false;
+        }
       },
     };
   }
