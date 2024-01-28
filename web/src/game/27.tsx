@@ -197,7 +197,17 @@ export const gameMeta = normaliseGameMetadata<
 export type TurnData27 = TurnDataForGame<typeof gameMeta>;
 
 export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
-  { best: "highest", min: -393, max: 1287 },
+  {
+    best: "highest",
+    min: -393,
+    max: 1287,
+    scoreEntryDisplay: ({ latestRound, currentScore }) => {
+      const s = latestRound >= 0 ? currentScore : 27;
+      const l = latestRound + 1;
+      const l_l2 = l + l * l;
+      return `${s - 420 + l_l2} - ${s + 1260 - l_l2}`;
+    },
+  },
   ({ countWhile, numeric, boolean, roundStats }) => ({
     fatNicks: countWhile(({ value }) => !value, {
       best: "lowest",

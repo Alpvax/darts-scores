@@ -22,10 +22,10 @@ const GameEntry27 = createGameEntriesComponent(summaryFactory, [
   "hits",
   "cliffs",
   "doubleDoubles",
+  "hans",
   "fatNicks.allGame",
   "piranhas",
   "goblins",
-  "hans",
   "allPos.allGame",
   "dreams.allGame",
 ]);
@@ -67,7 +67,10 @@ export default defineComponent({
   },
   props: {
     gameId: { type: String, default: "" },
-    sideDisplay: { type: String as PropType<"summary" | "entries">, default: "entries" },
+    sideDisplay: {
+      type: String as PropType<"none" | "summary" | "entries" | "combined">,
+      default: "entries",
+    },
   },
   setup(props) {
     type PlayerData = PlayerDataFor<typeof gameMeta>;

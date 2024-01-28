@@ -4,7 +4,7 @@ import type { HighlightRules } from "./displayMetaV2";
 import { BoolSummaryField, NumericSummaryField } from "./primitive";
 import { countUntil, countWhile } from "./roundCount";
 import { RoundStatsSummaryField, type RoundStatsDisplayMetaInput } from "./roundStats";
-import { ScoreSummaryField } from "./score";
+import { ScoreSummaryField, type ScoreEntryDisplay } from "./score";
 import { WinSummaryField, type PlayerRequirements, type WinsDisplayMeta } from "./wins";
 
 // Re-exports for convenience
@@ -78,17 +78,18 @@ type EntryDisplayRecord<T extends Record<string, any>> = {
   [K in keyof T & string]: EntryDisplayMetadata<T[K]>;
 };
 export type EntryDisplayMetadata<T> = T extends Record<string, any>
-  ? EntryDisplayRecord<T>
+  ? EntryDisplayRecord<T> | EntryDisplayMetadataSingle<T>
   : // Handle boolean expanding to `true | false`
     T extends boolean
     ? EntryDisplayMetadataSingle<boolean>
     : EntryDisplayMetadataSingle<T>;
-export interface SummaryEntryFieldPartialGameEntry<
+export interface SummaryEntryFieldWithGameEntryDisplay<
   T extends TurnData<any, any, any>,
   E,
   S extends SummaryValueRecord,
+  D extends EntryDisplayMetadata<E> = EntryDisplayMetadata<E>,
 > extends SummaryEntryField<T, E, S> {
-  entryFieldDisplay: EntryDisplayMetadata<E>;
+  entryFieldDisplay: D;
 }
 
 export type SummaryDisplayMetadata<S extends SummaryValueRecord> = {
@@ -349,6 +350,7 @@ export const summaryAccumulatorFactory = <
           {
             minScore: scoreProperties.min,
             maxScore: scoreProperties.max,
+            scoreEntryDisplay: scoreProperties.scoreEntryDisplay,
           },
         ];
   const fieldEntries = [
@@ -532,6 +534,7 @@ type ScoreFieldArgs =
       best: "highest" | "lowest";
       min?: number;
       max?: number;
+      scoreEntryDisplay?: ScoreEntryDisplay;
     };
 export const makeSummaryAccumulatorFactoryFor =
   <T extends TurnData<any, any, any>>(): {
@@ -666,8 +669,8 @@ export type SummaryEntryKeys<
   P extends PlayerRequirements = { all: "*" },
   Key extends keyof S = keyof S,
 > = Key extends string
-  ? S[Key] extends SummaryEntryFieldPartialGameEntry<T, infer Entry, any>
-    ? Entry extends Record<string, any>
+  ? S[Key] extends SummaryEntryFieldWithGameEntryDisplay<T, any, any, infer Entry>
+    ? Entry extends EntryDisplayRecord<any>
       ? `${Key}.${keyof Entry & string}`
       : `${Key}`
     : never

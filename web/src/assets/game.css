@@ -10,6 +10,7 @@ div.gameDiv {
 
   & .playerSelect {
     grid-area: pselect;
+    width: max-content;
   }
   & table.game {
     grid-area: game;

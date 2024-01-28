@@ -1,23 +1,30 @@
+import type { VNodeChild } from "vue";
 import type {
-  EntryDisplayMetadata,
+  EntryDisplayMetadataSingle,
   PlayerDataForStats,
   ScoreDirection,
   SummaryDisplayMetadata,
-  SummaryEntryField,
+  SummaryEntryFieldWithGameEntryDisplay,
 } from ".";
 import type { TurnData } from "../roundDeclaration";
 import type { HighlightRules } from "./displayMetaV2";
 
 export class ScoreSummaryField<T extends TurnData<any, any, any>>
-  implements SummaryEntryField<T, number, ScoreSummaryValues>
+  implements
+    SummaryEntryFieldWithGameEntryDisplay<
+      T,
+      ScoreEntry,
+      ScoreSummaryValues,
+      EntryDisplayMetadataSingle<ScoreEntry>
+    >
 {
   readonly minScore: number;
   readonly maxScore: number;
   display: SummaryDisplayMetadata<ScoreSummaryValues>;
-  entryFieldDisplay: EntryDisplayMetadata<number>;
+  entryFieldDisplay: EntryDisplayMetadataSingle<ScoreEntry>;
   constructor(
     readonly scoreDirection: ScoreDirection,
-    options?: { minScore?: number; maxScore?: number },
+    options?: { minScore?: number; maxScore?: number; scoreEntryDisplay?: ScoreEntryDisplay },
   ) {
     this.minScore = options?.minScore ?? Number.MIN_SAFE_INTEGER;
     this.maxScore = options?.maxScore ?? Number.MAX_SAFE_INTEGER;
@@ -40,22 +47,35 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
     };
     this.entryFieldDisplay = {
       label: "Score",
-      combineTeamValues: (a, b) => a + b,
-      combinedDisplay: (total, count, numFmt) => `Average = ${numFmt.format(total / count)}`,
-      ignoreHighlight: (val) => {
+      display: options?.scoreEntryDisplay ?? (({ final }) => final),
+      combineTeamValues: ({ final: a }, { final: b }) => ({
+        final: a + b,
+        currentScore: 0,
+        latestRound: 0,
+      }),
+      combinedDisplay: ({ final }, count, numFmt) => `Average = ${numFmt.format(final / count)}`,
+      ignoreHighlight: ({ final }) => {
         switch (scoreDirection) {
           case "highest":
-            return val <= this.minScore;
+            return final <= this.minScore;
           case "lowest":
-            return val >= this.maxScore;
+            return final >= this.maxScore;
           case "none":
             return false;
         }
       },
     };
   }
-  entry({ score }: PlayerDataForStats<T>) {
-    return score;
+  entry({ score, turns }: PlayerDataForStats<T>) {
+    const [latestRound, currentScore] = [...turns].reduce(
+      ([lIdx, lScore], [idx, turn]) => (idx > lIdx ? [idx, turn.score] : [lIdx, lScore]),
+      [-1, this.minScore],
+    );
+    return {
+      final: score,
+      latestRound,
+      currentScore,
+    };
   }
   emptySummary(): ScoreSummaryValues {
     const [best, worst] =
@@ -72,7 +92,7 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
   summary(
     { best, worst, total }: ScoreSummaryValues,
     numGames: number,
-    val: number,
+    { final: val }: ScoreEntry,
   ): ScoreSummaryValues {
     const tot = total + val;
     const [b, w] = this.scoreDirection === "highest" ? [Math.max, Math.min] : [Math.min, Math.max];
@@ -84,6 +104,15 @@ export class ScoreSummaryField<T extends TurnData<any, any, any>>
     };
   }
 }
+export type ScoreEntryDisplay = (entry: ScoreEntry) => VNodeChild;
+type ScoreEntry = {
+  /** The real or predicted final game score */
+  final: number;
+  /** The score after the last taken round */
+  currentScore: number;
+  /** The index of the last taken round */
+  latestRound: number;
+};
 type ScoreSummaryValues = {
   /** The best score in a single game */
   best: number;

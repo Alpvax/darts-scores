@@ -142,6 +142,7 @@ export const createComponent = <
             }),
           ),
       );
+      emit("update:partialSummary", playerData.value);
 
       const allCompleted = computed(() =>
         //TODO: completed early for dynamic rounds
@@ -174,12 +175,7 @@ export const createComponent = <
               positions: playerPositions.value.ordered,
             });
           }
-          emit(
-            "update:partialSummary",
-            new Map<string, PlayerData>(
-              props.players.map((pid) => [pid, playerData.value.get(pid)!]),
-            ),
-          );
+          emit("update:partialSummary", playerData.value);
         },
       );
       watch(

@@ -6,7 +6,7 @@ import {
   type SummaryEntryKeys,
   SummaryFieldsKeySymbol,
   type PlayerDataForStats,
-  type SummaryEntryFieldPartialGameEntry,
+  type SummaryEntryFieldWithGameEntryDisplay,
   type EntryDisplayMetadataSingle,
 } from "@/gameUtils/summary";
 import { usePlayerStore } from "@/stores/player";
@@ -97,7 +97,7 @@ export const createGameEntriesComponent = <
           }
           const field = summaryFactory[SummaryFieldsKeySymbol][
             fieldKey as keyof S
-          ] as SummaryEntryFieldPartialGameEntry<T, any, any>;
+          ] as SummaryEntryFieldWithGameEntryDisplay<T, any, any>;
           let meta: EntryDisplayMetadataSingle<any> = field.entryFieldDisplay as any;
           for (const prop of fieldProp) {
             if (Object.hasOwn(meta, prop)) {
@@ -141,6 +141,7 @@ export const createGameEntriesComponent = <
 
       const fieldData = computed(() => {
         const playerData = players.value.map((pid) => ({ pid, data: entries.value.get(pid) }));
+        console.log(players.value, entries.value, props.gameResults); //XXX
         return props.fields.flatMap((fieldPath, index) => {
           const [fieldKey, ...fieldProp] = fieldPath.split(".") as [keyof S, ...string[]];
           if (fieldKey === "numGames") {
@@ -234,7 +235,7 @@ export const createGameEntriesComponent = <
                           class={[
                             "summaryValue",
                             ...[
-                              highlight && !ignoreHighlight(value)
+                              highlight && value !== undefined && !ignoreHighlight(value)
                                 ? Object.entries(highlight).flatMap(([k, v]) =>
                                     (v === "highest" && value === highest) ||
                                     (v === "lowest" && value === lowest)

@@ -3,6 +3,7 @@ table#gameSummaryEntryTable {
   & tbody {
     font-size: 0.8em;
     line-height: 1.2;
+    border-collapse: collapse;
   }
   & tr:hover {
     background-color: bisque;
@@ -36,5 +37,9 @@ table#gameSummaryEntryTable {
   & .teamColumn {
     border-left: grey 1px dashed;
     background-color: #d0d0d0;
+    &.playerName {
+      background-color: initial;
+      background-image: linear-gradient(#d0d0d060, #d0d0d0);
+    }
   }
 }
