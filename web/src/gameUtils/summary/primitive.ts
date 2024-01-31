@@ -63,6 +63,7 @@ export class NumericSummaryField<T extends TurnData<any, any, any>>
   constructor(
     readonly calculate: (data: PlayerDataForStats<T>) => number,
     displayMeta: NormalisedDisplayMetaInputs<NumericSummaryValues>,
+    readonly maxPerGame = 1,
   ) {
     this.display = {
       highest: displayMeta.getMeta("highest", {
@@ -106,7 +107,7 @@ export class NumericSummaryField<T extends TurnData<any, any, any>>
       highest: Math.max(highest, val),
       lowest: Math.min(lowest, val),
       total: tot,
-      mean: tot / numGames,
+      mean: tot / numGames / this.maxPerGame,
     };
   }
 }

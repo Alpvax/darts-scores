@@ -1,12 +1,6 @@
 <script lang="ts">
 import { createSummaryComponent } from "@/components/summary";
-import {
-  defaultSummaryFields,
-  gameMeta,
-  summaryFactory,
-  summaryMeta,
-  type TurnData27,
-} from "@/game/27";
+import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import type { GameResult, PlayerDataForStats } from "@/gameUtils/summary";

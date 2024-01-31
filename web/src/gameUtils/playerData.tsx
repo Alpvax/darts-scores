@@ -5,7 +5,7 @@ import type {
   RoundsValues,
 } from "@/components/game/Rounds";
 import { computed, type Ref } from "vue";
-import type { IntoTaken, TurnData, TurnStats } from "./roundDeclaration";
+import type { IntoTaken, TakenTurnData, TurnData, TurnStats } from "./roundDeclaration";
 import type { GameStatsForRounds, GameStats } from "./statsAccumulatorGame";
 import type {
   AnyGameMetadata,
@@ -14,6 +14,7 @@ import type {
   GameMetaKNS,
   GameMetaKRS,
 } from "./gameMeta";
+import type { PlayerDataForStats } from "./summary";
 
 export type PlayerDataT<
   RS extends TurnStats,
@@ -191,3 +192,91 @@ export const makePlayerPositions = (
     posRowFactory,
   };
 };
+
+// ================= Convert values to score =====================
+type PlayerScore<T extends TurnData<any, any>> = {
+  score: number;
+  allTurns: Map<number, T>;
+  turnsTaken: Map<number, IntoTaken<T>>;
+  lastPlayedRound: number;
+};
+/** Create a factory from gameMeta */
+export function makePlayerScoreFactory<V, RS extends TurnStats, K extends string = string>(
+  meta: AnyGameMetadata<V, RS, any, K>,
+): (pid: string, rounds: (V | undefined)[]) => PlayerScore<TurnData<V, RS>>;
+/** Create a factory from gameMeta and a getter for the per-round scores to calculate the player turns */
+export function makePlayerScoreFactory<V, RS extends TurnStats, K extends string = string>(
+  meta: AnyGameMetadata<V, RS, any, K>,
+  valueGetter: (roundIndex: number, pid: string) => V | undefined,
+): (pid: string) => PlayerScore<TurnData<V, RS>>;
+export function makePlayerScoreFactory<V, RS extends TurnStats, K extends string = string>(
+  meta: AnyGameMetadata<V, RS, any, K>,
+  valueGetter?: (roundIndex: number, pid: string) => V | undefined,
+) {
+  const internal = (pid: string, get: (roundIndex: number, pid: string) => V | undefined) =>
+    meta.rounds.reduce(
+      ({ score, allTurns, turnsTaken, lastPlayedRound }, r, i) => {
+        const val = get(i, pid);
+        const data = r.turnData(val, score, pid, i);
+        score = data.score;
+        if (r.type === "indexed-stats") {
+          // || r.type === "keyed-stats") {
+          allTurns.set(i, data);
+        }
+        if (val !== undefined) {
+          turnsTaken.set(i, data as TakenTurnData<V, RS, any>);
+          lastPlayedRound = i;
+        }
+        return { score, allTurns, turnsTaken, lastPlayedRound };
+      },
+      {
+        score: meta.startScore(pid),
+        allTurns: new Map<number, TurnData<V, RS, any>>(),
+        turnsTaken: new Map<number, TakenTurnData<V, RS, any>>(),
+        lastPlayedRound: -1,
+      },
+    );
+
+  return valueGetter === undefined
+    ? (pid: string, rounds: (V | undefined)[]) => internal(pid, (i) => rounds[i])
+    : (pid: string) => internal(pid, valueGetter);
+}
+
+/** Convert values from multiple players' rounds to GameResult parts */
+export const makeGameResultFactory =
+  <T extends TurnData<V, RS, K>, V, RS extends TurnStats, K extends string = string>(
+    meta: AnyGameMetadata<V, RS, any, K>,
+  ) =>
+  (playerRoundEntries: [string, (V | undefined)[]][]): Map<string, PlayerDataForStats<T>> => {
+    const scoreFactory = makePlayerScoreFactory<V, RS, K>(meta);
+    const [scores, playerscores] = playerRoundEntries.reduce(
+      (acc, [pid, rounds]) => {
+        const s = scoreFactory(pid, rounds);
+        acc[0].set(pid, s.score);
+        acc[1].set(pid, s as PlayerScore<T>);
+        return acc;
+      },
+      [new Map<string, number>(), new Map<string, PlayerScore<T>>()],
+    );
+    const positions = makePlayerPositions(
+      computed(() => scores),
+      meta.positionOrder,
+    ).playerPositions.value.playerLookup;
+    return new Map(
+      [...playerscores].map(([pid, pData]) => {
+        const { pos, players } = positions.get(pid)!;
+        return [
+          pid,
+          {
+            playerId: pid,
+            complete: pData.turnsTaken.size === 20,
+            score: pData.score,
+            turns: pData.turnsTaken,
+            allTurns: pData.allTurns,
+            position: pos,
+            tied: players.filter((p) => p !== pid),
+          },
+        ];
+      }),
+    );
+  };

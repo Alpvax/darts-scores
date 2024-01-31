@@ -224,11 +224,13 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     cliffs: numeric(
       (data) => [...data.turns.values()].filter(({ stats: { cliff } }) => cliff).length,
       { best: "highest", label: "Cliff" },
+      20,
     ),
     doubleDoubles: numeric(
       (data) =>
         [...data.turns.values()].filter(({ stats: { doubledouble } }) => doubledouble).length,
       { best: "highest", label: "Double Double" },
+      20,
     ),
     hans: numeric(
       (data) =>

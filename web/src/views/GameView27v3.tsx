@@ -14,6 +14,7 @@ import type { PlayerDataFor } from "@/gameUtils/playerData";
 import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
+import { intoDBResult } from "@/game/27/history";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -191,6 +192,21 @@ export default defineComponent({
           "Stats:",
           new Map([...gameResult.value.entries()].map(([pid, { stats }]) => [pid, stats])),
         );
+        const playerStore = usePlayerStore();
+        const resultV2 = intoDBResult(
+          {
+            date: gameDate.value,
+            results: partialGameResult.value,
+          },
+          {
+            players: players.value.map((pid) => ({
+              pid,
+              displayName: playerStore.playerName(pid).value,
+            })),
+            //TODO: tiebreakType
+          },
+        );
+        console.log("DBResultV2:", resultV2);
         submitted.value = true;
       }
     };

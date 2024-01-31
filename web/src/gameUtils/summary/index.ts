@@ -161,7 +161,7 @@ export const defaultHighlight = (
 export const defaultFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
   Object.assign({ maximumFractionDigits: 2 }, f);
 export const defaultRateFmt = (f: Intl.NumberFormatOptions | undefined): Intl.NumberFormatOptions =>
-  Object.assign({ style: "percent" }, f);
+  Object.assign({ style: "percent", maximumFractionDigits: 2 }, f);
 export const normaliseDMI = <T extends Record<string, any>>(
   inputs: DisplayMetaInputs<T>,
 ): NormalisedDisplayMetaInputs<T> => {
@@ -511,6 +511,7 @@ type FieldFactoryUtils<T extends TurnData<any, any, any>> = {
     calculate: (data: PlayerDataForStats<T>) => number,
     // @ts-ignore
     displayMeta: DisplayMetaInputsFor<NumericSummaryField<T>>,
+    maxPerGame?: number,
   ) => NumericSummaryField<T>;
   /** Make boolean stat */
   boolean: (
@@ -631,7 +632,8 @@ export function makeSummaryAccumulatorFactory<
       numeric: <T extends TurnData<any, any, any>>(
         calculate: (data: PlayerDataForStats<T>) => number,
         displayMeta: DisplayMetaInputsFor<NumericSummaryField<T>>,
-      ) => new NumericSummaryField<T>(calculate, normaliseDMI(displayMeta)),
+        maxPerGame?: number,
+      ) => new NumericSummaryField<T>(calculate, normaliseDMI(displayMeta), maxPerGame),
       boolean: <T extends TurnData<any, any, any>>(
         calculate: (data: PlayerDataForStats<T>) => boolean,
         displayMeta: DisplayMetaInputsFor<BoolSummaryField<T>>,
