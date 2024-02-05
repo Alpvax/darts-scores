@@ -332,7 +332,7 @@ export const defaultSummaryFields: SummaryFieldKeysFor<typeof summaryFactory>[] 
   "hits.lowest",
   "hits.mean",
   ...Array.from({ length: 20 }).flatMap((_, i) => [
-    `rounds.${i + 1}.hits.mean` satisfies SummaryFieldKeysFor<typeof summaryFactory>,
+    `rounds.${i + 1}.hits.nonZero.mean` satisfies SummaryFieldKeysFor<typeof summaryFactory>,
   ]),
 ];
 
