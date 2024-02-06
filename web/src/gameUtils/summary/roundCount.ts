@@ -6,7 +6,7 @@ import {
   type PlayerDataForStats,
   type SummaryDisplayMetadata,
   type SummaryEntryField,
-  type EntryDisplayMetadata,
+  type EntryDisplayMetadataMultiple,
 } from ".";
 import type { TurnData, IntoTaken } from "../roundDeclaration";
 
@@ -27,7 +27,7 @@ export class RoundCountField<T extends TurnData<any, any, any>>
   private readonly findFirst: boolean;
   private readonly takenOnly: boolean;
   display: SummaryDisplayMetadata<RoundCountSummaryValues>;
-  entryFieldDisplay: EntryDisplayMetadata<{ index: number; allGame: boolean }>;
+  entryFieldDisplay: EntryDisplayMetadataMultiple<{ index: number; allGame: boolean }>;
   constructor(
     predicate: (data: IntoTaken<T>) => boolean,
     displayMeta: NormalisedDisplayMetaInputs<RoundCountSummaryValues>,

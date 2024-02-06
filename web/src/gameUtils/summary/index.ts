@@ -74,11 +74,11 @@ export type EntryDisplayMetadataSingle<T> = {
   combineTeamValues: (a: T, b: T) => T;
   combinedDisplay?: (value: T, playerCount: number, numFmt: Intl.NumberFormat) => VNodeChild;
 };
-type EntryDisplayRecord<T extends Record<string, any>> = {
+export type EntryDisplayMetadataMultiple<T extends Record<string, any>> = {
   [K in keyof T & string]: EntryDisplayMetadata<T[K]>;
 };
 export type EntryDisplayMetadata<T> = T extends Record<string, any>
-  ? EntryDisplayRecord<T> | EntryDisplayMetadataSingle<T>
+  ? EntryDisplayMetadataMultiple<T> | EntryDisplayMetadataSingle<T>
   : // Handle boolean expanding to `true | false`
     T extends boolean
     ? EntryDisplayMetadataSingle<boolean>
@@ -672,7 +672,7 @@ export type SummaryEntryKeys<
   Key extends keyof S = keyof S,
 > = Key extends string
   ? S[Key] extends SummaryEntryFieldWithGameEntryDisplay<T, any, any, infer Entry>
-    ? Entry extends EntryDisplayRecord<any>
+    ? Entry extends EntryDisplayMetadataMultiple<any>
       ? `${Key}.${keyof Entry & string}`
       : `${Key}`
     : never
@@ -682,3 +682,33 @@ export type SummaryEntryKeysFor<F extends SummaryAccumulatorFactory<any, any, an
   F extends SummaryAccumulatorFactory<infer S, infer T, any, infer P>
     ? SummaryEntryKeys<S, T, P>
     : never;
+
+type EDMFields<S extends SummaryDefinition<T, any, any>, T extends TurnData<any, any, any>> = {
+  [K in keyof S & string as S[K] extends SummaryEntryFieldWithGameEntryDisplay<any, any, any, any>
+    ? K
+    : never]: S[K];
+};
+type FlattenEDM<
+  S extends SummaryDefinition<T, any, any>,
+  T extends TurnData<any, any, any>,
+  Key extends keyof EDMFields<S, T> & string = keyof EDMFields<S, T> & string,
+> = S[Key] extends SummaryEntryFieldWithGameEntryDisplay<T, any, any, infer Entry>
+  ? Entry extends EntryDisplayMetadataMultiple<infer R>
+    ? {
+        [K in keyof R & string as `${Key}.${K}`]: R[K];
+      }
+    : Entry extends EntryDisplayMetadataSingle<infer U>
+      ? { [K in Key as `${Key}`]: U }
+      : never
+  : never;
+type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void
+  ? I
+  : never;
+export type EntryDisplayFieldTypes<
+  S extends SummaryDefinition<T, any, any>,
+  T extends TurnData<any, any, any>,
+> = UnionToIntersection<
+  {
+    [K in keyof EDMFields<S, T> & string]: FlattenEDM<S, T, K>;
+  }[keyof EDMFields<S, T> & string]
+>;

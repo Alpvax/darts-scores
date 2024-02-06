@@ -3,14 +3,26 @@ import {
   type SummaryDefinition,
   type PlayerRequirements,
   type SummaryAccumulatorFactory,
-  type SummaryEntryKeys,
   SummaryFieldsKeySymbol,
   type PlayerDataForStats,
   type SummaryEntryFieldWithGameEntryDisplay,
   type EntryDisplayMetadataSingle,
+  type EntryDisplayFieldTypes,
 } from "@/gameUtils/summary";
 import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
+
+type FieldMetadata<S extends SummaryDefinition<T, any, any>, T extends TurnData<any, any, any>> = {
+  [K in keyof EntryDisplayFieldTypes<S, T> & string]:
+    | K
+    | {
+        field: K;
+        combiner: (
+          a: EntryDisplayFieldTypes<S, T>[K],
+          b: EntryDisplayFieldTypes<S, T>[K],
+        ) => EntryDisplayFieldTypes<S, T>[K];
+      };
+}[keyof EntryDisplayFieldTypes<S, T> & string];
 
 export const createGameEntriesComponent = <
   S extends SummaryDefinition<T, any, P>,
@@ -19,7 +31,7 @@ export const createGameEntriesComponent = <
   Pid extends string = string,
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
-  defaultFields: SummaryEntryKeys<S, T, P>[],
+  defaultFields: FieldMetadata<S, T>[], //SummaryEntryKeys<S, T, P>[],
   // fieldMeta?: Record<string, SummaryFieldMeta>,
 ) =>
   defineComponent({
@@ -30,7 +42,7 @@ export const createGameEntriesComponent = <
       players: { type: Array as PropType<Pid[]>, default: undefined },
       gameResults: { type: Object as PropType<Map<Pid, PlayerDataForStats<T>>>, required: true },
       includeAllPlayers: { type: Boolean, default: false },
-      fields: { type: Array as PropType<SummaryEntryKeys<S, T, P>[]>, default: defaultFields },
+      fields: { type: Array as PropType<FieldMetadata<S, T>[]>, default: defaultFields },
       decimalFormat: {
         type: Object as PropType<Intl.NumberFormat>,
         default: new Intl.NumberFormat(undefined, {
@@ -90,7 +102,9 @@ export const createGameEntriesComponent = <
       const entries = computed(() => summaryFactory.entriesFor(props.gameResults));
       const fieldsMeta = computed(() =>
         // @ts-ignore
-        props.fields.flatMap((fieldPath) => {
+        props.fields.flatMap((fieldDef) => {
+          const [fieldPath, combiner] =
+            typeof fieldDef === "string" ? [fieldDef] : [fieldDef.field, fieldDef.combiner];
           const [fieldKey, ...fieldProp] = fieldPath.split(".") as [keyof S, ...string[]];
           if (fieldKey === "numGames") {
             return [];
@@ -112,12 +126,13 @@ export const createGameEntriesComponent = <
           return {
             field,
             path: fieldPath,
+            fieldKey,
             fieldProp,
             label: meta.label ?? fieldPath,
             display:
               meta.display ??
               ((v: any) => (typeof v === "number" ? props.decimalFormat.format(v) : v)),
-            combineTeamValues: meta.combineTeamValues,
+            combineTeamValues: combiner ?? meta.combineTeamValues,
             combinedDisplay: meta.combinedDisplay,
             ignoreHighlight: meta.ignoreHighlight ?? (() => false),
             format: props.decimalFormat,
@@ -142,8 +157,7 @@ export const createGameEntriesComponent = <
       const fieldData = computed(() => {
         const playerData = players.value.map((pid) => ({ pid, data: entries.value.get(pid) }));
         console.log(players.value, entries.value, props.gameResults); //XXX
-        return props.fields.flatMap((fieldPath, index) => {
-          const [fieldKey, ...fieldProp] = fieldPath.split(".") as [keyof S, ...string[]];
+        return fieldsMeta.value.flatMap(({ fieldKey, fieldProp, combineTeamValues, ...meta }) => {
           if (fieldKey === "numGames") {
             return [];
           }
@@ -175,7 +189,6 @@ export const createGameEntriesComponent = <
                 }[],
               },
             );
-          const { combineTeamValues, ...meta } = fieldsMeta.value[index];
           const values = data.playerValues.flatMap(({ value }) =>
             value !== undefined ? [value] : [],
           );

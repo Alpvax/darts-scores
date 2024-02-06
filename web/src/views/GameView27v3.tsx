@@ -24,11 +24,11 @@ const GameEntry27 = createGameEntriesComponent(summaryFactory, [
   "cliffs",
   "doubleDoubles",
   "hans",
-  "fatNicks.allGame",
+  { field: "fatNicks.allGame", combiner: (a, b) => a && b },
   "piranhas",
   "goblins",
   "allPos.allGame",
-  "dreams.allGame",
+  { field: "dreams.allGame", combiner: (a, b) => a || b },
 ]);
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });

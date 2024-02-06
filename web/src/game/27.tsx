@@ -220,7 +220,10 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
       highlight: "worst",
     }),
     dreams: countWhile(({ value }) => value > 0, { best: "highest", label: "Dream" }, true),
-    allPos: countWhile(({ score }) => score > 0, { best: "highest", label: "All Positive" }),
+    allPos: countWhile(({ score }) => score > 0, {
+      best: "highest",
+      label: ["All Positive", { latest: "Furthest Positive" }],
+    }),
     cliffs: numeric(
       (data) => [...data.turns.values()].filter(({ stats: { cliff } }) => cliff).length,
       { best: "highest", label: "Cliff" },
