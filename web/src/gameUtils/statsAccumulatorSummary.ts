@@ -8,19 +8,20 @@ type BoolGS<S extends GameStats<any, any>> = {
 type NumericGS<S extends GameStats<any, any>> = {
   [K in keyof S as S[K] extends number ? K : never]: S[K];
 };
-type TurnStatGS<S extends GameStats<any, any>> = S extends GameStats<infer RS, any>
-  ? {
-      [K in keyof BoolTS<RS> & string as `${K}Total` | `${K}Mean`]: number;
-    } & {
-      [K in keyof NumericTS<RS> & string as
-        | `${K}Total`
-        | `${K}TotalCountNZ`
-        | `${K}Most`
-        | `${K}Least`
-        | `${K}Mean`
-        | `${K}MeanCountNZ`]: number;
-    }
-  : never;
+type TurnStatGS<S extends GameStats<any, any>> =
+  S extends GameStats<infer RS, any>
+    ? {
+        [K in keyof BoolTS<RS> & string as `${K}Total` | `${K}Mean`]: number;
+      } & {
+        [K in keyof NumericTS<RS> & string as
+          | `${K}Total`
+          | `${K}TotalCountNZ`
+          | `${K}Most`
+          | `${K}Least`
+          | `${K}Mean`
+          | `${K}MeanCountNZ`]: number;
+      }
+    : never;
 
 type StatWithRate = {
   total: number;

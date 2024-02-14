@@ -77,12 +77,13 @@ export type EntryDisplayMetadataSingle<T> = {
 export type EntryDisplayMetadataMultiple<T extends Record<string, any>> = {
   [K in keyof T & string]: EntryDisplayMetadata<T[K]>;
 };
-export type EntryDisplayMetadata<T> = T extends Record<string, any>
-  ? EntryDisplayMetadataMultiple<T> | EntryDisplayMetadataSingle<T>
-  : // Handle boolean expanding to `true | false`
-    T extends boolean
-    ? EntryDisplayMetadataSingle<boolean>
-    : EntryDisplayMetadataSingle<T>;
+export type EntryDisplayMetadata<T> =
+  T extends Record<string, any>
+    ? EntryDisplayMetadataMultiple<T> | EntryDisplayMetadataSingle<T>
+    : // Handle boolean expanding to `true | false`
+      T extends boolean
+      ? EntryDisplayMetadataSingle<boolean>
+      : EntryDisplayMetadataSingle<T>;
 export interface SummaryEntryFieldWithGameEntryDisplay<
   T extends TurnData<any, any, any>,
   E,
@@ -111,13 +112,8 @@ export type DisplayMetaInputs<T extends Record<string, any>> = {
   format?: DisplayMetaArg<Intl.NumberFormatOptions, keyof T & string>;
   highlight?: DisplayMetaArg<HighlightRules, keyof T & string>;
 };
-type DisplayMetaInputsFor<T extends SummaryEntryField<any, any, any>> = T extends SummaryEntryField<
-  any,
-  any,
-  infer S
->
-  ? DisplayMetaInputs<S>
-  : never;
+type DisplayMetaInputsFor<T extends SummaryEntryField<any, any, any>> =
+  T extends SummaryEntryField<any, any, infer S> ? DisplayMetaInputs<S> : never;
 type DMIGetter<T extends Record<string, any>, V, U = V> = (
   key: keyof T & string,
   fallback?: (def: U, best: ScoreDirection) => V,
@@ -692,15 +688,16 @@ type FlattenEDM<
   S extends SummaryDefinition<T, any, any>,
   T extends TurnData<any, any, any>,
   Key extends keyof EDMFields<S, T> & string = keyof EDMFields<S, T> & string,
-> = S[Key] extends SummaryEntryFieldWithGameEntryDisplay<T, any, any, infer Entry>
-  ? Entry extends EntryDisplayMetadataMultiple<infer R>
-    ? {
-        [K in keyof R & string as `${Key}.${K}`]: R[K];
-      }
-    : Entry extends EntryDisplayMetadataSingle<infer U>
-      ? { [K in Key as `${Key}`]: U }
-      : never
-  : never;
+> =
+  S[Key] extends SummaryEntryFieldWithGameEntryDisplay<T, any, any, infer Entry>
+    ? Entry extends EntryDisplayMetadataMultiple<infer R>
+      ? {
+          [K in keyof R & string as `${Key}.${K}`]: R[K];
+        }
+      : Entry extends EntryDisplayMetadataSingle<infer U>
+        ? { [K in Key as `${Key}`]: U }
+        : never
+    : never;
 type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void
   ? I
   : never;

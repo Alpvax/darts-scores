@@ -300,11 +300,5 @@ export function createGameMetadata<
 
 // =========== TurnData Lookup ===============
 
-export type TurnDataForGame<M extends GameMetadata<any, any, any, any>> = M extends GameMetadata<
-  infer R,
-  any,
-  any,
-  any
->
-  ? TurnDataType<R>
-  : never;
+export type TurnDataForGame<M extends GameMetadata<any, any, any, any>> =
+  M extends GameMetadata<infer R, any, any, any> ? TurnDataType<R> : never;

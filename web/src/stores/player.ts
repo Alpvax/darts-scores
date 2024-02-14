@@ -200,7 +200,12 @@ export const usePlayerStore = defineStore("player", () => {
   const getPlayer = (playerId: string): Ref<Player> => {
     loadPlayer(playerId);
     return computed(
-      () => loadedPlayers.value.get(playerId) ?? { id: playerId, loaded: false, name: playerId },
+      () =>
+        (loadedPlayers.value.get(playerId) as LoadedPlayer | undefined) ?? {
+          id: playerId,
+          loaded: false,
+          name: playerId,
+        },
     );
   };
 

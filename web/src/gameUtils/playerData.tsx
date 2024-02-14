@@ -49,9 +49,10 @@ export type PlayerDataFor<
     | GameMetaIRS<any, any, any>
     | GameMetaKNS<any, any, any>
     | GameMetaKRS<any, any, any, any>,
-> = M extends AnyGameMetadata<infer V, infer RS, infer GS, infer K>
-  ? PlayerDataT<RS, TurnData<V, RS, K>, GS>
-  : never;
+> =
+  M extends AnyGameMetadata<infer V, infer RS, infer GS, infer K>
+    ? PlayerDataT<RS, TurnData<V, RS, K>, GS>
+    : never;
 
 export type PlayerDataBase = {
   playerId: string;

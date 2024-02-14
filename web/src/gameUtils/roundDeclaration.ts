@@ -56,18 +56,16 @@ export type TakenTurnData<V, S extends TurnStats = {}, K extends string = string
   | TakenKeyedTurnDataStats<V, S, K>
   | TakenIndexedTurnDataNoStats<V>
   | TakenIndexedTurnDataStats<V, S>;
-export type IntoTaken<T extends TurnData<any, any, any>> = T extends KeyedTurnDataNoStats<
-  infer V,
-  infer K
->
-  ? TakenKeyedTurnDataNoStats<V, K>
-  : T extends KeyedTurnDataStats<infer V, infer S, infer K>
-    ? TakenKeyedTurnDataStats<V, S, K>
-    : T extends IndexedTurnDataNoStats<infer V>
-      ? TakenIndexedTurnDataNoStats<V>
-      : T extends IndexedTurnDataStats<infer V, infer S>
-        ? TakenIndexedTurnDataStats<V, S>
-        : never;
+export type IntoTaken<T extends TurnData<any, any, any>> =
+  T extends KeyedTurnDataNoStats<infer V, infer K>
+    ? TakenKeyedTurnDataNoStats<V, K>
+    : T extends KeyedTurnDataStats<infer V, infer S, infer K>
+      ? TakenKeyedTurnDataStats<V, S, K>
+      : T extends IndexedTurnDataNoStats<infer V>
+        ? TakenIndexedTurnDataNoStats<V>
+        : T extends IndexedTurnDataStats<infer V, infer S>
+          ? TakenIndexedTurnDataStats<V, S>
+          : never;
 
 export function hasStats<V, S extends TurnStats = {}, K extends string = string>(
   keyed: KeyedTurnDataNoStats<V, K> | KeyedTurnDataStats<V, S, K>,
@@ -191,15 +189,12 @@ export type RoundDef<V, S extends TurnStats = {}, K extends string = string> =
 export type TurnDataType<R extends RoundDef<any, any, any> | NormalisedRound<any, any, any>> =
   R["display"] extends DisplayFactory<any, infer T> ? T : never;
 
-export type RoundStatsType<R extends RoundDef<any, any, any>> = R extends KeyedRoundDefStats<
-  any,
-  infer S,
-  any
->
-  ? S
-  : R extends IndexedRoundDefStats<any, infer S>
+export type RoundStatsType<R extends RoundDef<any, any, any>> =
+  R extends KeyedRoundDefStats<any, infer S, any>
     ? S
-    : undefined;
+    : R extends IndexedRoundDefStats<any, infer S>
+      ? S
+      : undefined;
 
 // ============== Rounds definition list types ================
 
