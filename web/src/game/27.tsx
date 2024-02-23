@@ -4,11 +4,13 @@ import makeSummaryAccumulatorFactoryFor, {
   type PlayerDataForStats,
   type SummaryFieldKeysFor,
 } from "@/gameUtils/summary";
-import {
-  defaultedSummaryFieldMeta,
-  makeSummaryMetaStore,
-  rateFieldMeta,
-} from "@/gameUtils/summary/displayMeta";
+import { makeGameDefinition } from "@/gameV2/gameDef";
+import type { RoundDef } from "@/gameV2/roundDef";
+// import {
+//   defaultedSummaryFieldMeta,
+//   makeSummaryMetaStore,
+//   rateFieldMeta,
+// } from "@/gameUtils/summary/displayMeta";
 import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
 
@@ -98,6 +100,98 @@ type GameStats = {
   hans: number;
 };
 
+type RoundKey =
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "10"
+  | "11"
+  | "12"
+  | "13"
+  | "14"
+  | "15"
+  | "16"
+  | "17"
+  | "18"
+  | "19"
+  | "20";
+
+const roundDef = <K extends RoundKey>(key: K) =>
+  ({
+    //: RoundDef<number, { cliff: boolean, doubledouble: boolean, hits: number }, {}, K> => ({
+    key,
+    label: key,
+    focusOn: () => ({
+      status: [console.log("TODO: implement focussing"), "success"][1] as "success",
+    }), //TODO: implement focussing
+    calculateTurnData: (value: number | undefined) => ({
+      value: value ?? 0,
+      deltaScore: (value || -1) * 2,
+      stats: {
+        cliff: value === 3,
+        doubledouble: value !== undefined && value >= 2,
+        hits: value ?? 0,
+      },
+    }),
+    makeTeamStats: (data) => {
+      const values = data.map((d) => d.value);
+      const totalHits = values.reduce((a, v) => a + v);
+      return {
+        partiallyPlayed: values.some((v) => v !== undefined) && values.some((v) => v === undefined),
+        unplayed: values.every((v) => v === undefined),
+        allMissed: values.every((v) => v !== undefined && v < 1),
+        allHit: values.every((v) => v),
+        totalHits,
+        meanHits: totalHits / values.length,
+      };
+    },
+  }) satisfies RoundDef<number, { cliff: boolean; doubledouble: boolean; hits: number }, any, K>;
+export const gameDefinition = makeGameDefinition({
+  playerStartState: () => ({ score: 27, jesus: false }),
+  rounds: [
+    roundDef("1"),
+    roundDef("2"),
+    roundDef("3"),
+    roundDef("4"),
+    roundDef("5"),
+    roundDef("6"),
+    roundDef("7"),
+    roundDef("8"),
+    roundDef("9"),
+    roundDef("10"),
+    roundDef("11"),
+    roundDef("12"),
+    roundDef("13"),
+    roundDef("14"),
+    roundDef("15"),
+    roundDef("16"),
+    roundDef("17"),
+    roundDef("18"),
+    roundDef("19"),
+    {
+      ...roundDef("20"),
+      calculateTurnData: (value) => ({
+        value: value ?? 0,
+        deltaScore: (value || -1) * 2,
+        stats: {
+          cliff: value === 3,
+          doubledouble: value !== undefined && value >= 2,
+          hits: value ?? 0,
+          jesus: false, //TODO: include jesus as part of round 20?
+        },
+      }),
+    },
+  ],
+});
+// gameDefinition.playerStartState("player1").
+// gameDefinition.getRound("20").makeTeamStats
+
 export const gameMeta = normaliseGameMetadata<
   number,
   {
@@ -105,12 +199,14 @@ export const gameMeta = normaliseGameMetadata<
     doubledouble: boolean;
     hits: number;
   },
-  GameStats
+  GameStats,
+  RoundKey
 >({
   startScore: () => 27,
   positionOrder: "highestFirst",
   rounds: Array.from({ length: 20 }, (_, i) => ({
     label: (i + 1).toString(),
+    key: (i + 1).toString() as RoundKey,
     display: (hits, { score, deltaScore, editable, focus }) => (
       <>
         <span>{score}</span>
@@ -339,32 +435,32 @@ export const defaultSummaryFields: SummaryFieldKeysFor<typeof summaryFactory>[] 
   ]),
 ];
 
-export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
-  "twentysevenSummary",
-  "twentyseven",
-  {
-    "wins.real.total": defaultedSummaryFieldMeta("Real Wins", { highlight: "best" }),
-    "fatNicks.count": defaultedSummaryFieldMeta("Fat Nicks", {
-      best: "lowest",
-      highlight: "worst",
-    }),
-    "fatNicks.latest": defaultedSummaryFieldMeta("Furthest without hitting", {
-      best: "lowest",
-      highlight: ["best", "worst"],
-    }),
-    ...rateFieldMeta("cliffs", "Cliff", { highlight: "best" }),
-    ...rateFieldMeta("doubleDoubles", "Double Double", { highlight: "best" }),
-    ...rateFieldMeta("hans", "Hans", { label: { plural: "{}" }, highlight: "best" }),
-    ...rateFieldMeta("goblins", "Goblin", { highlight: "best" }),
-    ...rateFieldMeta("piranhas", "Piranha", { highlight: "best" }),
-    "dreams.latest": defaultedSummaryFieldMeta("Furthest Dream", { highlight: "best" }),
-    "allPos.count": defaultedSummaryFieldMeta("All Positives", { highlight: "best" }),
-    "allPos.latest": defaultedSummaryFieldMeta("Furthest positive", { highlight: "best" }),
-    "hits.highest": defaultedSummaryFieldMeta("Most Hits", { highlight: "best" }),
-    "hits.lowest": defaultedSummaryFieldMeta("Least Hits", { highlight: "best" }),
-    "hits.mean": defaultedSummaryFieldMeta("Average Hits", { highlight: "best" }),
-  },
-);
+// export const summaryMeta = makeSummaryMetaStore<typeof summaryFactory>(
+//   "twentysevenSummary",
+//   "twentyseven",
+//   {
+//     "wins.real.total": defaultedSummaryFieldMeta("Real Wins", { highlight: "best" }),
+//     "fatNicks.count": defaultedSummaryFieldMeta("Fat Nicks", {
+//       best: "lowest",
+//       highlight: "worst",
+//     }),
+//     "fatNicks.latest": defaultedSummaryFieldMeta("Furthest without hitting", {
+//       best: "lowest",
+//       highlight: ["best", "worst"],
+//     }),
+//     ...rateFieldMeta("cliffs", "Cliff", { highlight: "best" }),
+//     ...rateFieldMeta("doubleDoubles", "Double Double", { highlight: "best" }),
+//     ...rateFieldMeta("hans", "Hans", { label: { plural: "{}" }, highlight: "best" }),
+//     ...rateFieldMeta("goblins", "Goblin", { highlight: "best" }),
+//     ...rateFieldMeta("piranhas", "Piranha", { highlight: "best" }),
+//     "dreams.latest": defaultedSummaryFieldMeta("Furthest Dream", { highlight: "best" }),
+//     "allPos.count": defaultedSummaryFieldMeta("All Positives", { highlight: "best" }),
+//     "allPos.latest": defaultedSummaryFieldMeta("Furthest positive", { highlight: "best" }),
+//     "hits.highest": defaultedSummaryFieldMeta("Most Hits", { highlight: "best" }),
+//     "hits.lowest": defaultedSummaryFieldMeta("Least Hits", { highlight: "best" }),
+//     "hits.mean": defaultedSummaryFieldMeta("Average Hits", { highlight: "best" }),
+//   },
+// );
 
 //TODO: REMOVE TEST
 (() => {

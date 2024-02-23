@@ -7,7 +7,7 @@ import type {
   SummaryDefinition,
   SummaryFieldKeys,
 } from "@/gameUtils/summary";
-import type { SummaryFieldMeta } from "@/gameUtils/summary/displayMeta";
+// import type { SummaryFieldMeta } from "@/gameUtils/summary/displayMeta";
 import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
 
@@ -20,7 +20,7 @@ export const createSummaryComponent = <
 >(
   summaryFactory: SummaryAccumulatorFactory<S, T, any, P>,
   defaultFields: SummaryFieldKeys<S, T, P>[],
-  fieldMeta?: Record<string, SummaryFieldMeta>,
+  // fieldMeta?: Record<string, SummaryFieldMeta>,
   // rounds: R[],
   // roundFields: T extends TurnData<any, infer RS, any> ? (stats: RS) => any : () => any,
 ) =>
@@ -92,9 +92,9 @@ export const createSummaryComponent = <
         // @ts-ignore
         props.fields.map((fieldPath) => {
           const meta = summaryFactory.getDisplayMetadata(fieldPath);
-          const fMeta: SummaryFieldMeta | undefined = fieldMeta ? fieldMeta[fieldPath] : undefined;
+          // const fMeta: SummaryFieldMeta | undefined = fieldMeta ? fieldMeta[fieldPath] : undefined;
           const best = meta.best ?? "highest";
-          const label = meta.label ?? fMeta?.label ?? fieldPath;
+          const label = meta.label ?? /*fMeta?.label ??*/ fieldPath;
           let format: Intl.NumberFormat;
           let deltaFmt: Intl.NumberFormat;
           const makeDeltaFmt = (opts: Intl.NumberFormatOptions) => {
@@ -109,12 +109,14 @@ export const createSummaryComponent = <
             format = new Intl.NumberFormat(undefined, meta.formatArgs);
             deltaFmt = makeDeltaFmt(meta.formatArgs);
           } else {
-            let fmt = fMeta?.format ?? "!baseFmt";
-            while (typeof fmt === "string") {
-              fmt = fMeta?.format ?? props.decimalFormat;
-            }
-            format = fmt;
-            deltaFmt = makeDeltaFmt(fmt.resolvedOptions());
+            // let fmt = fMeta?.format ?? "!baseFmt";
+            // while (typeof fmt === "string") {
+            //   fmt = fMeta?.format ?? props.decimalFormat;
+            // }
+            // format = fmt;
+            // deltaFmt = makeDeltaFmt(fmt.resolvedOptions());
+            format = props.decimalFormat;
+            deltaFmt = makeDeltaFmt(props.decimalFormat.resolvedOptions());
           }
           const highlight = meta.highlight;
           // // eslint-disable-next-line prefer-const
