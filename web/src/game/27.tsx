@@ -199,14 +199,12 @@ export const gameMeta = normaliseGameMetadata<
     doubledouble: boolean;
     hits: number;
   },
-  GameStats,
-  RoundKey
+  GameStats
 >({
   startScore: () => 27,
   positionOrder: "highestFirst",
   rounds: Array.from({ length: 20 }, (_, i) => ({
     label: (i + 1).toString(),
-    key: (i + 1).toString() as RoundKey,
     display: (hits, { score, deltaScore, editable, focus }) => (
       <>
         <span>{score}</span>

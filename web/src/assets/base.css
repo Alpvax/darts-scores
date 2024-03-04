@@ -84,3 +84,19 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+ul.contextmenu {
+  background-color: var(--color-background);
+  border: 2px var(--color-border-hover) solid;
+  text-align: center;
+  list-style: none;
+  padding: 0.2em;
+
+  > li {
+    cursor: pointer;
+  }
+  > li:hover,
+  > li.selected {
+    background-color: var(--color-border-hover);
+  }
+}

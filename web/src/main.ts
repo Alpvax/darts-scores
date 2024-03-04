@@ -7,6 +7,7 @@ import { initializeApp } from "firebase/app";
 import App from "./App.vue";
 import router from "./router";
 import initialiseAPI from "./utils/consoleAPI";
+import contextMenu from "./contextMenu";
 
 initializeApp({
   apiKey: "AIzaSyDlxprk1nL3NfhOjvvv8t7b_849NS9hndA",
@@ -22,6 +23,7 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
+app.use(contextMenu);
 
 app.mount("#app");
 

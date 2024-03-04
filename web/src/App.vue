@@ -13,6 +13,7 @@ import { RouterLink, RouterView } from "vue-router";
   </header>
 
   <RouterView />
+  <ContextMenu />
 </template>
 
 <style scoped>

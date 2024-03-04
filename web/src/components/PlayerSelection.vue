@@ -1,8 +1,13 @@
 <template>
-  <fieldset class="playerSelection">
+  <fieldset class="playerSelection" v-context-menu.end="generalPlayerContextMenu">
     <legend>{{ legend }}</legend>
 
-    <div v-for="{ name, id } in availablePlayers" :key="id" class="playerCheckbox">
+    <div
+      v-for="{ name, id } in availablePlayers"
+      :key="id"
+      class="playerCheckbox"
+      v-context-menu="nameContextMenuItems(id).value"
+    >
       <input
         :id="'select_' + id"
         v-model="players"
@@ -123,6 +128,51 @@ export default defineComponent({
           trigger();
         },
       })),
+      nameContextMenuItems: (pid: string) =>
+        computed(() => {
+          const player = playerStore.getPlayer(pid).value;
+          return player.loaded ? player.names.contextMenuItems() : [];
+        }),
+      generalPlayerContextMenu: computed(() => {
+        const themes = availablePlayers.value.flatMap((p) => (p.loaded ? p.names.themes : []));
+        return [
+          {
+            label: "Refresh Names",
+            action: () => {
+              availablePlayers.value.forEach((p) => {
+                if (p.loaded) {
+                  p.names.refreshName();
+                }
+              });
+            },
+          },
+          ...(themes.length > 0
+            ? [
+                "separator",
+                {
+                  label: "Remove Name theme",
+                  action: () => {
+                    availablePlayers.value.forEach((p) => {
+                      if (p.loaded) {
+                        p.names.theme = null;
+                      }
+                    });
+                  },
+                },
+                ...[...new Set(themes)].map((theme) => ({
+                  label: `Theme = ${theme}`,
+                  action: () => {
+                    availablePlayers.value.forEach((p) => {
+                      if (p.loaded && p.names.themes.includes(theme)) {
+                        p.names.theme = theme;
+                      }
+                    });
+                  },
+                })),
+              ]
+            : []),
+        ];
+      }),
     };
   },
 });

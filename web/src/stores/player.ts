@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from "vue";
 import { defineStore } from "pinia";
 import { doc, getFirestore, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import type { ContextMenuItem } from "@/components/contextmenu";
 
 export type DBPlayer = {
   name: string;
@@ -13,7 +14,7 @@ export type DBPlayer = {
   handicap?: number;
 };
 
-class PlayerNames {
+export class PlayerNames {
   private readonly names = new Map<string | null, string[]>();
   private theme_: string | null = null;
   private cached: string | null = null;
@@ -88,6 +89,47 @@ class PlayerNames {
     if (opts?.useName) {
       this.cached = name;
     }
+  }
+  public getNames(): {
+    current: string;
+    unthemed: string[];
+    themed: { theme: string; names: string[] }[];
+  };
+  public getNames(theme: string | null): string[];
+  public getNames(theme?: string | null) {
+    if (theme !== undefined) {
+      return this.names.get(theme) ?? [];
+    } else {
+      const allNames = new Set(this.names.get(null));
+      const themed: { theme: string; names: string[] }[] = [];
+      for (const theme of (
+        [...this.names.keys()].filter((s) => s !== null) as string[]
+      ).toSorted()) {
+        const names = this.names.get(theme)!.toSorted();
+        names.forEach((n) => allNames.delete(n));
+        themed.push({ theme, names });
+      }
+      return { current: this.name, unthemed: [...allNames].toSorted(), themed };
+    }
+  }
+  public get themes() {
+    return [...this.names.keys()].filter((t) => t) as string[];
+  }
+  public contextMenuItems(addRandomise: "first" | "last" | false = "first"): ContextMenuItem[] {
+    const items = this.getNames(null).map((name) => ({
+      label: name,
+      action: () => {
+        this.name = name;
+      },
+    }));
+    if (addRandomise) {
+      const r = {
+        label: "Randomise",
+        action: () => this.refreshName(),
+      };
+      return addRandomise === "first" ? [r, "separator", ...items] : [...items, "separator", r];
+    }
+    return items;
   }
 }
 
@@ -215,5 +257,7 @@ export const usePlayerStore = defineStore("player", () => {
     playerOrder,
     getPlayer,
     all: computed(() => [...loadedPlayers.value.keys()]),
+    setNameTheme: (theme: string | null) =>
+      loadedPlayers.value.forEach((p) => (p.names.theme = theme)),
   };
 });

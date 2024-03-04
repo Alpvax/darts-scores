@@ -13,6 +13,7 @@ import {
   ArrayStatsAccumulatorGame,
   type GameStatsForRounds,
 } from "@/gameUtils/statsAccumulatorGame";
+import { injectOpen } from "@/contextMenu/inject";
 
 export const createComponent = <
   V,
@@ -202,16 +203,27 @@ export const createComponent = <
       );
 
       const playerStore = usePlayerStore();
+      const openContextMenu = injectOpen();
       return () => (
         <table>
           <thead>
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
-              {[...playerData.value.entries()].map(([pid, data]) => (
-                <th class={(meta.playerNameClass as (data: PlayerData) => ClassBindings)(data)}>
-                  {playerStore.playerName(pid).value}
-                </th>
-              ))}
+              {[...playerData.value.entries()].map(([pid, data]) => {
+                const player = playerStore.getPlayer(pid).value;
+                return (
+                  <th
+                    class={(meta.playerNameClass as (data: PlayerData) => ClassBindings)(data)}
+                    onContextmenu={(e) =>
+                      openContextMenu(player.loaded ? player.names.contextMenuItems() : [], e, {
+                        useElementPosition: true,
+                      })
+                    }
+                  >
+                    {playerStore.playerName(pid).value}
+                  </th>
+                );
+              })}
             </tr>
             {posRow("head")}
           </thead>
