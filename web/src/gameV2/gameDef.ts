@@ -1,10 +1,8 @@
-import type { TurnStats } from "@/gameUtils/roundDeclaration";
 import type {
   AsRound,
   OptionalTurnDataFor,
   Round,
   RoundDef,
-  TurnData,
   TurnDataFor,
 } from "./roundDef";
 

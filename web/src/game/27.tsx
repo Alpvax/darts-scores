@@ -130,6 +130,28 @@ const roundDef = <K extends RoundKey>(key: K) =>
     focusOn: () => ({
       status: [console.log("TODO: implement focussing"), "success"][1] as "success",
     }), //TODO: implement focussing
+    display: (hits, { endScore, deltaScore, editable, focus }) => (
+      <>
+        <span>{endScore}</span>
+        <sup>({DECIMAL_FORMAT.format(deltaScore)})</sup>
+        {editable ? (
+          <input
+            class="hitsInput"
+            type="number"
+            min="0"
+            max="3"
+            placeholder="0"
+            value={hits.value}
+            onInput={(e) => {
+              const val = parseInt((e.target as HTMLInputElement).value);
+              hits.value = isNaN(val) ? undefined : val;
+              e.preventDefault();
+            }}
+            onKeydown={onKeyInput(hits, focus)}
+          />
+        ) : undefined}
+      </>
+    ),
     calculateTurnData: (value: number | undefined) => ({
       value: value ?? 0,
       deltaScore: (value || -1) * 2,

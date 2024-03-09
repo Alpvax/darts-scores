@@ -1,4 +1,5 @@
-import type { TurnStats } from "@/gameUtils/roundDeclaration";
+import type { MoveFocus } from "@/utils";
+import type { Ref, VNodeChild } from "vue";
 
 type FocusResult =
   | {
@@ -15,9 +16,9 @@ type TurnDataChange<Value, TurnStats extends {}> = {
   deltaScore: number;
 };
 
-export type TurnData<Value, TurnStats extends {}> = {
+export type TurnData<Value, TurnStats extends {}, RoundKey extends string | number> = {
   playerId: string;
-  roundKey: number | string;
+  roundKey: RoundKey;
   value: Value;
   stats: TurnStats;
   deltaScore: number;
@@ -33,12 +34,25 @@ export type RoundDef<
   key: RoundKey;
   label: string;
   focusOn: (playerIndex: number) => FocusResult;
+  /** The html to display.
+   * @param value is a ref that can be used as a v-model value for the round input. Setting it will automatically move the focus to the next unentered input
+   * @param extra is a combination of the TurnData (except for the value) and:
+   *  `editable`: whether the rendered cell should allow editing the value, used to conditionally render input elements
+   *  `focus`: a {@link MoveFocus} object to allow changing focus to different turns
+   */
+  display: (
+  value: Ref<Value | undefined>,
+  extra: Omit<TurnData<Value, TurnStats, RoundKey>, "value"> & {
+    editable: boolean;
+    focus: MoveFocus;
+  },
+) => VNodeChild;
   calculateTurnData: (
     value: Value | undefined,
     startScore: number,
     playerId: string,
   ) => TurnDataChange<Value, TurnStats>;
-  makeTeamStats: (playerTurns: TurnData<Value, TurnStats>[]) => TeamStats;
+  makeTeamStats: (playerTurns: TurnData<Value, TurnStats, RoundKey>[]) => TeamStats;
 };
 
 export interface Round<
@@ -47,7 +61,7 @@ export interface Round<
   TeamStats extends {},
   RoundKey extends string | number,
 > extends RoundDef<Value, TurnStats, TeamStats, RoundKey> {
-  makeTurnData: (value: Value, startScore: number, playerId: string) => TurnData<Value, TurnStats>;
+  makeTurnData: (value: Value, startScore: number, playerId: string) => TurnData<Value, TurnStats, RoundKey>;
 }
 export type AsRound<Def extends RoundDef<any, any, any, any>> =
   Def extends RoundDef<infer Value, infer TurnStats, infer TeamStats, infer RoundKey>
@@ -55,10 +69,10 @@ export type AsRound<Def extends RoundDef<any, any, any, any>> =
     : never;
 
 export type TurnDataFor<T extends RoundDef<any, any, any, any>> =
-  T extends RoundDef<infer Value, infer TurnStats, any, any> ? TurnData<Value, TurnStats> : never;
+  T extends RoundDef<infer Value, infer TurnStats, any, infer RoundKey> ? TurnData<Value, TurnStats, RoundKey> : never;
 export type OptionalTurnDataFor<T extends RoundDef<any, any, any, any>> =
-  T extends RoundDef<infer Value, infer TurnStats, any, any>
-    ? TurnData<Value | undefined, TurnStats>
+  T extends RoundDef<infer Value, infer TurnStats, any, infer RoundKey>
+    ? TurnData<Value | undefined, TurnStats, RoundKey>
     : never;
 
 // const makeTurnStatsFactory = <Value, TurnStats extends {}>(roundDef: RoundDef<Value, TurnStats, any>) =>
