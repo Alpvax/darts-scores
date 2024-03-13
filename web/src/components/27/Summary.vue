@@ -178,8 +178,8 @@
     <template #jesus="{player}">
       <td
         :class="{
-          best: playerStats[player].piranhas > 0
-            && statLimits.piranhas.max == playerStats[player].piranhas,
+          best: playerStats[player].jesus > 0
+            && statLimits.jesus.max == playerStats[player].jesus,
         }"
       >
         {{ playerStats[player].jesus }}
