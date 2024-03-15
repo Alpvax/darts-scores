@@ -1,10 +1,4 @@
-import type {
-  AsRound,
-  OptionalTurnDataFor,
-  Round,
-  RoundDef,
-  TurnDataFor,
-} from "./roundDef";
+import type { AsRound, OptionalTurnDataFor, Round, RoundDef, TurnDataFor } from "./roundDef";
 
 export interface GameDefinition<
   Rounds extends {
@@ -31,6 +25,8 @@ type PlayerStateCore<
   allRounds: {
     [K in keyof Rounds]: OptionalTurnDataFor<Rounds[K]>;
   };
+  getTakenData: <K extends keyof Rounds>(round: K) => TurnDataFor<Rounds[K]> | null;
+  getRoundData: <K extends keyof Rounds>(round: K) => OptionalTurnDataFor<Rounds[K]>;
 };
 
 export const makeGameDefinition = <
@@ -75,13 +71,17 @@ export const makeGameDefinition = <
     playerStartState: (playerId: string) => {
       const startState = definition.playerStartState(playerId);
       let score = startState.score;
+      let takenRounds = new Map();
+      let allRounds = rounds.reduce((obj, round) => {
+        const turnData = round.makeTurnData(undefined, score, playerId);
+        score += turnData.deltaScore;
+        return Object.assign(obj, { [round.key]: turnData });
+      }, {}) as PlayerStateCore<RoundsObj<Rounds>>["allRounds"];
       return {
-        takenRounds: new Map(),
-        allRounds: rounds.reduce((obj, round) => {
-          const turnData = round.makeTurnData(undefined, score, playerId);
-          score += turnData.deltaScore;
-          return Object.assign(obj, { [round.key]: turnData });
-        }, {}) as PlayerStateCore<RoundsObj<Rounds>>["allRounds"],
+        takenRounds,
+        allRounds,
+        getTakenData: (round) => takenRounds.get(round) ?? null,
+        getRoundData: (round) => allRounds[round],
         ...startState,
       };
     },
@@ -89,3 +89,8 @@ export const makeGameDefinition = <
     getRound: (round) => roundsObj[round],
   };
 };
+
+export type RoundsFor<G extends GameDefinition<any, any>> =
+  G extends GameDefinition<infer R, any> ? { [K in keyof R]: R[K] } : never;
+export type PlayerStateFor<G extends GameDefinition<any, any>> =
+  G extends GameDefinition<any, infer P> ? { [K in keyof P]: P[K] } : never;

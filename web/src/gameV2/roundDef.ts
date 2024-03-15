@@ -41,12 +41,12 @@ export type RoundDef<
    *  `focus`: a {@link MoveFocus} object to allow changing focus to different turns
    */
   display: (
-  value: Ref<Value | undefined>,
-  extra: Omit<TurnData<Value, TurnStats, RoundKey>, "value"> & {
-    editable: boolean;
-    focus: MoveFocus;
-  },
-) => VNodeChild;
+    value: Ref<Value | undefined>,
+    extra: Omit<TurnData<Value, TurnStats, RoundKey>, "value"> & {
+      editable: boolean;
+      focus: MoveFocus;
+    },
+  ) => VNodeChild;
   calculateTurnData: (
     value: Value | undefined,
     startScore: number,
@@ -61,7 +61,11 @@ export interface Round<
   TeamStats extends {},
   RoundKey extends string | number,
 > extends RoundDef<Value, TurnStats, TeamStats, RoundKey> {
-  makeTurnData: (value: Value, startScore: number, playerId: string) => TurnData<Value, TurnStats, RoundKey>;
+  makeTurnData: (
+    value: Value,
+    startScore: number,
+    playerId: string,
+  ) => TurnData<Value, TurnStats, RoundKey>;
 }
 export type AsRound<Def extends RoundDef<any, any, any, any>> =
   Def extends RoundDef<infer Value, infer TurnStats, infer TeamStats, infer RoundKey>
@@ -69,7 +73,9 @@ export type AsRound<Def extends RoundDef<any, any, any, any>> =
     : never;
 
 export type TurnDataFor<T extends RoundDef<any, any, any, any>> =
-  T extends RoundDef<infer Value, infer TurnStats, any, infer RoundKey> ? TurnData<Value, TurnStats, RoundKey> : never;
+  T extends RoundDef<infer Value, infer TurnStats, any, infer RoundKey>
+    ? TurnData<Value, TurnStats, RoundKey>
+    : never;
 export type OptionalTurnDataFor<T extends RoundDef<any, any, any, any>> =
   T extends RoundDef<infer Value, infer TurnStats, any, infer RoundKey>
     ? TurnData<Value | undefined, TurnStats, RoundKey>
