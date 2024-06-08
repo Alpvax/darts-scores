@@ -178,6 +178,7 @@ export const createComponent = <
           }
           emit("update:partialSummary", playerData.value);
         },
+        { deep: true },
       );
       watch(
         () => new Map([...playerData.value.entries()].map(([pid, { stats }]) => [pid, stats])),
@@ -253,8 +254,8 @@ export const createComponent = <
                           computed({
                             get: () => value,
                             set: (val) => {
-                              turnValues.value.set(turnKey(pData.playerId, idx), val!);
-                              emit("turnTaken", { value, ...pData });
+                              turnValues.set(turnKey(pData.playerId, idx), val!);
+                              emit("turnTaken", { value: val, ...pData });
                               focusEmpty();
                             },
                           }),

@@ -134,6 +134,14 @@ export default defineComponent({
         }
       },
     );
+    watch(
+      () => partialGameResult.value,
+      (result) => {
+        if (result) {
+          console.log("Partial game result changed:", result);
+        }
+      },
+    );
     const positions = ref(
       [] as {
         pos: number;
