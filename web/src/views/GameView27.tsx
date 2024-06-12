@@ -15,6 +15,7 @@ import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult } from "@/game/27/history";
+import defaultStorageIface, { StorageLocation } from "@/config/storageInterface";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -69,8 +70,8 @@ export default defineComponent({
   props: {
     gameId: { type: String, default: "" },
     sideDisplay: {
-      type: String as PropType<"none" | "summary" | "entries" | "combined">,
-      default: "entries",
+      type: String as PropType<"none" | "summary" | "entries" | "combined" | undefined>,
+      required: false,
     },
   },
   setup(props) {
@@ -242,6 +243,29 @@ export default defineComponent({
 
     // const playerScores = ref([] as PlayerData<number[]>[]);
 
+    const sideDisplayStored = defaultStorageIface().addValueHandler<"none" | "summary" | "entries" | "combined">({
+      initial: "summary",
+      key: "twentyseven:sideDisplay",
+      location: StorageLocation.Local,
+      parse: s => {
+        switch (s) {
+          case "summary":
+            return "summary"
+          case "entries":
+            return "entries"
+          case "combined":
+            return "combined"
+          default:
+            return "none"
+        }
+      },
+      merge: "replace",
+    }, true).getMutableRef(StorageLocation.Local);
+    const sideDisplay = computed({
+      get: () => props.sideDisplay ?? sideDisplayStored.value,
+      set: (val) => {sideDisplayStored.value = val},
+    });
+
     return () => (
       <>
         <div class="gameDiv">
@@ -344,7 +368,7 @@ export default defineComponent({
               ),
             }}
           </Game27>
-          {props.sideDisplay === "summary" ? (
+          {sideDisplay.value === "summary" ? (
             <Summary27
               players={players.value}
               includeAllPlayers

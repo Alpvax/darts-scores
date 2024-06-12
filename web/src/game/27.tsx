@@ -4,7 +4,7 @@ import makeSummaryAccumulatorFactoryFor, {
   type PlayerDataForStats,
   type SummaryFieldKeysFor,
 } from "@/gameUtils/summary";
-import { makeGameDefinition } from "@/gameV2/gameDef";
+import { makeGameDefinition, type GameDefinition, type PlayerStateFor } from "@/gameV2/gameDef";
 import type { RoundDef } from "@/gameV2/roundDef";
 // import {
 //   defaultedSummaryFieldMeta,

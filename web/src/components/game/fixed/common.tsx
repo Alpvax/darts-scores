@@ -254,7 +254,7 @@ export const createComponent = <
                           computed({
                             get: () => value,
                             set: (val) => {
-                              turnValues.set(turnKey(pData.playerId, idx), val!);
+                              turnValues.value.set(turnKey(pData.playerId, idx), val!);
                               emit("turnTaken", { value: val, ...pData });
                               focusEmpty();
                             },

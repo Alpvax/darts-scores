@@ -1,13 +1,27 @@
-import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
+import { createRouter, createWebHistory, type RouteLocationRaw } from "vue-router";
+import defaultInstance, { StorageLocation } from "@/config/storageInterface";
+import {} from "@/utils/nestedKeys";//XXX
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",
-      name: "home",
-      component: HomeView,
+      redirect: (to) => {
+        let config = defaultInstance().addValueHandler<RouteLocationRaw>({
+          initial: { name: "twentyseven" },
+          key: "onload:defaultGame",
+          location: StorageLocation.Local,
+          parse: JSON.parse,
+          merge: (partial, initial) => [StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local].map(l => partial.get(l)).find(v => v) ?? initial,
+        }, true).readonlyRef();
+        return config.value;
+      },
+    },
+    {
+      path: "/gameSelect",
+      name: "gameSelect",
+      component: () => import("../views/HomeView.vue"), //TODO: selection view
     },
     {
       path: "/about",
