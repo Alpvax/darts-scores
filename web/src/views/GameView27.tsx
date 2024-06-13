@@ -15,7 +15,7 @@ import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult } from "@/game/27/history";
-import defaultStorageIface, { StorageLocation } from "@/config/storageInterface";
+import { StorageInterface, StorageLocation } from "@/config/storageInterface";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -243,7 +243,7 @@ export default defineComponent({
 
     // const playerScores = ref([] as PlayerData<number[]>[]);
 
-    const sideDisplayStored = defaultStorageIface().addValueHandler<"none" | "summary" | "entries" | "combined">({
+    const sideDisplayStored = StorageInterface.defaultInstance().addValueHandler<"none" | "summary" | "entries" | "combined">({
       initial: "summary",
       key: "twentyseven:sideDisplay",
       location: StorageLocation.Local,
@@ -260,6 +260,7 @@ export default defineComponent({
         }
       },
       merge: "replace",
+      toStr: s => s,
     }, true).getMutableRef(StorageLocation.Local);
     const sideDisplay = computed({
       get: () => props.sideDisplay ?? sideDisplayStored.value,

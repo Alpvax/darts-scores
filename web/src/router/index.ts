@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteLocationRaw } from "vue-router";
-import defaultInstance, { StorageLocation } from "@/config/storageInterface";
+import { StorageInterface, StorageLocation } from "@/config/storageInterface";
 import {} from "@/utils/nestedKeys";//XXX
 
 const router = createRouter({
@@ -8,7 +8,7 @@ const router = createRouter({
     {
       path: "/",
       redirect: (to) => {
-        let config = defaultInstance().addValueHandler<RouteLocationRaw>({
+        let config = StorageInterface.defaultInstance().addValueHandler<RouteLocationRaw>({
           initial: { name: "twentyseven" },
           key: "onload:defaultGame",
           location: StorageLocation.Local,

@@ -233,7 +233,7 @@ function makeRef<T>(value: StorageValue<T>, unparsed?: UnparsedValues): { r: Ref
   }
 }
 
-export class StorageInterface {
+export class StorageInterfaceV1 {
   readonly values = new Map<string, Ref<any>>();
   readonly unparsedSetters = new Map<string, (unparsed: UnparsedValues) => void>();
   readonly unparsedValues: Map<string, UnparsedValues>;
@@ -295,7 +295,11 @@ export class StorageInterface {
   }
 }
 
-export class StorageInterfaceV2 {
+export class StorageInterface {
+  private static DEFAULT_INSTANCE: StorageInterface = new StorageInterface();
+  public static defaultInstance(): StorageInterface {
+    return this.DEFAULT_INSTANCE
+  }
   readonly volatileValues = new Map<string, Ref<any>>();
   readonly savedValues = new Map<string, ConfigRef<any, any>>();
   readonly unparsedValues: Map<string, UnparsedValues>;
@@ -380,12 +384,5 @@ export class StorageInterfaceV2 {
   }
 }
 
-let DEFAULT_INTERFACE: StorageInterfaceV2 | null = null;
-
-export default () => {
-  if (DEFAULT_INTERFACE === null) {
-    DEFAULT_INTERFACE = new StorageInterfaceV2();
-  }
-  return DEFAULT_INTERFACE;
-};
+export default StorageInterface;
 
