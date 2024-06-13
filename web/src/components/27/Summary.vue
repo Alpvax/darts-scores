@@ -360,6 +360,7 @@ export default defineComponent({
         hans: { min: 0, max: 0 },
         goblins: { min: 0, max: 0 },
         piranhas: { min: 0, max: 0 },
+        jesus: { min: 0, max: 0 },
         allPos: { min: 0, max: 0 },
         farDream: { min: 0, max: 0 },
         bestHits: { min: 0, max: 0 },
