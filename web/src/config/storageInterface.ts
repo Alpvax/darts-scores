@@ -17,6 +17,25 @@ export type NestedPartial<T> = T extends {}
 }
 : T;
 
+type MergeFunction<T> =
+/**
+ * @param partial A map of the location to a (maybe partial) value. The StorageLocation.Volatile value will always be present and will be the current value.
+ * @param initial The default (fallback) value.
+ */
+(partial: Map<StorageLocation, NestedPartial<T>>, initial: T) => T;
+
+type MergeOption<T> = MergeFunction<T> | "replace";
+
+const makeMergeFunc = <T>(merge: MergeOption<T>): MergeFunction<T> => {
+  if (typeof merge === "string") {
+    switch (merge) {
+      case "replace":
+        return (partial, initial) => ([StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local].map(l => partial.get(l)).find(v => v) ?? initial) as T;
+    }
+  }
+  return merge;
+};
+
 type UnparsedValues = { session?: string, local?: string, remote?: any };
 
 type RAMStorageValue<T> = {
@@ -24,14 +43,16 @@ type RAMStorageValue<T> = {
   location: StorageLocation.Volatile;
   initial: T | (() => T);
 }
-type SavedStorageValue<T> = {
+type BrowserStorageValue<T> = {
   key: string;
-  location: Exclude<StorageLocation, StorageLocation.Volatile>;
+  location: StorageLocation.Session | StorageLocation.Local;
   parse: (s: string) => NestedPartial<T>;
   toStr?: (val: T) => string;
-  merge: "replace" | ((partial: Map<StorageLocation, NestedPartial<T>>, initial: T) => T);
+  merge: MergeOption<T>;
   initial: T | (() => T);
 }
+// Separated in preparation for e.g. database saved values
+type SavedStorageValue<T> = BrowserStorageValue<T>;
 export type StorageValue<T> = RAMStorageValue<T> | SavedStorageValue<T>;
 
 class ConfigRef<T, Meta extends SavedStorageValue<T>> {
@@ -40,7 +61,7 @@ class ConfigRef<T, Meta extends SavedStorageValue<T>> {
   private readonly initDefault: () => void;
   private defaultValue: T | null = null;
   private readonly storageLayers: Ref<Map<StorageLocation, NestedPartial<T>>> = ref(new Map());
-  private merge: Exclude<SavedStorageValue<T>["merge"], string>;
+  private merge: MergeFunction<T>;
   constructor(private readonly meta: Meta) {
     if (typeof meta.initial === "function") {
       this.cachedValue = null;
@@ -53,9 +74,7 @@ class ConfigRef<T, Meta extends SavedStorageValue<T>> {
       this.defaultValue = meta.initial;
       this.initDefault = () => {};
     }
-    this.merge = (this.meta as SavedStorageValue<T>).merge === "replace"
-      ? (partial, initial) => ([StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local].map(l => partial.get(l)).find(v => v) ?? initial) as T
-      : (this.meta as SavedStorageValue<T>).merge as Exclude<SavedStorageValue<T>["merge"], string>;
+    this.merge = makeMergeFunc((this.meta as SavedStorageValue<T>).merge);
   }
   // isDefault(): boolean {
 
@@ -164,9 +183,7 @@ function makeRef<T>(value: StorageValue<T>, unparsed?: UnparsedValues): { r: Ref
       //   unparsedRef.value.set(StorageLocation.Remote, unparsed.remote);
       // }
     };
-    let merge: Exclude<SavedStorageValue<T>["merge"], string> = (value as SavedStorageValue<T>).merge === "replace"
-    ? (partial, initial) => ([StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local].map(l => partial.get(l)).find(v => v) ?? initial) as T
-    : (value as SavedStorageValue<T>).merge as Exclude<SavedStorageValue<T>["merge"], string>;
+    let merge = makeMergeFunc((value as SavedStorageValue<T>).merge);
     setUnparsed(unparsed ?? {});
     if (typeof value.initial === "function") {
       let cached: Ref<T | null> = ref(null);
@@ -309,7 +326,7 @@ export class StorageInterface {
     this.unparsedValues = reactive(new Map())
   }
   addValueHandler<T>(storageValue: RAMStorageValue<T>, allowExisting?: boolean): Ref<T>;
-  addValueHandler<T>(storageValue: SavedStorageValue<T>, allowExisting?: boolean): ConfigRef<T, typeof storageValue>;
+  addValueHandler<T>(storageValue: BrowserStorageValue<T>, allowExisting?: boolean): ConfigRef<T, typeof storageValue>;
   addValueHandler<T>(storageValue: StorageValue<T>, allowExisting?: boolean): any/*: typeof storageValue extends SavedStorageValue<T> ? ConfigRef<T, typeof storageValue> : Ref<T>*/ {
     let key = storageValue.key;
     if (this.storageValues.has(key) && !allowExisting) {
