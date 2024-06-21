@@ -15,7 +15,8 @@ import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult } from "@/game/27/history";
-import { StorageInterface, StorageLocation } from "@/config/storageInterface";
+import { use27Config } from "@/game/27/config";
+import { StorageLocation } from "@/config";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -60,6 +61,8 @@ type Result27 = {
   };
 };
 
+export type SideDisplay = "none" | "summary" | "entries" | "combined";
+
 export default defineComponent({
   components: {
     Game27,
@@ -70,7 +73,7 @@ export default defineComponent({
   props: {
     gameId: { type: String, default: "" },
     sideDisplay: {
-      type: String as PropType<"none" | "summary" | "entries" | "combined" | undefined>,
+      type: String as PropType<SideDisplay | undefined>,
       required: false,
     },
   },
@@ -78,15 +81,8 @@ export default defineComponent({
     type PlayerData = PlayerDataFor<typeof gameMeta>;
     const db = getFirestore();
     const playerStore = usePlayerStore();
-    const players = ref([
-      //TODO: proper players
-      "y5IM9Fi0VhqwZ6gAjil6",
-      "6LuRdib3wFxhbcjjh0au",
-      "Gt8I7XPbPWiQ92FGsTtR",
-      "jcfFkGCY81brr8agA3g3",
-      "jpBEiBzn9QTVN0C6Hn1m",
-      "k7GNyCogBy79JE4qhvAj",
-    ]);
+    const config = use27Config();
+    const players = ref(config.defaultPlayers.readonlyRef().value);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
     const onGameIdUpdated = async (gameId: string | undefined, oldGameId?: string) => {
@@ -243,25 +239,7 @@ export default defineComponent({
 
     // const playerScores = ref([] as PlayerData<number[]>[]);
 
-    const sideDisplayStored = StorageInterface.defaultInstance().addValueHandler<"none" | "summary" | "entries" | "combined">({
-      initial: "summary",
-      key: "twentyseven:sideDisplay",
-      location: StorageLocation.Local,
-      parse: s => {
-        switch (s) {
-          case "summary":
-            return "summary"
-          case "entries":
-            return "entries"
-          case "combined":
-            return "combined"
-          default:
-            return "none"
-        }
-      },
-      merge: "replace",
-      toStr: s => s,
-    }, true).getMutableRef(StorageLocation.Local);
+    const sideDisplayStored = config.sideDisplay.mutableRef(StorageLocation.Local);
     const sideDisplay = computed({
       get: () => props.sideDisplay ?? sideDisplayStored.value,
       set: (val) => {sideDisplayStored.value = val},

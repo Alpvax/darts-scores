@@ -8,7 +8,7 @@ const router = createRouter({
     {
       path: "/",
       redirect: (to) => {
-        let config = StorageInterface.defaultInstance().addValueHandler<RouteLocationRaw>({
+        const config = StorageInterface.defaultInstance().addValueHandler<RouteLocationRaw>({
           initial: { name: "twentyseven" },
           key: "onload:defaultGame",
           location: StorageLocation.Local,
@@ -32,9 +32,17 @@ const router = createRouter({
       component: () => import("../views/AboutView.vue"),
     },
     {
+      path: "/twentyseven",
+      alias: "/27",
+      name: "twentyseven",
+      redirect: (to) => ({
+        name: "twentysevenSummary" //TODO: dynamic
+      })
+    },
+    {
       path: "/twentyseven/game",
       alias: "/27/game",
-      name: "twentyseven",
+      name: "twentysevenGame",
       // props: (route) => ({
       //   gameId: route.query.gameId,
       // }),

@@ -100,9 +100,19 @@ const setPrototypeOfTrap: ProxyHandler<object>["setPrototypeOf"] = () => { throw
 
 
 const handlers: ProxyHandler<object> = {
+  apply: applyTrap,
+  construct: constructTrap,
+  // defineProperty: definePropertyTrap,
+  // deleteProperty: deletePropertyTrap,
   get: getTrap,
-  ownKeys: ownKeysTrap,
+  // getOwnPropertyDescriptor: getOwnPropertyDescriptorTrap,
+  // getPrototypeOf: getPrototypeOfTrap,
   has: hasTrap,
+  // isExtensible: isExtensibleTrap,
+  ownKeys: ownKeysTrap,
+  // preventExtensions: preventExtensionsTrap,
+  // set: setTrap,
+  // setPrototypeOf: setPrototypeOfTrap,
 }
 
 export const nestedAccessProxy = <T extends object>(obj: T): NestedKeys<T> => new Proxy(obj, handlers) as NestedKeys<T>;
