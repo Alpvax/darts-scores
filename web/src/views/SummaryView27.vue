@@ -61,6 +61,7 @@ export default defineComponent({
       ).playerPositions.value;
       const game: GameResult<TurnData27> = {
         date: new Date(),
+        players: players.value.map((pid) => ({ pid })),
         results: new Map(
           [...plyrData].map(([pid, data]) => {
             const pos = positions.playerLookup.get(pid)!;

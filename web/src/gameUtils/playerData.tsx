@@ -15,6 +15,7 @@ import type {
   GameMetaKRS,
 } from "./gameMeta";
 import type { PlayerDataForStats } from "./summary";
+import type { JSX } from "vue/jsx-runtime";
 
 export type PlayerDataT<
   RS extends TurnStats,

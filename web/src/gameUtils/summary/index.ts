@@ -35,6 +35,8 @@ export type PlayerDataForStats<T extends TurnData<any, any, any>> = {
 
 export type GameResult<T extends TurnData<any, any, any>, P extends string = string> = {
   date: Date;
+  /** Ordered list of players in game */
+  players: { pid: P; displayName?: string }[];
   results: Map<P, PlayerDataForStats<T>>;
   tiebreakWinner?: P;
 };

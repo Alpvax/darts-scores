@@ -1,0 +1,47 @@
+div.historyDiv {
+  padding: 1em;
+  display: grid;
+  grid-template-areas:
+    "filter filter side"
+    "games g_ side"
+    "games g_ _";
+  grid-template-rows: max-content max-content 1fr;
+  grid-template-columns: max-content 1fr min-content;
+  font-size: small;
+
+  & .playerName,
+  & .tableHeader {
+    white-space: normal;
+    font-weight: bold;
+    width: 4.5em;
+    vertical-align: bottom;
+  }
+
+  & .historyFilter {
+    grid-area: filter;
+    width: max-content;
+    white-space: nobreak;
+  }
+  & table.gamesList {
+    grid-area: games;
+    width: min-content;
+    text-align: center;
+
+    & td {
+      padding: 0 0.2em;
+    }
+
+    & tbody tr:hover {
+      background-color: bisque;
+    }
+    & td.tie {
+      background-color: #bbff66;
+    }
+    & td.winner {
+      background-color: #00ff00;
+    }
+  }
+  & table:not(.gamesList) {
+    grid-area: side;
+  }
+}

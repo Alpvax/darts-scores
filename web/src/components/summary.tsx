@@ -60,10 +60,6 @@ export const createSummaryComponent = <
               }
               map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
             });
-            console.debug(
-              `Summary post game[${gameIndex}]:`,
-              new Map([...map].map(([k, v]) => [k, v.summary])),
-            ); //XXX
             return map;
           },
           new Map<PIDs, ReturnType<typeof summaryFactory>>(
@@ -225,7 +221,7 @@ export const createSummaryComponent = <
                 props.includeAllPlayers || playerStats.value.has(pid)
                   ? [
                       <th class="playerName" data-player-id={pid}>
-                        {playerStore.playerName(pid).value}
+                        {playerStore.playerName(pid)}
                       </th>,
                     ]
                   : [],

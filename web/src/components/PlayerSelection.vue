@@ -65,8 +65,9 @@ export default defineComponent({
   },
   emits: ["update:player", "update:modelValue"],
   setup(props, { emit }) {
+    console.log("Allow guests:", props.allowGuests); //XXX
     const playerStore = usePlayerStore();
-    const allPlayers = computed(() => props.available.map((p) => playerStore.getPlayer(p).value));
+    const allPlayers = computed(() => props.available.map((p) => playerStore.getPlayer(p)));
     const guests = ref(
       new Set<string>(
         props.modelValue !== null
@@ -130,7 +131,7 @@ export default defineComponent({
       })),
       nameContextMenuItems: (pid: string) =>
         computed(() => {
-          const player = playerStore.getPlayer(pid).value;
+          const player = playerStore.getPlayer(pid);
           return player.loaded ? player.names.contextMenuItems() : [];
         }),
       generalPlayerContextMenu: computed(() => {

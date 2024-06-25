@@ -1,11 +1,25 @@
 import type { GameResult, PlayerDataForStats } from "@/gameUtils/summary";
 import { gameMeta, type TurnData27 } from "../27";
 import { makeGameResultFactory, makePlayerPositions } from "@/gameUtils/playerData";
-import { Timestamp } from "firebase/firestore";
-import { ref } from "vue";
+import {
+  QuerySnapshot,
+  Timestamp,
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+  writeBatch,
+  type Unsubscribe,
+} from "firebase/firestore";
+import { computed, reactive, ref, watch, watchEffect } from "vue";
+import { defineStore } from "pinia";
 
 type Result27v1 = {
-  version?: 1;
+  version: 1;
   date: string;
   winner:
     | string
@@ -98,6 +112,10 @@ const gameResultFactory = makeGameResultFactory(gameMeta);
 export const intoGameResult = (result: Result27): GameResult<TurnData27> => {
   const gameResult: GameResult<TurnData27> = {
     date: result.version === 2 ? result.date.toDate() : new Date(result.date),
+    players:
+      result.version === 2
+        ? result.players.map((pid) => ({ pid, displayName: result.game[pid].displayName }))
+        : Object.keys(result.game).map((pid) => ({ pid })),
     results: gameResultFactory(
       Object.entries(result.game).map(([pid, { rounds }]) => [pid, rounds]),
     ) as Map<string, PlayerDataForStats<TurnData27>>,
@@ -194,3 +212,103 @@ export const intoDBResult = <P extends string>(
     game,
   };
 };
+
+export const use27History = defineStore("27History", () => {
+  const db = getFirestore();
+  const gamesRef = collection(db, "game/twentyseven/games");
+
+  const today = new Date();
+  const toDate = ref(today.toISOString().slice(0, 10));
+  const fromDate = ref(`${today.getFullYear()}-01-01`);
+
+  let subscriptions: Unsubscribe[] = [];
+  const games = reactive(new Map<string, GameResult<TurnData27>>());
+
+  const handleSnapshot = (snapshot: QuerySnapshot) =>
+    snapshot.docChanges().forEach(async (change) => {
+      const gameId = change.doc.id;
+      if (change.type === "removed") {
+        games.delete(gameId);
+      } else {
+        const gameData = intoGameResult(change.doc.data() as Result27);
+        games.set(gameId, gameData);
+      }
+    });
+
+  watch(
+    [fromDate, toDate],
+    async ([fromDate, toDate]): Promise<void> => {
+      games.clear();
+      if (subscriptions.length > 0) {
+        subscriptions.forEach((unsub) => unsub());
+        subscriptions = [];
+        console.info("Refreshed subscription"); //XXX
+      }
+      const fd = new Date(fromDate);
+      if (fromDate <= toDate && fd <= today) {
+        const td = new Date(toDate);
+        td.setDate(td.getDate() + 1);
+        console.log("From", fd.toISOString().slice(0, 10), "To", td.toISOString().slice(0, 10)); //XXX
+        // Version 1 results
+        subscriptions.push(
+          onSnapshot(
+            query(
+              gamesRef,
+              // orderBy("version", "asc"),
+              // where("version", "==", 1),
+              orderBy("date", "desc"),
+              where("date", ">=", fromDate),
+              where("date", "<=", td.toISOString().slice(0, 10)),
+            ),
+            handleSnapshot,
+          ),
+        );
+        // Version 2 results
+        subscriptions.push(
+          onSnapshot(
+            query(
+              gamesRef,
+              orderBy("version", "asc"),
+              where("version", "==", 2),
+              orderBy("date", "desc"),
+              where("date", ">=", Timestamp.fromDate(fd)),
+              where("date", "<=", Timestamp.fromDate(td)),
+            ),
+            handleSnapshot,
+          ),
+        );
+      } else {
+        console.warn("toDate is earlier than fromDate!");
+      }
+    },
+    {
+      immediate: true,
+    },
+  );
+
+  return {
+    toDate,
+    fromDate,
+    dateError: computed(() =>
+      toDate.value < fromDate.value
+        ? "Start date is greater than end date"
+        : fromDate.value > today.toISOString().slice(0, 10)
+          ? "Start date is later than the current date"
+          : null,
+    ),
+    games: computed(
+      () =>
+        [...games]
+          .map(([gameId, game]) => Object.freeze({ gameId, ...game }))
+          .toSorted(({ date: a }, { date: b }) =>
+            a > b ? -1 : a < b ? 1 : 0,
+          ) as (GameResult<TurnData27> & { gameId: string })[],
+    ),
+    allPlayers: computed(() =>
+      [...games.values()].reduce((s, { players }) => {
+        players.forEach(({ pid }) => s.add(pid));
+        return s;
+      }, new Set<string>()),
+    ),
+  };
+});

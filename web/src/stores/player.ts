@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from "vue";
 import { defineStore } from "pinia";
-import { doc, getFirestore, onSnapshot, type Unsubscribe } from "firebase/firestore";
+import { collection, doc, getFirestore, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { ContextMenuItem } from "@/components/contextmenu";
 
 export type DBPlayer = {
@@ -203,8 +203,13 @@ export const usePlayerStore = defineStore("player", () => {
   const db = getFirestore();
 
   const loadedPlayers = ref(new Map<string, LoadedPlayer>());
-  const subscriptions = new Map<string, Unsubscribe>();
+  let subscriptions: Map<string, Unsubscribe> | null = new Map<string, Unsubscribe>();
+  let globalSubscription: Unsubscribe | null = null;
   const loadPlayer = (playerId: string) => {
+    if (globalSubscription !== null) {
+      console.debug(`Skipping loading player "${playerId}": All player subscription mode enabled!`);
+      return;
+    }
     if (!subscriptions.has(playerId)) {
       subscriptions.set(
         playerId,
@@ -221,33 +226,36 @@ export const usePlayerStore = defineStore("player", () => {
       );
     }
   };
-  const playerName = (playerId: string) =>
-    computed(() => {
+  const playerName = (playerId: string) => {
+    if (globalSubscription === null) {
       loadPlayer(playerId);
-      const p = loadedPlayers.value.get(playerId);
-      if (p) {
-        return p.name;
-      }
-      return playerId;
-    });
-  const playerOrder = (playerId: string) =>
-    computed(() => {
+    }
+    const p = loadedPlayers.value.get(playerId);
+    if (p) {
+      return p.name;
+    }
+    return playerId;
+  };
+  const playerOrder = (playerId: string) => {
+    if (globalSubscription === null) {
       loadPlayer(playerId);
-      const p = loadedPlayers.value.get(playerId);
-      if (p) {
-        return p.defaultOrder;
+    }
+    const p = loadedPlayers.value.get(playerId);
+    if (p) {
+      return p.defaultOrder;
+    }
+    return Number.MAX_SAFE_INTEGER;
+  };
+  const getPlayer = (playerId: string): Player => {
+    if (globalSubscription === null) {
+      loadPlayer(playerId);
+    }
+    return (
+      (loadedPlayers.value.get(playerId) as LoadedPlayer | undefined) ?? {
+        id: playerId,
+        loaded: false,
+        name: playerId,
       }
-      return Number.MAX_SAFE_INTEGER;
-    });
-  const getPlayer = (playerId: string): Ref<Player> => {
-    loadPlayer(playerId);
-    return computed(
-      () =>
-        (loadedPlayers.value.get(playerId) as LoadedPlayer | undefined) ?? {
-          id: playerId,
-          loaded: false,
-          name: playerId,
-        },
     );
   };
 
@@ -256,6 +264,37 @@ export const usePlayerStore = defineStore("player", () => {
     playerName,
     playerOrder,
     getPlayer,
+    loadAllPlayers: () => {
+      globalSubscription = onSnapshot(collection(db, "players"), (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const playerId = change.doc.id;
+          if (loadedPlayers.value.has(playerId) && change.type in ["added", "modified"]) {
+            //TODO: modify existing, rather than replacing
+            loadedPlayers.value.set(
+              playerId,
+              new LoadedPlayer(playerId, change.doc.data() as DBPlayer),
+            );
+            console.log(
+              "Player changed in database: (Currently replace entire player)",
+              playerId,
+              change.doc.data(),
+            );
+          } else if (change.type === "added") {
+            const p = new LoadedPlayer(playerId, change.doc.data() as DBPlayer);
+            console.debug("Loaded player:", p); //XXX
+            loadedPlayers.value.set(playerId, p);
+          } else if (change.type === "removed") {
+            loadedPlayers.value.delete(playerId);
+          } else {
+            console.warn("Should be unreachable:", playerId, change.doc.data()); //XXX
+          }
+        });
+      });
+      for (const unsub of subscriptions.values()) {
+        unsub();
+      }
+    },
+    allLoaded: () => globalSubscription !== null,
     all: computed(() => [...loadedPlayers.value.keys()]),
     setNameTheme: (theme: string | null) =>
       loadedPlayers.value.forEach((p) => (p.names.theme = theme)),

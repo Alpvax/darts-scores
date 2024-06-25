@@ -36,8 +36,8 @@ const router = createRouter({
       alias: "/27",
       name: "twentyseven",
       redirect: (to) => ({
-        name: "twentysevenSummary" //TODO: dynamic
-      })
+        name: "twentysevenSummary", //TODO: dynamic
+      }),
     },
     {
       path: "/twentyseven/game",

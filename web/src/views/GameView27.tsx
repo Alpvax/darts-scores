@@ -17,6 +17,7 @@ import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
 import { StorageLocation } from "@/config";
+import { usePlayerConfig } from "@/config/playerConfig";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -82,6 +83,7 @@ export default defineComponent({
     const db = getFirestore();
     const playerStore = usePlayerStore();
     const config = use27Config();
+    const playerConfig = usePlayerConfig();
     const players = ref(config.defaultPlayers.readonlyRef().value);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
@@ -95,14 +97,13 @@ export default defineComponent({
           );
           gameValues.value = values;
           const plyrs = Object.keys(data.game).map(
-            (pid) => [playerStore.playerOrder(pid).value, pid] as [number, string],
+            (pid) => [playerStore.playerOrder(pid), pid] as [number, string],
           );
           plyrs.sort(([a], [b]) => (a ?? 0) - (b ?? 0));
           players.value = plyrs.map((p) => p[1]);
           return;
         }
-      }
-      if (oldGameId !== undefined) {
+      } else if (oldGameId !== undefined) {
         gameDate.value = new Date();
         gameValues.value = undefined;
         players.value = [
@@ -202,11 +203,15 @@ export default defineComponent({
           {
             date: gameDate.value,
             results: partialGameResult.value,
+            players: players.value.map((pid) => ({
+              pid,
+              displayName: playerStore.playerName(pid),
+            })),
           },
           {
             players: players.value.map((pid) => ({
               pid,
-              displayName: playerStore.playerName(pid).value,
+              displayName: playerStore.playerName(pid),
             })),
             //TODO: tiebreakType
           },
@@ -242,8 +247,21 @@ export default defineComponent({
     const sideDisplayStored = config.sideDisplay.mutableRef(StorageLocation.Local);
     const sideDisplay = computed({
       get: () => props.sideDisplay ?? sideDisplayStored.value,
-      set: (val) => {sideDisplayStored.value = val},
+      set: (val) => {
+        sideDisplayStored.value = val;
+      },
     });
+
+    const allowGuests = playerConfig.allowGuestPlayers.readonlyRef();
+    watch(
+      allowGuests,
+      (val) => {
+        if (val && !playerStore.allLoaded()) {
+          playerStore.loadAllPlayers();
+        }
+      },
+      { immediate: true },
+    );
 
     return () => (
       <>
@@ -255,9 +273,10 @@ export default defineComponent({
               modelValue={players.value}
               onUpdate:modelValue={(p: string[]) =>
                 (players.value = p.toSorted(
-                  (a, b) => playerStore.playerOrder(a).value - playerStore.playerOrder(b).value,
+                  (a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b),
                 ))
               }
+              allowGuests={allowGuests.value}
             />
           ) : undefined}
           <Game27
@@ -365,9 +384,9 @@ export default defineComponent({
             <div class="completed">
               Game Completed!{" "}
               {winners.value.length === 1
-                ? `Winner = ${playerStore.playerName(winners.value[0]).value}`
+                ? `Winner = ${playerStore.playerName(winners.value[0])}`
                 : `It is a tie between ${listFormat.format(
-                    winners.value.map((pid) => playerStore.playerName(pid).value),
+                    winners.value.map((pid) => playerStore.playerName(pid)),
                   )}`}
               !
               {!submitted.value && props.gameId.length <= 0 ? (

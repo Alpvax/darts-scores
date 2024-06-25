@@ -3,11 +3,11 @@
 @import "./game27.css";
 @import "./ingameEntry.css";
 @import "./summary.css";
+@import "./history.css";
 
 #app {
   /* max-width: 100%; */
   margin: 0 auto;
-  padding: 2rem;
   padding-top: 0px;
 
   font-weight: normal;
