@@ -99,6 +99,7 @@ export type PlayerGameResult27 = {
   jesus?: boolean;
 };
 export type Result27 = {
+  version: 1;
   date: string;
   winner: string | {
     tie: string[];
