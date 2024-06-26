@@ -1,8 +1,7 @@
-import { ref, type App, readonly, type Ref, h, watch } from "vue";
+import { ref, type App, readonly, type Ref, h } from "vue";
 import { ContextMenu, type ContextMenuItem } from "@/components/contextmenu";
 import type { Side, UseFloatingOptions, VirtualElement } from "@floating-ui/vue";
 import type { Placement } from "@floating-ui/vue";
-import { flip } from "@floating-ui/vue";
 import type { AlignedPlacement } from "@floating-ui/vue";
 import type { Alignment } from "@floating-ui/vue";
 import { menuCloseKey, menuInjectionKey, menuItemsKey, menuOpenKey } from "./inject";
@@ -191,7 +190,7 @@ export default {
           floatingOptions,
         };
       },
-      beforeMount(el) {},
+      // beforeMount(el) {},
     });
   },
 };

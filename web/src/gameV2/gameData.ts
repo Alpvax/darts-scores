@@ -12,8 +12,8 @@ export type PlayerGameData<Rounds extends RoundsBaseType> = {
 
 export const playerGameData = <Rounds extends RoundsBaseType>(playerId: string) => {
   type RoundKey = keyof Rounds;
-  let takenTurns = new Map<RoundKey, any>();
-  let untakenTurns = new Set<RoundKey>();
+  const takenTurns = new Map<RoundKey, any>();
+  const untakenTurns = new Set<RoundKey>();
   return Object.defineProperties(
     {},
     {

@@ -215,7 +215,7 @@ type GameDefTypes27 =
   typeof gameDefinition extends GameDefinition<infer R, infer P> ? [R, P] : never;
 type Rounds = GameDefTypes27[0];
 type PlayerData = PlayerStateFor<typeof gameDefinition>;
-let test = gameDefinition.playerStartState("player1").getTakenData("20");
+const test = gameDefinition.playerStartState("player1").getTakenData("20");
 type T = typeof test;
 // gameDefinition.getRound("20").makeTeamStats
 

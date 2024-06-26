@@ -60,6 +60,10 @@ export const createSummaryComponent = <
               }
               map.get(pid)!.addGame(pData, allPlayers, game.tiebreakWinner);
             });
+            // console.debug(
+            //   `Summary post game[${gameIndex}]:`,
+            //   new Map([...map].map(([k, v]) => [k, v.summary])),
+            // ); //XXX
             return map;
           },
           new Map<PIDs, ReturnType<typeof summaryFactory>>(

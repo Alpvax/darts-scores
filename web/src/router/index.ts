@@ -1,20 +1,27 @@
 import { createRouter, createWebHistory, type RouteLocationRaw } from "vue-router";
 import { StorageInterface, StorageLocation } from "@/config/storageInterface";
-import {} from "@/utils/nestedKeys";//XXX
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: "/",
-      redirect: (to) => {
-        const config = StorageInterface.defaultInstance().addValueHandler<RouteLocationRaw>({
-          initial: { name: "twentyseven" },
-          key: "onload:defaultGame",
-          location: StorageLocation.Local,
-          parse: JSON.parse,
-          merge: (partial, initial) => [StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local].map(l => partial.get(l)).find(v => v) ?? initial,
-        }, true).readonlyRef();
+      redirect: (_to) => {
+        const config = StorageInterface.defaultInstance()
+          .addValueHandler<RouteLocationRaw>(
+            {
+              initial: { name: "twentyseven" },
+              key: "onload:defaultGame",
+              location: StorageLocation.Local,
+              parse: JSON.parse,
+              merge: (partial, initial) =>
+                [StorageLocation.Volatile, StorageLocation.Session, StorageLocation.Local]
+                  .map((l) => partial.get(l))
+                  .find((v) => v) ?? initial,
+            },
+            true,
+          )
+          .readonlyRef();
         return config.value;
       },
     },
@@ -35,7 +42,7 @@ const router = createRouter({
       path: "/twentyseven",
       alias: "/27",
       name: "twentyseven",
-      redirect: (to) => ({
+      redirect: (_to) => ({
         name: "twentysevenSummary", //TODO: dynamic
       }),
     },

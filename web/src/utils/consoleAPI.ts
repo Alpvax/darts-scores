@@ -38,7 +38,7 @@ export const initialiseAPI = (): void => {
           {
             useFunNames: {
               get: () => true,
-              set: (val) => console.log("UNIMPLEMENTED!"),
+              set: (_val) => console.log("UNIMPLEMENTED!"),
               // get: () => preferences.useFunNames,
               // set(val) {
               //   preferences.useFunNames = val;

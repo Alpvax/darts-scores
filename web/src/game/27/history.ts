@@ -5,17 +5,14 @@ import {
   QuerySnapshot,
   Timestamp,
   collection,
-  doc,
-  getDocs,
   getFirestore,
   onSnapshot,
   orderBy,
   query,
   where,
-  writeBatch,
   type Unsubscribe,
 } from "firebase/firestore";
-import { computed, reactive, ref, watch, watchEffect } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 
 type Result27v1 = {

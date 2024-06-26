@@ -1,12 +1,11 @@
-import { defineComponent, ref, watch, type Ref, computed, type PropType } from "vue";
+import { defineComponent, ref, computed } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { usePlayerStore } from "@/stores/player";
 import type { GameResult } from "@/gameUtils/summary";
 import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
 import { createSummaryComponent } from "@/components/summary";
-import { intoGameResult, use27History, type Result27 } from "@/game/27/history";
+import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
-import { StorageLocation } from "@/config";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import { extendClass } from "@/utils";
 
@@ -25,7 +24,7 @@ export default defineComponent({
     // },
     // toDate: { type: Date as PropType<Date | null>, default: null },
   },
-  setup(props) {
+  setup(_props) {
     const playerStore = usePlayerStore();
 
     const config = use27Config();
@@ -76,7 +75,7 @@ export default defineComponent({
           <tbody>
             {(historyStore.games as unknown as (GameResult<TurnData27> & { gameId: string })[]).map(
               (game) => {
-                let positions = makePlayerPositions(
+                const positions = makePlayerPositions(
                   ref(new Map([...game.results].map(([pid, { score }]) => [pid, score]))),
                   gameMeta.positionOrder,
                 ).playerPositions.value.playerLookup;

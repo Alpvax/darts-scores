@@ -24,11 +24,11 @@ const getTrap: ProxyHandler<object>["get"] = (target, key, reciever) => {
     if (key in target) {
       return Reflect.get(target, key, reciever);
     }
-    let parts = key.split(".");
+    const parts = key.split(".");
     if (parts.length < 2) {
       return undefined;
     }
-    let last = parts.pop()!;
+    const last = parts.pop()!;
     let obj: any = target; //TODO: lookup from reciever?
     for (const part of parts) {
       if (part in obj) {
@@ -60,8 +60,8 @@ const hasTrap: ProxyHandler<object>["has"] = (target, p) => {
     return true;
   }
   if (typeof p === "string") {
-    let parts = p.split(".");
-    let l = parts.length;
+    const parts = p.split(".");
+    const l = parts.length;
     let obj: any = target;
     for (const [i, part] of parts.entries()) {
       if (part in obj) {
@@ -86,7 +86,7 @@ const isExtensibleTrap: ProxyHandler<object>["isExtensible"] = () => {
 
 // A trap for Object.getOwnPropertyNames and Object.getOwnPropertySymbols.
 const getKeysRecursive = <T extends Record<string, any>>(obj: T, prefix?: string): string[] => {
-  let keys = Object.getOwnPropertyNames(obj).flatMap((k: keyof T & string) =>
+  const keys = Object.getOwnPropertyNames(obj).flatMap((k: keyof T & string) =>
     typeof obj[k] === "object" && !Array.isArray(obj[k])
       ? [k, ...getKeysRecursive(obj[k] as Record<string, any>, k)]
       : [k],
@@ -194,15 +194,6 @@ type Flatten<T extends object> = object extends T
       } extends Record<string, (y: infer O) => void>
     ? { [K in keyof O]: O[K] }
     : never;
-
-type Test = NestedKeys<{
-  a: string;
-  b: number;
-  maybeC?: {
-    some: [];
-    thing?: boolean;
-  };
-}>;
 
 // TODO: proper tests:
 // (() => {

@@ -71,8 +71,8 @@ export const makeGameDefinition = <
     playerStartState: (playerId: string) => {
       const startState = definition.playerStartState(playerId);
       let score = startState.score;
-      let takenRounds = new Map();
-      let allRounds = rounds.reduce((obj, round) => {
+      const takenRounds = new Map();
+      const allRounds = rounds.reduce((obj, round) => {
         const turnData = round.makeTurnData(undefined, score, playerId);
         score += turnData.deltaScore;
         return Object.assign(obj, { [round.key]: turnData });

@@ -182,13 +182,13 @@ export class StorageInterface {
     storageValue: StorageValue<T>,
     allowExisting: boolean = true,
   ): any /*: typeof storageValue extends SavedStorageValue<T> ? ConfigRef<T, typeof storageValue> : Ref<T>*/ {
-    let key = storageValue.key;
+    const key = storageValue.key;
     if (this.storageValues.has(key) && !allowExisting) {
       throw new Error(`Value with key: "${key}" already exists!`);
     }
     this.storageValues.set(key, storageValue);
     if (!this.unparsedValues.has(key)) {
-      let unparsed: UnparsedValues = {};
+      const unparsed: UnparsedValues = {};
       let shouldSave = false;
       switch (storageValue.location) {
         case StorageLocation.Local:
@@ -216,7 +216,7 @@ export class StorageInterface {
         return this.volatileValues.get(key)!;
       }
       default: {
-        let cv = new ConfigRef<T, typeof storageValue>(storageValue);
+        const cv = new ConfigRef<T, typeof storageValue>(storageValue);
         if (this.unparsedValues.has(key)) {
           cv.setUnparsed(this.unparsedValues.get(key)!);
         }
@@ -241,7 +241,7 @@ export class StorageInterface {
   //   return this.volatileValues.has(key) ? this.volatileValues.get(key) : this.savedValues.get(key)
   // }
   handleEvent(event: StorageEvent) {
-    let key = event.key;
+    const key = event.key;
     if (key) {
       if (!this.unparsedValues.has(key)) {
         this.unparsedValues.set(key, {});
@@ -252,7 +252,7 @@ export class StorageInterface {
       if (event.storageArea === localStorage) {
         this.unparsedValues.get(key)!.local = event.newValue ?? undefined;
       }
-      let cv = this.savedValues.get(key);
+      const cv = this.savedValues.get(key);
       console.info("Storage event recieved:", event, cv); //XXX
       if (cv) {
         cv.setUnparsed(this.unparsedValues.get(key) ?? {});

@@ -1,10 +1,6 @@
 // export { ConfigValue } from "./configValue";
 export { makeConfigComposable, type StorageValue } from "./storageInterfaceComposable";
 
-interface Config {
-  startup?: StartupConfig;
-}
-
 type StartupConfig =
   | {
       gameType: string;

@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from "vue";
+import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import { collection, doc, getFirestore, onSnapshot, type Unsubscribe } from "firebase/firestore";
 import type { ContextMenuItem } from "@/components/contextmenu";
@@ -203,7 +203,7 @@ export const usePlayerStore = defineStore("player", () => {
   const db = getFirestore();
 
   const loadedPlayers = ref(new Map<string, LoadedPlayer>());
-  let subscriptions: Map<string, Unsubscribe> | null = new Map<string, Unsubscribe>();
+  const subscriptions: Map<string, Unsubscribe> | null = new Map<string, Unsubscribe>();
   let globalSubscription: Unsubscribe | null = null;
   const loadPlayer = (playerId: string) => {
     if (globalSubscription !== null) {
