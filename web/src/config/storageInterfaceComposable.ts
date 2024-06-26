@@ -74,6 +74,7 @@ export interface ConfigRef<V> {
   setUnparsed(unparsed: UnparsedValues): void;
   readonlyRef(): ComputedRef<V>;
   mutableRef(storageLocation?: StorageLocation): WritableComputedRef<V>;
+  readonly value: V;
 }
 
 const makeBrowserRef = <V>(
@@ -118,7 +119,7 @@ const makeBrowserRef = <V>(
     }
     cachedValue!.value = val;
   };
-  return Object.defineProperty(
+  return Object.defineProperties(
     {
       setVolatile,
       setUnparsed(unparsed: UnparsedValues) {
@@ -194,15 +195,26 @@ const makeBrowserRef = <V>(
         }
         return refCache.get(location)!;
       },
-    },
-    CONFIG_REF_IDENTIFIER,
+    } satisfies Omit<ConfigRef<V>, "value">,
     {
-      configurable: false,
-      enumerable: false,
-      value: true,
-      writable: false,
+      value: {
+        configurable: false,
+        enumerable: true,
+        get: () => {
+          if (cachedValue === null) {
+            init();
+          }
+          return refCache.get(null)?.value ?? merge(storageLayers.value, fallback());
+        },
+      },
+      [CONFIG_REF_IDENTIFIER]: {
+        configurable: false,
+        enumerable: false,
+        value: true,
+        writable: false,
+      },
     },
-  );
+  ) as ConfigRef<V>;
 };
 
 const isConfigRef = (val: any): val is ConfigRef<any> =>
@@ -221,17 +233,21 @@ export type StorageRefs<Values extends { [k: string]: StorageValue<any> }> = {
       : unknown;
 };
 
+type UseConfig<Values extends { [k: string]: StorageValue<any> }> = {
+  getValue: <K extends keyof Values>(key: K) => Values[K] extends StorageValue<infer V> ? V : never;
+} & (() => StorageRefs<Values>);
+
 export function makeConfigComposable<Values extends { [k: string]: StorageValue<any> }>(
   values: Values,
-): () => StorageRefs<Values>;
+): UseConfig<Values>;
 export function makeConfigComposable<Values extends { [k: string]: StorageValue<any> }>(
   prefix: string,
   values: Values,
-): () => StorageRefs<Values>;
+): UseConfig<Values>;
 export function makeConfigComposable<Values extends { [k: string]: StorageValue<any> }>(
   prefixOrValues: string | Values,
   maybeValues?: Values,
-): () => StorageRefs<Values> {
+): UseConfig<Values> {
   const [prefix, values] =
     typeof prefixOrValues === "string"
       ? [prefixOrValues, maybeValues!]
@@ -239,6 +255,7 @@ export function makeConfigComposable<Values extends { [k: string]: StorageValue<
   const unparsedValues = reactive(new Map<string, UnparsedValues>());
   const refs = Object.freeze(
     Object.entries(values).reduce((refs, [key, meta]) => {
+      const storageKey = prefix ? `${prefix}:${key}` : key;
       const unparsed: UnparsedValues = {};
       switch (meta.location) {
         case StorageLocation.Volatile:
@@ -247,13 +264,13 @@ export function makeConfigComposable<Values extends { [k: string]: StorageValue<
           );
           break;
         case StorageLocation.Local:
-          unparsed.local = localStorage.getItem(key) ?? undefined;
+          unparsed.local = localStorage.getItem(storageKey) ?? undefined;
         // Do not break, check session storage for value in addition
         // eslint-disable-next-line no-fallthrough
         case StorageLocation.Session: {
-          unparsed.session = sessionStorage.getItem(key) ?? undefined;
+          unparsed.session = sessionStorage.getItem(storageKey) ?? undefined;
           unparsedValues.set(key, unparsed);
-          const cv = makeBrowserRef(`${prefix}:${key}`, meta as SavedStorageValue<any>);
+          const cv = makeBrowserRef(storageKey, meta as SavedStorageValue<any>);
           if (unparsedValues.has(key)) {
             cv.setUnparsed(unparsedValues.get(key)!);
           }
@@ -287,15 +304,33 @@ export function makeConfigComposable<Values extends { [k: string]: StorageValue<
       }
     }
   };
-  return () => {
-    onMounted(() => {
-      console.debug("Mounted config composable:", prefix);
-      window.addEventListener("storage", handle);
-    });
-    onUnmounted(() => {
-      console.debug("Unmounted config composable:", prefix);
-      window.removeEventListener("storage", handle);
-    });
-    return refs;
-  };
+  return Object.defineProperty(
+    () => {
+      onMounted(() => {
+        console.debug("Mounted config composable:", prefix);
+        window.addEventListener("storage", handle);
+      });
+      onUnmounted(() => {
+        console.debug("Unmounted config composable:", prefix);
+        window.removeEventListener("storage", handle);
+      });
+      return refs;
+    },
+    "getValue",
+    {
+      configurable: false,
+      enumerable: true,
+      writable: false,
+      value: <K extends keyof Values>(
+        key: K,
+      ): Values[K] extends StorageValue<infer V> ? V : never => {
+        let r = refs[key];
+        if (isConfigRef(r)) {
+          return r.value;
+        } else {
+          return (r as Ref<Values[K] extends StorageValue<infer V> ? V : never>).value;
+        }
+      },
+    },
+  ) as UseConfig<Values>;
 }

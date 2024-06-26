@@ -2,12 +2,6 @@ import { makeConfigComposable, StorageLocation, type StorageValue } from "@/conf
 import type { SideDisplay } from "@/views/GameView27";
 
 export const use27Config = makeConfigComposable("twentyseven", {
-  defaultView: {
-    fallback: "history",
-    location: StorageLocation.Local,
-    merge: "replace",
-    parse: (s) => (s in ["game", "history"] ? (s as "game" | "history") : undefined),
-  } satisfies StorageValue<"game" | "history">,
   sideDisplay: {
     fallback: "summary",
     location: StorageLocation.Local,
