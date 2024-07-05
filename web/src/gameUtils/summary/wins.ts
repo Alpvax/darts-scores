@@ -17,7 +17,7 @@ type PlayerRequirement =
   | ((opponents: Set<string>) => boolean);
 export type PlayerRequirements = Record<string, PlayerRequirement>;
 type PlayerReqsInternal<O extends PlayerRequirements> = {
-  [K in keyof O]: (opponents: Set<string>) => boolean;
+  [K in keyof O]: (players: Set<string>) => boolean;
 };
 
 type WinsDMI = Omit<DisplayMetaInputs<WinsSummaryValuesEntry>, "best"> & { best?: ScoreDirection };
@@ -157,9 +157,13 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
   ): WinsSummaryDefinition {
     return playerData.position === 1
       ? playerData.tied.length < 1
-        ? { type: "outright", opponents }
-        : { type: "tie", opponents, wonTiebreak: tiebreakWinner === playerData.playerId }
-      : { type: "noWin", opponents };
+        ? { type: "outright", players: [playerData.playerId, ...opponents] }
+        : {
+            type: "tie",
+            players: [playerData.playerId, ...opponents],
+            wonTiebreak: tiebreakWinner === playerData.playerId,
+          }
+      : { type: "noWin", players: [playerData.playerId, ...opponents] };
   }
   emptySummary(): WinsSummaryValues<Outputs> {
     return Object.keys(this.requirements).reduce(
@@ -190,10 +194,9 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
         ? { tiebreak: true, tbWin: entry.wonTiebreak }
         : { tiebreak: false, tbWin: false };
     return (
-      Object.entries(this.requirements) as [keyof Outputs, (opponents: Set<string>) => boolean][]
+      Object.entries(this.requirements) as [keyof Outputs, (players: Set<string>) => boolean][]
     ).reduce((acc, [k, req]) => {
-      const opponents = new Set(entry.opponents);
-      if (req(opponents)) {
+      if (req(new Set(entry.players))) {
         acc[k].gameCount += 1;
         if (win) {
           if (tiebreak) {
@@ -224,19 +227,19 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
 type WinsSummaryDefinition =
   | {
       type: "noWin";
-      /** All players in game (except current player) */
-      opponents: string[];
+      /** All players in game (including current player) */
+      players: string[];
     }
   | {
       type: "outright";
-      /** All players in game (except current player) */
-      opponents: string[];
+      /** All players in game (including current player) */
+      players: string[];
     }
   | {
       type: "tie";
       wonTiebreak: boolean;
-      /** All players in game (except current player), not just those in the tiebreak */
-      opponents: string[];
+      /** All players in game (including current player), not just those in the tiebreak */
+      players: string[];
     };
 
 type WinsSummaryValues<O extends PlayerRequirements> = Record<keyof O, WinsSummaryValuesEntry>;

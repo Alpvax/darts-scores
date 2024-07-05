@@ -9,8 +9,8 @@ import {
   type EntryDisplayMetadataSingle,
   type EntryDisplayFieldTypes,
 } from "@/gameUtils/summary";
-import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
+import PlayerName from "./PlayerName";
 
 type FieldMetadata<S extends SummaryDefinition<T, any, any>, T extends TurnData<any, any, any>> = {
   [K in keyof EntryDisplayFieldTypes<S, T> & string]:
@@ -203,7 +203,6 @@ export const createGameEntriesComponent = <
         });
       });
 
-      const playerStore = usePlayerStore();
       return () => (
         <table id="gameSummaryEntryTable">
           <thead>
@@ -211,9 +210,7 @@ export const createGameEntriesComponent = <
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {teamDisplay("first", "head")}
               {players.value.map((pid) => (
-                <th class="playerName" data-player-id={pid}>
-                  {playerStore.playerName(pid).value}
-                </th>
+                <PlayerName tag="th" playerId={pid} class="playerName" />
               ))}
               {teamDisplay("last", "head")}
             </tr>

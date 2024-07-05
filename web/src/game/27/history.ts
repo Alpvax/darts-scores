@@ -239,13 +239,15 @@ export const use27History = defineStore("27History", () => {
       if (subscriptions.length > 0) {
         subscriptions.forEach((unsub) => unsub());
         subscriptions = [];
-        console.info("Refreshed subscription"); //XXX
+        console.debug("Refreshed history subscriptions"); //XXX
       }
       const fd = new Date(fromDate);
       if (fromDate <= toDate && fd <= today) {
         const td = new Date(toDate);
         td.setDate(td.getDate() + 1);
-        console.log("From", fd.toISOString().slice(0, 10), "To", td.toISOString().slice(0, 10)); //XXX
+        console.debug(
+          `Updating history date range: From = ${fd.toISOString().slice(0, 10)}, To = ${td.toISOString().slice(0, 10)}`,
+        ); //XXX
         // Version 1 results
         subscriptions.push(
           onSnapshot(

@@ -324,7 +324,7 @@ export function makeConfigComposable<Values extends { [k: string]: StorageValue<
       value: <K extends keyof Values>(
         key: K,
       ): Values[K] extends StorageValue<infer V> ? V : never => {
-        let r = refs[key];
+        const r = refs[key];
         if (isConfigRef(r)) {
           return r.value;
         } else {

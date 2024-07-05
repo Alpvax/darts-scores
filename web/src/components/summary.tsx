@@ -8,8 +8,8 @@ import type {
   SummaryFieldKeys,
 } from "@/gameUtils/summary";
 // import type { SummaryFieldMeta } from "@/gameUtils/summary/displayMeta";
-import { usePlayerStore } from "@/stores/player";
 import { computed, defineComponent, type PropType } from "vue";
+import PlayerName from "./PlayerName";
 
 export const createSummaryComponent = <
   S extends SummaryDefinition<T, any, P>,
@@ -209,7 +209,6 @@ export const createSummaryComponent = <
         });
       });
 
-      const playerStore = usePlayerStore();
       return () => (
         <table
           id="gameSummaryTable"
@@ -223,11 +222,7 @@ export const createSummaryComponent = <
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
               {props.players.flatMap((pid) =>
                 props.includeAllPlayers || playerStats.value.has(pid)
-                  ? [
-                      <th class="playerName" data-player-id={pid}>
-                        {playerStore.playerName(pid)}
-                      </th>,
-                    ]
+                  ? [<PlayerName tag="th" playerId={pid} class="playerName" />]
                   : [],
               )}
             </tr>

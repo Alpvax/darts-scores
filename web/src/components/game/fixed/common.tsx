@@ -1,19 +1,27 @@
 import { type ClassBindings, makeMoveFocusFactory } from "@/utils";
-import { computed, defineComponent, ref, type PropType, onMounted, watch } from "vue";
+import {
+  computed,
+  defineComponent,
+  ref,
+  type PropType,
+  onMounted,
+  watch,
+  onUnmounted,
+  type Ref,
+} from "vue";
 import {
   makePlayerPositions,
   type DisplayPosRowPositions,
   type PlayerDataT,
   type Position,
 } from "@/gameUtils/playerData";
-import { usePlayerStore } from "@/stores/player";
 import type { AnyGameMetadata, GameStatsFactory } from "@/gameUtils/gameMeta";
 import type { TakenTurnData, TurnData, TurnStats } from "@/gameUtils/roundDeclaration";
 import {
   ArrayStatsAccumulatorGame,
   type GameStatsForRounds,
 } from "@/gameUtils/statsAccumulatorGame";
-import { injectOpen } from "@/contextMenu/inject";
+import PlayerNameSpan from "@/components/PlayerName";
 
 export const createComponent = <
   V,
@@ -66,7 +74,7 @@ export const createComponent = <
       /* eslint-enable @typescript-eslint/no-unused-vars */
     },
     setup: (props, { slots, emit }) => {
-      const turnValues = ref(new Map<string, V>()); //TODO: set from props
+      const turnValues: Ref<Map<string, V>> = ref(new Map()); //TODO: set from props
 
       /** Map of playerId to Map<index, {score, allTurns, takenTurns, lastPlayedRound}> */
       const playerScores = computed(
@@ -197,34 +205,43 @@ export const createComponent = <
         computed(() => props.players.length),
         allCompleted,
       );
-      onMounted(() => focusEmpty());
+      /** Fallback events to use to focusEmpty */
+      const focusEvents: (keyof WindowEventMap)[] = [
+        "click",
+        // "keydown",
+      ];
+      const focusEventHandler = () => {
+        console.log("focussing"); //XXX
+        focusEmpty();
+      };
+      onMounted(() => {
+        for (const e of focusEvents) {
+          window.addEventListener(e, focusEventHandler, { passive: true });
+        }
+        focusEmpty();
+      });
+      onUnmounted(() => {
+        for (const e of focusEvents) {
+          window.removeEventListener(e, focusEventHandler);
+        }
+      });
       watch(
         () => props.players,
         () => focusEmpty(),
       );
 
-      const playerStore = usePlayerStore();
-      const openContextMenu = injectOpen();
       return () => (
         <table>
           <thead>
             <tr>
               {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
-              {[...playerData.value.entries()].map(([pid, data]) => {
-                const player = playerStore.getPlayer(pid).value;
-                return (
-                  <th
-                    class={(meta.playerNameClass as (data: PlayerData) => ClassBindings)(data)}
-                    onContextmenu={(e) =>
-                      openContextMenu(player.loaded ? player.names.contextMenuItems() : [], e, {
-                        useElementPosition: true,
-                      })
-                    }
-                  >
-                    {playerStore.playerName(pid).value}
-                  </th>
-                );
-              })}
+              {[...playerData.value.entries()].map(([pid, data]) => (
+                <PlayerNameSpan
+                  class={(meta.playerNameClass as (data: PlayerData) => ClassBindings)(data)}
+                  tag="th"
+                  playerId={pid}
+                />
+              ))}
             </tr>
             {posRow("head")}
           </thead>

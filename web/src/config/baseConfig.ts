@@ -15,9 +15,9 @@ export const useBasicConfig = makeConfigComposable({
     fallback: { default: "history", games: {} },
     location: StorageLocation.Local,
     parse: (s) => {
-      let res: Partial<DefaultView> = {};
+      const res: Partial<DefaultView> = {};
       try {
-        let obj = JSON.parse(s);
+        const obj = JSON.parse(s);
         if ("default" in obj) {
           res.default = obj.default;
         }

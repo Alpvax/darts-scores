@@ -65,7 +65,6 @@ export default defineComponent({
   },
   emits: ["update:player", "update:modelValue"],
   setup(props, { emit }) {
-    console.log("Allow guests:", props.allowGuests); //XXX
     const playerStore = usePlayerStore();
     const allPlayers = computed(() => props.available.map((p) => playerStore.getPlayer(p)));
     const guests = ref(

@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, type Ref, computed, type PropType } from "vue";
+import { defineComponent, ref, watch, type Ref, computed, type PropType, nextTick } from "vue";
 import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
@@ -14,10 +14,11 @@ import type { PlayerDataFor } from "@/gameUtils/playerData";
 import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
-import { intoDBResult } from "@/game/27/history";
+import { intoDBResult, use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
 import { StorageLocation } from "@/config";
 import { usePlayerConfig } from "@/config/playerConfig";
+import PlayerName from "@/components/PlayerName";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -198,7 +199,6 @@ export default defineComponent({
           "Stats:",
           new Map([...gameResult.value.entries()].map(([pid, { stats }]) => [pid, stats])),
         );
-        const playerStore = usePlayerStore();
         const resultV2 = intoDBResult(
           {
             date: gameDate.value,
@@ -263,6 +263,10 @@ export default defineComponent({
       { immediate: true },
     );
 
+    const playersFilter = config.realWinsPlayers.mutableRef();
+
+    const historyStore = use27History();
+
     return () => (
       <>
         <div class="gameDiv">
@@ -291,6 +295,8 @@ export default defineComponent({
             onCompleted={(c) => {
               if (!c) {
                 gameResult.value = null;
+              } else {
+                nextTick(() => document.getElementById("submitGame")?.focus());
               }
             }}
             onUpdate:gameResult={({ data, positions: p }) => {
@@ -370,7 +376,7 @@ export default defineComponent({
             <Summary27
               players={players.value}
               includeAllPlayers
-              games={[] /* TODO: past games? */}
+              games={historyStore.games}
               inProgressGame={partialGameResult.value}
             />
           ) : (
@@ -383,14 +389,25 @@ export default defineComponent({
           {props.gameId.length <= 0 && gameResult.value !== null && winners.value ? (
             <div class="completed">
               Game Completed!{" "}
-              {winners.value.length === 1
-                ? `Winner = ${playerStore.playerName(winners.value[0])}`
-                : `It is a tie between ${listFormat.format(
-                    winners.value.map((pid) => playerStore.playerName(pid)),
-                  )}`}
+              {winners.value.length === 1 ? (
+                <>
+                  Winner = <PlayerName playerId={winners.value[0]} />
+                </>
+              ) : (
+                [
+                  <>It is a tie between </>,
+                  ...listFormat
+                    .format(winners.value.map((pid) => `{@{${pid}}@}`))
+                    .split(/(\{@\{\w+\}@\})/)
+                    .map((item) => {
+                      const match = /\{@\{(\w+)\}@\}/.exec(item);
+                      return match ? <PlayerName playerId={match[1]} /> : <>{item}</>;
+                    }),
+                ]
+              )}
               !
               {!submitted.value && props.gameId.length <= 0 ? (
-                <input type="button" value="Submit Scores" onClick={submitScores} />
+                <input id="submitGame" type="button" value="Submit Scores" onClick={submitScores} />
               ) : undefined}
             </div>
           ) : undefined}

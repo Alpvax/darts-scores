@@ -195,6 +195,7 @@ export class StorageInterface {
           unparsed.local = localStorage.getItem(key) ?? undefined;
           shouldSave = true;
         // Do not break, check session storage for value in addition
+        // eslint-disable-next-line no-fallthrough
         case StorageLocation.Session:
           unparsed.session = sessionStorage.getItem(key) ?? undefined;
           shouldSave = true;

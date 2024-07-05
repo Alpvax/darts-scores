@@ -6,8 +6,9 @@ div.gameDiv {
   grid-template-areas:
     "pselect pselect side"
     "game g_ side"
-    "game g_ _";
-  grid-template-rows: max-content max-content 1fr;
+    "game g_ _"
+    "completed completed completed";
+  grid-template-rows: max-content max-content 1fr min-content;
   grid-template-columns: min-content max-content max-content;
 
   & .playerSelection {
@@ -19,5 +20,8 @@ div.gameDiv {
   }
   & table:not(.game) {
     grid-area: side;
+  }
+  & .completed {
+    grid-area: completed;
   }
 }

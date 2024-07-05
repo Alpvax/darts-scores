@@ -13,6 +13,7 @@ import type { RoundDef } from "@/gameV2/roundDef";
 // } from "@/gameUtils/summary/displayMeta";
 import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
+import { use27Config } from "./27/config";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
   style: "decimal",
@@ -412,15 +413,7 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     requirements: {
       all: "*",
       solo: { players: [], exact: true },
-      real: (opponents) =>
-        [
-          //TODO: not hardcode real wins players
-          "y5IM9Fi0VhqwZ6gAjil6",
-          "6LuRdib3wFxhbcjjh0au",
-          "Gt8I7XPbPWiQ92FGsTtR",
-          "jcfFkGCY81brr8agA3g3",
-          "jpBEiBzn9QTVN0C6Hn1m",
-        ].every((pid) => opponents.has(pid)),
+      real: (players) => use27Config.getValue("realWinsPlayers").every((pid) => players.has(pid)),
     },
     displayMeta: {
       real: {
