@@ -15,8 +15,8 @@ export enum StorageLocation {
   Session,
   /** Saved to localStorage */
   Local,
-  // /** Saved to database. Currently unimplemented */
-  // Remote,
+  /** Saved to database. Currently unimplemented */
+  Remote,
 }
 
 export type NestedPartial<T> = T extends {}

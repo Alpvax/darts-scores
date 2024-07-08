@@ -10,6 +10,7 @@ import {
   type WritableComputedRef,
 } from "vue";
 import { StorageLocation, type NestedPartial } from ".";
+import type { DocumentSnapshot } from "firebase/firestore";
 
 type MergeFunction<V> =
   /**
@@ -67,6 +68,13 @@ type BrowserStorageValue<V> = {
   fallback: V | (() => V);
   recalculateFallback?: boolean;
 };
+type RemoteStorageValue<V> = {
+  location: StorageLocation.Remote;
+  merge: MergeOption<V>;
+  parse?: (docSnapshot: DocumentSnapshot) => NestedPartial<V>;
+  fallback: V | (() => V);
+  recalculateFallback?: boolean;
+};
 // Separated in preparation for e.g. database saved values
 type SavedStorageValue<V> = BrowserStorageValue<V>;
 export type StorageValue<V> = RAMStorageValue<V> | SavedStorageValue<V>;
@@ -103,16 +111,20 @@ const makeBrowserRef = <V>(storageKey: string, meta: BrowserStorageValue<V>): Co
   if (typeof meta.fallback === "function") {
     init = () => {
       cachedValue = ref(fallback()) as Ref<V>;
-      watch(cachedFallback!, (val) =>
-        storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+      watch(
+        cachedValue!,
+        (val) => storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+        { immediate: true },
       );
       init = () => {};
     };
   } else {
     cachedValue = ref(meta.fallback) as Ref<V>;
     cachedFallback = structuredClone(meta.fallback);
-    watch(cachedFallback!, (val) =>
-      storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+    watch(
+      cachedValue!,
+      (val) => storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+      { immediate: true },
     );
     init = () => {};
   }
@@ -187,6 +199,12 @@ const makeBrowserRef = <V>(storageKey: string, meta: BrowserStorageValue<V>): Co
                   storageKey,
                   ((meta as BrowserStorageValue<V>).toStr ?? JSON.stringify)(val),
                 );
+              };
+              break;
+            case StorageLocation.Remote:
+              throw new Error("Remote config not yet implemented!"); //TODO: implement remote
+              set = (val) => {
+                setVolatile(val);
               };
               break;
           }
