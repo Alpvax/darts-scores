@@ -1,5 +1,26 @@
 import { makeConfigComposable, StorageLocation, type StorageValue } from "@/config";
 import type { SideDisplay } from "@/views/GameView27";
+import { doc, getFirestore, onSnapshot } from "firebase/firestore";
+
+const DB_REF_27 = doc(getFirestore(), "games", "twentyseven");
+const DB_META: {
+  defaultPlayers: string[];
+  requiredPlayers: string[];
+} = {
+  defaultPlayers: [],
+  requiredPlayers: [],
+};
+export const UNSUBSCRIBE = onSnapshot(DB_REF_27, (snapshot) => {
+  const data = snapshot.data();
+  if (data) {
+    if (data.defaultplayers) {
+      DB_META.defaultPlayers = data.defaultPlayers;
+    }
+    if (data.requiredplayers) {
+      DB_META.requiredPlayers = data.requiredplayers;
+    }
+  }
+});
 
 export const use27Config = makeConfigComposable("twentyseven", {
   sideDisplay: {
@@ -29,13 +50,8 @@ export const use27Config = makeConfigComposable("twentyseven", {
     parse: "json",
   },
   realWinsPlayers: {
-    fallback: [
-      "y5IM9Fi0VhqwZ6gAjil6",
-      "6LuRdib3wFxhbcjjh0au",
-      "Gt8I7XPbPWiQ92FGsTtR",
-      "jcfFkGCY81brr8agA3g3",
-      "jpBEiBzn9QTVN0C6Hn1m",
-    ],
+    fallback: () => DB_META.requiredPlayers,
+    recalculateFallback: true,
     location: StorageLocation.Local,
     merge: "replace",
     parse: "json",

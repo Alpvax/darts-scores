@@ -55,6 +55,7 @@ type RAMStorageValue<V> = {
   // key: string;
   location: StorageLocation.Volatile;
   fallback: V | (() => V);
+  recalculateFallback?: boolean;
 };
 type BrowserStorageValue<V> = {
   // key: string;
@@ -63,6 +64,7 @@ type BrowserStorageValue<V> = {
   merge: MergeOption<V>;
   parse: ParseOption<V>;
   fallback: V | (() => V);
+  recalculateFallback?: boolean;
 };
 // Separated in preparation for e.g. database saved values
 type SavedStorageValue<V> = BrowserStorageValue<V>;
@@ -77,17 +79,13 @@ export interface ConfigRef<V> {
   readonly value: V;
 }
 
-const makeBrowserRef = <V>(
-  storageKey: string,
-  meta: BrowserStorageValue<V>,
-  recalculateFallback = false,
-): ConfigRef<V> => {
+const makeBrowserRef = <V>(storageKey: string, meta: BrowserStorageValue<V>): ConfigRef<V> => {
   const refCache = new Map<StorageLocation | null, WritableComputedRef<V>>();
   let cachedValue: Ref<V> | null = null;
   let cachedFallback: V | null = null;
   const fallback =
     typeof meta.fallback === "function"
-      ? recalculateFallback
+      ? meta.recalculateFallback
         ? () => {
             cachedFallback = (meta.fallback as () => V)();
             return cachedFallback;
