@@ -4,6 +4,7 @@ import {
   onUnmounted,
   reactive,
   ref,
+  watch,
   type ComputedRef,
   type Ref,
   type WritableComputedRef,
@@ -98,17 +99,23 @@ const makeBrowserRef = <V>(storageKey: string, meta: BrowserStorageValue<V>): Co
           }
       : () => structuredClone(meta.fallback as V);
   let init: () => void;
+  const storageLayers: Ref<Map<StorageLocation, NestedPartial<V>>> = ref(new Map());
   if (typeof meta.fallback === "function") {
     init = () => {
       cachedValue = ref(fallback()) as Ref<V>;
+      watch(cachedFallback!, (val) =>
+        storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+      );
       init = () => {};
     };
   } else {
     cachedValue = ref(meta.fallback) as Ref<V>;
     cachedFallback = structuredClone(meta.fallback);
+    watch(cachedFallback!, (val) =>
+      storageLayers.value.set(StorageLocation.Volatile, val as NestedPartial<V>),
+    );
     init = () => {};
   }
-  const storageLayers: Ref<Map<StorageLocation, NestedPartial<V>>> = ref(new Map());
   const merge: MergeFunction<V> = makeMergeFunc((meta as SavedStorageValue<V>).merge);
   const parse: ParseFunction<V> = makeParseFunc(meta.parse);
   const setVolatile = (val: V) => {

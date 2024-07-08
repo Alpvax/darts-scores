@@ -413,7 +413,11 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
     requirements: {
       all: "*",
       solo: { players: [], exact: true },
-      real: (players) => use27Config.getValue("realWinsPlayers").every((pid) => players.has(pid)),
+      real: (players) =>
+        use27Config()
+          .realWinsPlayers.readonlyRef()
+          .value.every((pid) => players.has(pid)),
+      // real: (players) => use27Config.getValue("realWinsPlayers").every((pid) => players.has(pid)),
     },
     displayMeta: {
       real: {
