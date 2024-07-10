@@ -6,8 +6,8 @@ import { RouterLink, RouterView } from "vue-router";
   <header>
     <div class="wrapper">
       <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
+        <RouterLink :to="{ name: 'twentysevenGame' }">Game</RouterLink>
+        <RouterLink :to="{ name: 'twentysevenHistory' }">History</RouterLink>
       </nav>
     </div>
   </header>
@@ -18,9 +18,32 @@ import { RouterLink, RouterView } from "vue-router";
 
 <style scoped>
 header {
-  display: none; /* TODO: nav bar */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2em;
+}
+header > .wrapper {
+  /* display: none; TODO: nav bar */
+  display: inline-block;
+  background-color: var(--color-background);
+  box-shadow: 0 2px 5px;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%);
+  font-size: large;
+  width: max-content;
+  padding: 0.5em;
   line-height: 1.5;
   max-height: 100vh;
+  transition: all 0.5s;
+  border-radius: 0.3em;
+}
+header:not(:hover) > .wrapper {
+  transform: translate(-50%, -90%);
+  font-size: medium;
 }
 
 .logo {
@@ -30,16 +53,19 @@ header {
 
 nav {
   width: 100%;
-  font-size: 12px;
+  /* font-size: 12px; */
   text-align: center;
   /* margin-top: 2rem; */
 }
 
-nav a.router-link-exact-active {
+nav a.router-link-active {
   color: var(--color-text);
+  font-weight: bold;
+  font-style: italic;
+  cursor: default;
 }
 
-nav a.router-link-exact-active:hover {
+nav a.router-link-active:hover {
   background-color: transparent;
 }
 
@@ -49,8 +75,9 @@ nav a {
   border-left: 1px solid var(--color-border);
 }
 
-nav a:first-of-type {
-  border: 0;
+nav a:not(:first-of-type) {
+  border-left: 1px solid var(--color-border);
+  /* border: 0; */
 }
 
 /* @media (min-width: 1024px) {

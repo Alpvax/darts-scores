@@ -2,7 +2,7 @@ div.gameDiv {
   display: grid;
   padding-left: 2rem;
   padding-right: 2rem;
-  width: max-content;
+  width: 100%;
   grid-template-areas:
     "pselect pselect side"
     "game g_ side"
@@ -10,6 +10,7 @@ div.gameDiv {
     "completed completed completed";
   grid-template-rows: max-content max-content 1fr min-content;
   grid-template-columns: min-content max-content max-content;
+  justify-content: space-between;
 
   & .playerSelection {
     grid-area: pselect;
