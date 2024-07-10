@@ -210,19 +210,15 @@ export const createComponent = <
         "click",
         // "keydown",
       ];
-      const focusEventHandler = () => {
-        console.log("focussing"); //XXX
-        focusEmpty();
-      };
       onMounted(() => {
         for (const e of focusEvents) {
-          window.addEventListener(e, focusEventHandler, { passive: true });
+          window.addEventListener(e, focusEmpty, { passive: true });
         }
         focusEmpty();
       });
       onUnmounted(() => {
         for (const e of focusEvents) {
-          window.removeEventListener(e, focusEventHandler);
+          window.removeEventListener(e, focusEmpty);
         }
       });
       watch(

@@ -11,6 +11,5 @@
   "bugs": {
     "url": "https://github.com/Alpvax/darts-scores/issues"
   },
-  "homepage": "https://alpvax-darts-scores.web.app",
-  "packageManager": "pnpm@9.0.0-alpha.7+sha256.04fbfe5b989d5f70a387680f09c66fe35ef5bfd9186d7bd867c3f3a335785bd2"
+  "homepage": "https://alpvax-darts-scores.web.app"
 }

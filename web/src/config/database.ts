@@ -51,13 +51,18 @@ export type AppModelTypeFor<K extends keyof DatabaseConfig> = DatabaseConfig[K] 
 
 const DB_DATA: DatabaseConfig = {};
 
+const DEFINITIONS_KEY = Symbol("database definitions");
+
 const NOOP_PROMISE = async () => {};
 export const initDBData = <K extends keyof DatabaseConfig>(
   def: DbDataDef<K>,
 ): NonNullable<DatabaseConfig[K]> => {
   console.debug("Initialising DBData:", def);
   if (DB_DATA[def.key] !== undefined) {
-    console.error("Defined database config multiple times!");
+    const data = DB_DATA[def.key];
+    const defs = (data as unknown as { [DEFINITIONS_KEY]: DbDataDef<K>[] })[DEFINITIONS_KEY];
+    defs.push(def);
+    console.error(`Defined database config multiple times for "${def.key}":`, defs);
     return DB_DATA[def.key]!;
   }
   type DbTypes =
@@ -92,22 +97,31 @@ export const initDBData = <K extends keyof DatabaseConfig>(
       update();
     }
   }
-  const data = {
-    key: def.key,
-    dbRef: def.dbRef,
-    unsubscribe,
-    update,
-    ref: computed({
-      get: () => r.value,
-      set: (val) => {
-        console.error(
-          `Setting database values not yet implemented! No operation performed.\n"${def.key}" =`,
-          val,
-        );
-        //TODO: implement database saving of config values
-      },
-    }),
-  };
+  const data = Object.defineProperty(
+    {
+      key: def.key,
+      dbRef: def.dbRef,
+      unsubscribe,
+      update,
+      ref: computed({
+        get: () => r.value,
+        set: (val) => {
+          console.error(
+            `Setting database values not yet implemented! No operation performed.\n"${def.key}" =`,
+            val,
+          );
+          //TODO: implement database saving of config values
+        },
+      }),
+    },
+    DEFINITIONS_KEY,
+    {
+      configurable: false,
+      enumerable: false,
+      writable: false,
+      value: [def],
+    },
+  );
   DB_DATA[def.key] = data;
   return data;
 };

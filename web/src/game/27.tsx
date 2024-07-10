@@ -1,16 +1,7 @@
 import { normaliseGameMetadata, type TurnDataForGame } from "@/gameUtils/gameMeta";
-import type { IntoTaken } from "@/gameUtils/roundDeclaration";
-import makeSummaryAccumulatorFactoryFor, {
-  type PlayerDataForStats,
-  type SummaryFieldKeysFor,
-} from "@/gameUtils/summary";
+import makeSummaryAccumulatorFactoryFor, { type SummaryFieldKeysFor } from "@/gameUtils/summary";
 import { makeGameDefinition, type GameDefinition, type PlayerStateFor } from "@/gameV2/gameDef";
 import type { RoundDef } from "@/gameV2/roundDef";
-// import {
-//   defaultedSummaryFieldMeta,
-//   makeSummaryMetaStore,
-//   rateFieldMeta,
-// } from "@/gameUtils/summary/displayMeta";
 import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
 import { use27Config } from "./27/config";

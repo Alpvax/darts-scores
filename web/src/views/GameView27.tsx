@@ -262,8 +262,6 @@ export default defineComponent({
       { immediate: true },
     );
 
-    const playersFilter = config.realWinsPlayers.mutableRef("local");
-
     const historyStore = use27History();
 
     return () => (
