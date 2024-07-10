@@ -13,7 +13,7 @@ import type { RoundDef } from "@/gameV2/roundDef";
 // } from "@/gameUtils/summary/displayMeta";
 import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
-import { use27Config } from "./27/config";
+import { use27Config } from "./27/configV2";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
   style: "decimal",
@@ -483,46 +483,3 @@ export const defaultSummaryFields: SummaryFieldKeysFor<typeof summaryFactory>[] 
 //     "hits.mean": defaultedSummaryFieldMeta("Average Hits", { highlight: "best" }),
 //   },
 // );
-
-//TODO: REMOVE TEST
-(() => {
-  const testSummary = summaryFactory();
-  const testGame = (...hits: number[]): PlayerDataForStats<TurnData27> => {
-    const { turns, score } = gameMeta.rounds.reduce(
-      ({ turns, score }, r, i) => {
-        const t = r.turnData(hits[i + 1], score, "", i);
-        turns.push(t);
-        return { turns, score: t.score };
-      },
-      { turns: [] as TurnData27[], score: 27 },
-    );
-    return {
-      playerId: "notavalidplayerid",
-      complete: Array.from({ length: 20 }, (_, i) => hits[i] !== undefined).every((h) => h),
-      score,
-      turns: new Map(
-        turns.flatMap((t, i) => (t.value === undefined ? [] : [[i, t as IntoTaken<TurnData27>]])),
-      ),
-      allTurns: new Map(turns.map((t, i) => [i, t])),
-      position: 1,
-      tied: [],
-    };
-  };
-  const addTestGame = (
-    hits: number[],
-    gameModifier?: Partial<PlayerDataForStats<TurnData27>>,
-    players?: string[],
-  ) => {
-    const g = { ...testGame(...hits), ...gameModifier };
-    console.log("Adding Game:", g, "\n\thits:", hits);
-    console.log("\tDelta:", testSummary.addGame(g, players ?? [g.playerId, ...g.tied], g.playerId));
-    console.log("\tSummary:", structuredClone(testSummary.summary));
-  };
-
-  addTestGame([0, 1, 2, 0, 0, 0, 1, 0, 2, 2, 2, 2, 3, 0, 0, 0, 0, 0, 1, 0]);
-  addTestGame([1, 1, 1, 2, 0, 1, 0, 0, 0, 2, 1, 0, 0, 0, 3, 0, 1, 0], {
-    tied: ["anotherInvalidPlayer"],
-  });
-  // console.log(testSummary.summary);
-  // console.log(JSON.stringify(testSummary.summary, null, 2));
-})();

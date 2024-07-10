@@ -2,7 +2,7 @@ import { makeConfigComposable, StorageLocation, type StorageValue } from "@/conf
 import type { SideDisplay } from "@/views/GameView27";
 import { doc, getFirestore, onSnapshot } from "firebase/firestore";
 
-const DB_REF_27 = doc(getFirestore(), "games", "twentyseven");
+const DB_REF_27 = doc(getFirestore(), "game", "twentyseven");
 const DB_META: {
   defaultPlayers: string[];
   requiredPlayers: string[];
@@ -16,8 +16,8 @@ export const UNSUBSCRIBE = onSnapshot(DB_REF_27, (snapshot) => {
     if (data.defaultplayers) {
       DB_META.defaultPlayers = data.defaultPlayers;
     }
-    if (data.requiredplayers) {
-      DB_META.requiredPlayers = data.requiredplayers;
+    if (data.defaultrequired) {
+      DB_META.requiredPlayers = data.defaultrequired;
     }
   }
 });

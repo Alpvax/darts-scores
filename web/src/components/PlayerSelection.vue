@@ -54,7 +54,7 @@
 
 <script lang="ts">
 import { LoadedPlayer, usePlayerStore } from "@/stores/player";
-import { computed, customRef, defineComponent, type PropType, ref } from "vue";
+import { computed, customRef, defineComponent, type PropType, ref, watch } from "vue";
 
 export default defineComponent({
   props: {
@@ -80,6 +80,14 @@ export default defineComponent({
       allPlayers.value.filter((p) => (p.loaded && !p.guest) || guests.value.has(p.id)),
     );
     const players = ref(props.modelValue ?? props.available);
+    watch(
+      () => props.modelValue,
+      (val) => {
+        if (val) {
+          players.value = val;
+        }
+      },
+    );
     const loadedPlayers = computed(
       () => allPlayers.value.filter((p) => p.loaded) as LoadedPlayer[],
     );

@@ -5,7 +5,7 @@ import type { GameResult } from "@/gameUtils/summary";
 import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
 import { createSummaryComponent } from "@/components/summary";
 import { use27History } from "@/game/27/history";
-import { use27Config } from "@/game/27/config";
+import { use27Config } from "@/game/27/configV2";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import { extendClass } from "@/utils";
 
@@ -29,7 +29,7 @@ export default defineComponent({
 
     const config = use27Config();
 
-    const playersFilter = config.realWinsPlayers.mutableRef();
+    const playersFilter = config.realWinsPlayers.mutableRef("local");
 
     const historyStore = use27History();
 

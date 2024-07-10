@@ -15,8 +15,7 @@ import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult, use27History } from "@/game/27/history";
-import { use27Config } from "@/game/27/config";
-import { StorageLocation } from "@/config";
+import { use27Config } from "@/game/27/configV2";
 import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 
@@ -244,7 +243,7 @@ export default defineComponent({
 
     // const playerScores = ref([] as PlayerData<number[]>[]);
 
-    const sideDisplayStored = config.sideDisplay.mutableRef(StorageLocation.Local);
+    const sideDisplayStored = config.sideDisplay.mutableRef("local");
     const sideDisplay = computed({
       get: () => props.sideDisplay ?? sideDisplayStored.value,
       set: (val) => {
@@ -263,7 +262,7 @@ export default defineComponent({
       { immediate: true },
     );
 
-    const playersFilter = config.realWinsPlayers.mutableRef();
+    const playersFilter = config.realWinsPlayers.mutableRef("local");
 
     const historyStore = use27History();
 

@@ -72,9 +72,11 @@ export class WinSummaryField<T extends TurnData<any, any, any>, Outputs extends 
     });
     if (requirements === undefined) {
       req = { all: "*" } as unknown as O;
+      // @ts-ignore
       dmi = defaultAll(displayMeta as WinsDMI);
     } else {
       req = requirements;
+      // @ts-ignore
       dmi = displayMeta
         ? Object.entries(displayMeta).reduce(
             (acc, [k, meta]: [keyof O, WinsDMI]) =>
