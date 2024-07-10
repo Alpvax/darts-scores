@@ -29,16 +29,22 @@ div.historyDiv {
 
     & td {
       padding: 0 0.2em;
+      white-space: nowrap;
     }
 
     & tbody tr:hover {
-      background-color: bisque;
+      background-color: var(--colour-table-hover);
     }
     & td.tie {
       background-color: #bbff66;
     }
     & td.winner {
       background-color: #00ff00;
+    }
+
+    & td::after {
+      content: attr(data-notables);
+      color: #228b22;
     }
   }
   & table:not(.gamesList) {

@@ -34,6 +34,8 @@
   --color-text: var(--vt-c-text-light-1);
 
   --section-gap: 160px;
+
+  --colour-table-hover: bisque;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -5,7 +5,7 @@ table#gameSummaryTable {
     line-height: 1.2;
   }
   & tr:hover {
-    background-color: bisque;
+    background-color: var(--colour-table-hover);
   }
   & .rowLabel {
     font-weight: bold;

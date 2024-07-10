@@ -6,7 +6,7 @@ table#gameSummaryEntryTable {
     border-collapse: collapse;
   }
   & tr:hover {
-    background-color: bisque;
+    background-color: var(--colour-table-hover);
   }
   & .rowLabel {
     font-weight: bold;

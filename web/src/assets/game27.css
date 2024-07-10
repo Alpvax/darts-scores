@@ -41,7 +41,7 @@ table.game.twentyseven {
 
   & tr:first-child:is(.current, .untaken),
   & tr:not(.untaken, .current) + tr:is(.current, .untaken) {
-    background-color: bisque;
+    background-color: var(--colour-table-hover);
   }
 
   & tr.allMissed > .rowLabel {

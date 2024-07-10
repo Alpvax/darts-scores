@@ -19,7 +19,6 @@ initDBData({
   dbRef: doc(getFirestore(), "game/twentyseven").withConverter<TwentySevenMeta>({
     fromFirestore(snapshot) {
       const data = snapshot.data();
-      console.log("Loading twentyseven config data from database:", data); //XXX
       return {
         defaultPlayers: data?.defaultplayers?.map((r: DocumentReference) => r.id) ?? [],
         requiredPlayers: data?.defaultrequired?.map((r: DocumentReference) => r.id) ?? [],

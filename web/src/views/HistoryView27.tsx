@@ -8,8 +8,19 @@ import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import { extendClass } from "@/utils";
+import type { RoundStatsType } from "@/gameUtils/roundDeclaration";
 
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
+
+const SUPERSCRIPT_N = (() => {
+  const digits = Array.from({ length: 10 }, (_, i) => String.fromCharCode(0x2070 + i));
+  digits[1] = "\u00B9";
+  digits[2] = "\u00B2";
+  digits[3] = "\u00B3";
+  const [z, ...nums] = ["", digits[1]].flatMap((s) => digits.map((d) => s + d));
+  nums.push(digits[2] + digits[0]);
+  return nums;
+})();
 
 export default defineComponent({
   components: {
@@ -85,6 +96,32 @@ export default defineComponent({
                     {players.value.map((pid) => {
                       const result = game.results.get(pid);
                       const pos = positions.get(pid);
+                      const notables = [...(result?.allTurns?.values() ?? [])].reduce(
+                        (acc, t) => {
+                          if (t.score < 0) {
+                            acc.allPositive = false;
+                          }
+                          if (t.stats.cliff) {
+                            acc.cliffs += 1;
+                          } else if (t.stats.doubledouble) {
+                            acc.dd += 1;
+                          }
+                          return acc;
+                        },
+                        {
+                          allPositive: true,
+                          cliffs: 0,
+                          dd: 0,
+                        },
+                      );
+                      const dataNotables =
+                        (notables.allPositive ? "+" : "") +
+                        (notables.cliffs > 0
+                          ? `c${notables.cliffs > 1 ? SUPERSCRIPT_N[notables.cliffs - 1] : ""}`
+                          : "") +
+                        (notables.dd > 0
+                          ? `d${notables.dd > 1 ? SUPERSCRIPT_N[notables.dd - 1] : ""}`
+                          : "");
                       return result ? (
                         <td
                           class={extendClass({
@@ -94,6 +131,7 @@ export default defineComponent({
                                 : pos?.pos === 1,
                             tie: pos?.pos === 1 && pos && pos.players.length > 1,
                           })}
+                          data-notables={dataNotables.length > 0 ? ` (${dataNotables})` : undefined}
                         >
                           {result.score}
                         </td>
