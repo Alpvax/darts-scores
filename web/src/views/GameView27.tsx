@@ -15,7 +15,7 @@ import { createSummaryComponent } from "@/components/summary";
 import type { PlayerDataForStats } from "@/gameUtils/summary";
 import { createGameEntriesComponent } from "@/components/gameEntry";
 import { intoDBResult, use27History } from "@/game/27/history";
-import { use27Config } from "@/game/27/configV2";
+import { use27Config } from "@/game/27/config";
 import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 

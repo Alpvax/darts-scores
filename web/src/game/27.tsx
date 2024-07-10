@@ -13,7 +13,7 @@ import type { RoundDef } from "@/gameV2/roundDef";
 // } from "@/gameUtils/summary/displayMeta";
 import { shortCircuitReduce } from "@/utils";
 import type { Ref } from "vue";
-import { use27Config } from "./27/configV2";
+import { use27Config } from "./27/config";
 
 export const DECIMAL_FORMAT = new Intl.NumberFormat(undefined, {
   style: "decimal",

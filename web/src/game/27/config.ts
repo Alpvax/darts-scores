@@ -1,35 +1,50 @@
-import { makeConfigComposable, StorageLocation, type StorageValue } from "@/config";
+import { initDBData } from "@/config/database";
+import { makeLayeredConfigComposable, type AnyLayeredDef } from "@/config/layeredConfig";
 import type { SideDisplay } from "@/views/GameView27";
-import { doc, getFirestore, onSnapshot } from "firebase/firestore";
+import { DocumentReference, doc, getFirestore } from "firebase/firestore";
 
-const DB_REF_27 = doc(getFirestore(), "game", "twentyseven");
-const DB_META: {
+type TwentySevenMeta = {
   defaultPlayers: string[];
   requiredPlayers: string[];
-} = {
-  defaultPlayers: [],
-  requiredPlayers: [],
 };
-export const UNSUBSCRIBE = onSnapshot(DB_REF_27, (snapshot) => {
-  const data = snapshot.data();
-  if (data) {
-    if (data.defaultplayers) {
-      DB_META.defaultPlayers = data.defaultPlayers;
-    }
-    if (data.defaultrequired) {
-      DB_META.requiredPlayers = data.defaultrequired;
-    }
+
+declare module "@/config/database" {
+  export interface DatabaseConfig {
+    twentysevenGameMeta?: DBData<TwentySevenMeta>;
   }
+}
+
+initDBData({
+  key: "twentysevenGameMeta",
+  dbRef: doc(getFirestore(), "game/twentyseven").withConverter<TwentySevenMeta>({
+    fromFirestore(snapshot) {
+      const data = snapshot.data();
+      console.log("Loading twentyseven config data from database:", data); //XXX
+      return {
+        defaultPlayers: data?.defaultplayers?.map((r: DocumentReference) => r.id) ?? [],
+        requiredPlayers: data?.defaultrequired?.map((r: DocumentReference) => r.id) ?? [],
+      };
+    },
+    toFirestore() {
+      throw new Error("Converting 27Meta to database unimplemented!");
+    },
+  }),
+  load: "lazy",
 });
 
-export const use27Config = makeConfigComposable("twentyseven", {
+export const use27Config = makeLayeredConfigComposable({
   sideDisplay: {
     fallback: "summary",
-    location: StorageLocation.Local,
+    browser: {
+      key: "twentyseven:sideDisplay",
+      convert: {
+        toString: (v) => v,
+        fromString: (s) =>
+          ["none", "summary", "entries", "combined"].includes(s) ? (s as SideDisplay) : undefined,
+      },
+    },
     merge: "replace",
-    parse: (s) =>
-      s in ["none", "summary", "entries", "combined"] ? (s as SideDisplay) : undefined,
-  } satisfies StorageValue<SideDisplay>,
+  } satisfies AnyLayeredDef<SideDisplay>,
   defaultPlayers: {
     fallback: () => {
       const res = [
@@ -45,15 +60,26 @@ export const use27Config = makeConfigComposable("twentyseven", {
       }
       return res;
     },
-    location: StorageLocation.Local,
+    browser: {
+      key: "twentyseven:defaultPlayers",
+      convert: "json",
+    },
+    database: {
+      key: "twentysevenGameMeta",
+      get: (data) => data?.defaultPlayers,
+    },
     merge: "replace",
-    parse: "json",
-  },
+  } satisfies AnyLayeredDef<string[], "twentysevenGameMeta">,
   realWinsPlayers: {
-    fallback: () => DB_META.requiredPlayers,
-    recalculateFallback: true,
-    location: StorageLocation.Local,
+    fallback: () => [] as string[],
+    browser: {
+      key: "twentyseven:requiredPlayers",
+      convert: "json",
+    },
+    database: {
+      key: "twentysevenGameMeta",
+      get: (data) => data?.requiredPlayers,
+    },
     merge: "replace",
-    parse: "json",
-  },
-});
+  } satisfies AnyLayeredDef<string[], "twentysevenGameMeta">,
+} as const);
