@@ -16,7 +16,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
 
 type Result27v1 = {
-  version: 1;
+  dataVersion: 1;
   date: string;
   winner:
     | string
@@ -42,7 +42,7 @@ type Result27v1 = {
 };
 
 type Result27v2 = {
-  version: 2;
+  dataVersion: 2;
   date: Timestamp;
   /** Players in order of play */
   players: string[];
@@ -108,9 +108,9 @@ const gameResultFactory = makeGameResultFactory(gameMeta);
 
 export const intoGameResult = (result: Result27): GameResult<TurnData27> => {
   const gameResult: GameResult<TurnData27> = {
-    date: result.version === 2 ? result.date.toDate() : new Date(result.date),
+    date: result.dataVersion === 2 ? result.date.toDate() : new Date(result.date),
     players:
-      result.version === 2
+      result.dataVersion === 2
         ? result.players.map((pid) => ({ pid, displayName: result.game[pid].displayName }))
         : Object.keys(result.game).map((pid) => ({ pid })),
     results: gameResultFactory(
@@ -202,7 +202,7 @@ export const intoDBResult = <P extends string>(
     }
   }
   return {
-    version: 2,
+    dataVersion: 2,
     date: Timestamp.fromDate(gameResult.date),
     players,
     winner,
@@ -227,7 +227,8 @@ export const use27History = defineStore("27History", () => {
       if (change.type === "removed") {
         games.delete(gameId);
       } else {
-        const gameData = intoGameResult(change.doc.data() as Result27);
+        const data = change.doc.data() as Result27;
+        const gameData = intoGameResult(data);
         games.set(gameId, gameData);
       }
     });
@@ -253,8 +254,8 @@ export const use27History = defineStore("27History", () => {
           onSnapshot(
             query(
               gamesRef,
-              // orderBy("version", "asc"),
-              // where("version", "==", 1),
+              orderBy("dataVersion", "asc"),
+              where("dataVersion", "==", 1),
               orderBy("date", "desc"),
               where("date", ">=", fromDate),
               where("date", "<=", td.toISOString().slice(0, 10)),
@@ -267,8 +268,8 @@ export const use27History = defineStore("27History", () => {
           onSnapshot(
             query(
               gamesRef,
-              orderBy("version", "asc"),
-              where("version", "==", 2),
+              orderBy("dataVersion", "asc"),
+              where("dataVersion", "==", 2),
               orderBy("date", "desc"),
               where("date", ">=", Timestamp.fromDate(fd)),
               where("date", "<=", Timestamp.fromDate(td)),
