@@ -325,7 +325,7 @@ export default defineComponent({
       submitted,
       submitScores: async () => {
         let result: Result27 = {
-          version: 1,
+          dataVersion: 1,
           date: props.date.toISOString(),
           winner: winner.value!.length == 1
             ? winner.value![0].id
