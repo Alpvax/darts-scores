@@ -106,15 +106,7 @@ export default defineComponent({
       } else if (oldGameId !== undefined) {
         gameDate.value = new Date();
         gameValues.value = undefined;
-        players.value = [
-          //TODO: proper players
-          "y5IM9Fi0VhqwZ6gAjil6",
-          "6LuRdib3wFxhbcjjh0au",
-          "Gt8I7XPbPWiQ92FGsTtR",
-          "jcfFkGCY81brr8agA3g3",
-          "jpBEiBzn9QTVN0C6Hn1m",
-          "k7GNyCogBy79JE4qhvAj",
-        ];
+        players.value = config.defaultPlayers.readonlyRef().value;
       }
     };
     watch(() => props.gameId, onGameIdUpdated, { immediate: true });
@@ -154,7 +146,7 @@ export default defineComponent({
     );
     const submitted = ref(false);
 
-    const submitScores = () => {
+    const submitScores = async () => {
       // console.log("Submitting scores:", gameValues.value);
       console.log("Game result:", gameResult.value);
       // if (gameValues.value !== undefined) {
@@ -216,6 +208,11 @@ export default defineComponent({
           },
         );
         console.log("DBResultV2:", resultV2);
+        await historyStore.saveGame(resultV2);
+        submitted.value = true;
+        // if (preferences.saveGamesInProgress) {
+        //   window.sessionStorage.clear(); //TODO: only clear relevant?
+        // }
         submitted.value = true;
       }
     };

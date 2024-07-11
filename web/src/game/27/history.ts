@@ -4,8 +4,10 @@ import { makeGameResultFactory, makePlayerPositions } from "@/gameUtils/playerDa
 import {
   QuerySnapshot,
   Timestamp,
+  addDoc,
   collection,
   getFirestore,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -254,7 +256,6 @@ export const use27History = defineStore("27History", () => {
           onSnapshot(
             query(
               gamesRef,
-              orderBy("dataVersion", "asc"),
               where("dataVersion", "==", 1),
               orderBy("date", "desc"),
               where("date", ">=", fromDate),
@@ -268,7 +269,6 @@ export const use27History = defineStore("27History", () => {
           onSnapshot(
             query(
               gamesRef,
-              orderBy("dataVersion", "asc"),
               where("dataVersion", "==", 2),
               orderBy("date", "desc"),
               where("date", ">=", Timestamp.fromDate(fd)),
@@ -277,6 +277,14 @@ export const use27History = defineStore("27History", () => {
             handleSnapshot,
           ),
         );
+        if (import.meta.env.DEV) {
+          subscriptions.push(
+            onSnapshot(
+              query(collection(db, "27testgames"), orderBy("date", "desc"), limit(50)),
+              handleSnapshot,
+            ),
+          );
+        }
       } else {
         console.warn("toDate is earlier than fromDate!");
       }
@@ -310,5 +318,11 @@ export const use27History = defineStore("27History", () => {
         return s;
       }, new Set<string>()),
     ),
+    saveGame: async (result: Result27) => {
+      await addDoc(
+        collection(db, import.meta.env.DEV ? "27testgames" : "game/twentyseven/games"),
+        result,
+      );
+    },
   };
 });
