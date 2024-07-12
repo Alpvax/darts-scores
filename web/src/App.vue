@@ -72,12 +72,10 @@ nav a.router-link-active:hover {
 nav a {
   display: inline-block;
   padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
 }
 
 nav a:not(:first-of-type) {
   border-left: 1px solid var(--color-border);
-  /* border: 0; */
 }
 
 /* @media (min-width: 1024px) {

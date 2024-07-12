@@ -18,6 +18,7 @@ import { intoDBResult, use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
 import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
+import { useRouter } from "vue-router";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -84,6 +85,7 @@ export default defineComponent({
     const playerStore = usePlayerStore();
     const config = use27Config();
     const playerConfig = usePlayerConfig();
+    const router = useRouter();
     const players = ref(config.defaultPlayers.readonlyRef().value);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
@@ -209,11 +211,13 @@ export default defineComponent({
         );
         console.log("DBResultV2:", resultV2);
         await historyStore.saveGame(resultV2);
-        submitted.value = true;
         // if (preferences.saveGamesInProgress) {
         //   window.sessionStorage.clear(); //TODO: only clear relevant?
         // }
         submitted.value = true;
+        if (config.showHistoryOnSubmit.readonlyRef().value) {
+          router.push({ name: "twentysevenHistory" });
+        }
       }
     };
 
@@ -248,16 +252,8 @@ export default defineComponent({
       },
     });
 
+    playerStore.loadAllPlayers();
     const allowGuests = playerConfig.allowGuestPlayers.readonlyRef();
-    watch(
-      allowGuests,
-      (val) => {
-        if (val && !playerStore.allLoaded()) {
-          playerStore.loadAllPlayers();
-        }
-      },
-      { immediate: true },
-    );
 
     const historyStore = use27History();
 

@@ -81,4 +81,12 @@ export const use27Config = makeLayeredConfigComposable({
     },
     merge: "replace",
   } satisfies AnyLayeredDef<string[], "twentysevenGameMeta">,
+  showHistoryOnSubmit: {
+    fallback: true,
+    browser: {
+      key: "twentyseven:showHistoryOnSubmit",
+      convert: "json",
+    },
+    merge: "replace",
+  },
 } as const);

@@ -145,7 +145,7 @@ export default defineComponent({
         const themes = availablePlayers.value.flatMap((p) => (p.loaded ? p.names.themes : []));
         return [
           {
-            label: "Refresh Names",
+            label: "Randomise All Names",
             action: () => {
               availablePlayers.value.forEach((p) => {
                 if (p.loaded) {
@@ -193,5 +193,6 @@ fieldset.playerSelection {
 .playerSelection > .playerCheckbox {
   display: inline;
   padding: 0px 10px;
+  white-space: nowrap;
 }
 </style>

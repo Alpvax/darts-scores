@@ -25,6 +25,9 @@ type ContextMenuSubmenu = {
   label: string;
   items: ContextMenuItem[];
 };
+type ContextMenuText = {
+  label: string;
+};
 type ContextMenuSeparator =
   | {
       type: "separator" | "seperator";
@@ -32,7 +35,11 @@ type ContextMenuSeparator =
     }
   | "separator"
   | "seperator";
-export type ContextMenuItem = ContextMenuOption | ContextMenuSubmenu | ContextMenuSeparator;
+export type ContextMenuItem =
+  | ContextMenuOption
+  | ContextMenuSubmenu
+  | ContextMenuText
+  | ContextMenuSeparator;
 
 const makeElement = (
   menuItem: ContextMenuItem,
@@ -80,6 +87,8 @@ const makeElement = (
           {item.label}
         </li>
       );
+    } else if (Object.hasOwn(menuItem, "label")) {
+      return <li class="contextmenuTextItem">{(menuItem as ContextMenuText).label}</li>;
     } // else if (menuItem["type"] === "seperator") {
   }
   {

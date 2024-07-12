@@ -116,7 +116,15 @@ export class PlayerNames {
     return [...this.names.keys()].filter((t) => t) as string[];
   }
   public contextMenuItems(addRandomise: "first" | "last" | false = "first"): ContextMenuItem[] {
-    const items = this.getNames(null).map((name) => ({
+    const allNames = this.getNames(null);
+    if (allNames.length < 1) {
+      return [
+        {
+          label: "No names found",
+        },
+      ];
+    }
+    const items = allNames.map((name) => ({
       label: name,
       action: () => {
         this.name = name;
@@ -132,26 +140,6 @@ export class PlayerNames {
     return items;
   }
 }
-
-// const loadedProto = Object.create(null, {
-//   loaded: {
-//     value: true,
-//     configurable: false,
-//     writable: false,
-//     enumerable: false,
-//   },
-//   name: {
-//     value: new PlayerNames,
-//     configurable: false,
-//     enumerable: false,
-
-//   },
-//   name: {
-//     get() {
-
-//     },
-//   }
-// });
 
 export class LoadedPlayer {
   readonly loaded = true;
@@ -180,18 +168,6 @@ export class LoadedPlayer {
   }
 }
 
-// export type LoadedPlayer = {
-//   names:
-//   // name: Ref<string>;
-//   name: string;
-//   id: string;
-//   defaultOrder: number;
-//   disabled: boolean;
-//   guest: boolean;
-//   guestLabel?: string;
-//   loaded: true;
-//   handicap: number;
-// }
 type PartialPlayer = {
   name: string;
   id: string;
@@ -219,7 +195,7 @@ export const usePlayerStore = defineStore("player", () => {
             // console.log("Loaded player:", p);//XXX
             loadedPlayers.value.set(playerId, p);
           } else {
-            // console.log("Unoaded player:", loadedPlayers.value.get(playerId));//XXX
+            // console.log("Unloaded player:", loadedPlayers.value.get(playerId));//XXX
             loadedPlayers.value.delete(playerId);
           }
         }),
@@ -265,37 +241,45 @@ export const usePlayerStore = defineStore("player", () => {
     playerOrder,
     getPlayer,
     loadAllPlayers: () => {
-      globalSubscription = onSnapshot(collection(db, "players"), (snapshot) => {
-        snapshot.docChanges().forEach((change) => {
-          const playerId = change.doc.id;
-          if (loadedPlayers.value.has(playerId) && change.type in ["added", "modified"]) {
-            //TODO: modify existing, rather than replacing
-            loadedPlayers.value.set(
-              playerId,
-              new LoadedPlayer(playerId, change.doc.data() as DBPlayer),
-            );
-            console.log(
-              "Player changed in database: (Currently replace entire player)",
-              playerId,
-              change.doc.data(),
-            );
-          } else if (change.type === "added") {
-            const p = new LoadedPlayer(playerId, change.doc.data() as DBPlayer);
-            console.debug("Loaded player:", p); //XXX
-            loadedPlayers.value.set(playerId, p);
-          } else if (change.type === "removed") {
-            loadedPlayers.value.delete(playerId);
-          } else {
-            console.warn("Should be unreachable:", playerId, change.doc.data()); //XXX
-          }
+      if (globalSubscription === null) {
+        globalSubscription = onSnapshot(collection(db, "players"), (snapshot) => {
+          snapshot.docChanges().forEach((change) => {
+            const playerId = change.doc.id;
+            if (loadedPlayers.value.has(playerId) && change.type in ["added", "modified"]) {
+              //TODO: modify existing, rather than replacing
+              loadedPlayers.value.set(
+                playerId,
+                new LoadedPlayer(playerId, change.doc.data() as DBPlayer),
+              );
+              console.log(
+                "Player changed in database: (Currently replace entire player)",
+                playerId,
+                change.doc.data(),
+              );
+            } else if (change.type === "added") {
+              const p = new LoadedPlayer(playerId, change.doc.data() as DBPlayer);
+              console.debug("Loaded player:", p); //XXX
+              loadedPlayers.value.set(playerId, p);
+            } else if (change.type === "removed") {
+              loadedPlayers.value.delete(playerId);
+            } else {
+              console.warn("Should be unreachable:", playerId, change.doc.data()); //XXX
+            }
+          });
         });
-      });
-      for (const unsub of subscriptions.values()) {
-        unsub();
+        for (const unsub of subscriptions.values()) {
+          unsub();
+        }
       }
     },
     allLoaded: () => globalSubscription !== null,
-    all: computed(() => [...loadedPlayers.value.keys()]),
+    all: computed(() =>
+      [...loadedPlayers.value]
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_pid, { disabled }]) => !disabled)
+        .toSorted(([a], [b]) => playerOrder(a) - playerOrder(b))
+        .map(([pid]) => pid),
+    ),
     setNameTheme: (theme: string | null) =>
       loadedPlayers.value.forEach((p) => (p.names.theme = theme)),
   };

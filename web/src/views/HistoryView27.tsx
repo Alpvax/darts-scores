@@ -8,7 +8,6 @@ import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
 import { makePlayerPositions } from "@/gameUtils/playerData";
 import { extendClass } from "@/utils";
-import type { RoundStatsType } from "@/gameUtils/roundDeclaration";
 
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
 
@@ -17,7 +16,8 @@ const SUPERSCRIPT_N = (() => {
   digits[1] = "\u00B9";
   digits[2] = "\u00B2";
   digits[3] = "\u00B3";
-  const [z, ...nums] = ["", digits[1]].flatMap((s) => digits.map((d) => s + d));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_z, ...nums] = ["", digits[1]].flatMap((s) => digits.map((d) => s + d));
   nums.push(digits[2] + digits[0]);
   return nums;
 })();
@@ -67,9 +67,12 @@ export default defineComponent({
           </div>
           <PlayerSelection
             legend='Select players to filter "Real Wins"'
-            available={playerStore.all.toSorted(
-              (a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b),
-            )}
+            available={[...historyStore.allPlayers]
+              .filter((pid) => {
+                const p = playerStore.getPlayer(pid);
+                return p.loaded && !p.disabled;
+              })
+              .toSorted((a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b))}
             modelValue={playersFilter.value}
             onUpdate:modelValue={(val) => (playersFilter.value = val)}
           />

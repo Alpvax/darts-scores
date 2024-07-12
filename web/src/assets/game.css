@@ -4,12 +4,11 @@ div.gameDiv {
   padding-right: 2rem;
   width: 100%;
   grid-template-areas:
-    "pselect pselect side"
-    "game g_ side"
-    "game g_ _"
-    "completed completed completed";
-  grid-template-rows: max-content max-content 1fr min-content;
-  grid-template-columns: min-content max-content max-content;
+    "pselect side"
+    "game side"
+    "completed completed";
+  grid-template-rows: max-content max-content min-content;
+  grid-template-columns: min-content max-content;
   justify-content: space-between;
 
   & .playerSelection {
@@ -18,6 +17,7 @@ div.gameDiv {
   }
   & table.game {
     grid-area: game;
+    max-width: max-content;
   }
   & table:not(.game) {
     grid-area: side;

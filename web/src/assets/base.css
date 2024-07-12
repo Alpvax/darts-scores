@@ -97,7 +97,10 @@ ul.contextmenu {
   > li {
     cursor: pointer;
   }
-  > li:hover,
+  > li.contextmenuTextItem {
+    cursor: default;
+  }
+  > li:hover:not(.contextmenuTextItem),
   > li.selected {
     background-color: var(--color-border-hover);
   }
