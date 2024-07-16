@@ -19,6 +19,7 @@ import { use27Config } from "@/game/27/config";
 import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 import { useRouter } from "vue-router";
+import SimpleTiebreakDialog from "@/components/game/SimpleTiebreakDialog.vue";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -55,6 +56,7 @@ type Result27 = {
         tiebreak: {
           //TODO: implement tiebreak
           winner?: string;
+          type?: string;
           // [k: string | number]: any;
         };
       };
@@ -126,14 +128,6 @@ export default defineComponent({
         }
       },
     );
-    watch(
-      () => partialGameResult.value,
-      (result) => {
-        if (result) {
-          console.log("Partial game result changed:", result);
-        }
-      },
-    );
     const positions = ref(
       [] as {
         pos: number;
@@ -148,7 +142,28 @@ export default defineComponent({
     );
     const submitted = ref(false);
 
+    const possibleJesus = computed(
+      () =>
+        new Set(
+          [...playerStats.value].flatMap(([pid, stats]) =>
+            stats.hitsTotal === 1 && stats.turnStats[19].hits === 1 ? [pid] : [],
+          ),
+        ),
+    );
+    const playerJesus = ref(new Set<string>());
+
+    const tiebreakResult = ref<{ type: string; winner: string } | undefined>();
+    const tiebreakDialogRef = ref<HTMLDialogElement | null>(null);
+
     const submitScores = async () => {
+      if (winners.value && winners.value.length > 1) {
+        if (tiebreakDialogRef.value) {
+          tiebreakDialogRef.value.showModal();
+        } else {
+          await nextTick();
+          tiebreakDialogRef.value!.showModal();
+        }
+      }
       // console.log("Submitting scores:", gameValues.value);
       console.log("Game result:", gameResult.value);
       // if (gameValues.value !== undefined) {
@@ -172,7 +187,7 @@ export default defineComponent({
               ? winners.value[0]
               : {
                   tie: winners.value,
-                  tiebreak: {}, //TODO: tiebreak
+                  tiebreak: tiebreakResult.value ?? {},
                 },
           game: [...gameResult.value.entries()].reduce(
             (game, [pid, data]) => {
@@ -200,13 +215,15 @@ export default defineComponent({
               pid,
               displayName: playerStore.playerName(pid),
             })),
+            tiebreakWinner: tiebreakResult.value?.winner,
           },
           {
             players: players.value.map((pid) => ({
               pid,
               displayName: playerStore.playerName(pid),
+              jesus: playerJesus.value.has(pid) && possibleJesus.value.has(pid) ? true : undefined,
             })),
-            //TODO: tiebreakType
+            tiebreakType: tiebreakResult.value?.type,
           },
         );
         console.log("DBResultV2:", resultV2);
@@ -311,6 +328,30 @@ export default defineComponent({
                   : undefined,
               footer: (playerScores: Ref<PlayerData[]>) => (
                 <>
+                  {possibleJesus.value.size > 0 ? (
+                    <tr class="jesusRow">
+                      <th class="rowLabel">Jesus?</th>
+                      {playerScores.value.map(({ playerId }) =>
+                        possibleJesus.value.has(playerId) ? (
+                          <td class="jesusOptionCell">
+                            <input
+                              type="checkbox"
+                              checked={playerJesus.value.has(playerId)}
+                              onChange={(e) => {
+                                if ((e.currentTarget as HTMLInputElement).checked) {
+                                  playerJesus.value.add(playerId);
+                                } else {
+                                  playerJesus.value.delete(playerId);
+                                }
+                              }}
+                            />
+                          </td>
+                        ) : (
+                          <td></td>
+                        ),
+                      )}
+                    </tr>
+                  ) : undefined}
                   <tr class="totalHitsRow">
                     <th class="rowLabel">Hits</th>
                     {playerScores.value.map(({ turns, stats: { hitsCountNZ, hitsTotal } }) => {
@@ -400,6 +441,13 @@ export default defineComponent({
                 <input id="submitGame" type="button" value="Submit Scores" onClick={submitScores} />
               ) : undefined}
             </div>
+          ) : undefined}
+          {winners.value && winners.value.length > 1 ? (
+            <SimpleTiebreakDialog
+              ref={tiebreakDialogRef}
+              players={winners.value}
+              onSubmit={(res) => (tiebreakResult.value = res)}
+            />
           ) : undefined}
         </div>
       </>

@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { computed, reactive, ref, watch } from "vue";
 import { defineStore } from "pinia";
+import { usePlayerConfig } from "@/config/playerConfig";
 
 type Result27v1 = {
   dataVersion: 1;
@@ -109,12 +110,20 @@ export type Result27 = Result27v1 | Result27v2;
 const gameResultFactory = makeGameResultFactory(gameMeta);
 
 export const intoGameResult = (result: Result27): GameResult<TurnData27> => {
+  const defaultOrder = usePlayerConfig.getValue("defaultOrder");
+
   const gameResult: GameResult<TurnData27> = {
     date: result.dataVersion === 2 ? result.date.toDate() : new Date(result.date),
     players:
       result.dataVersion === 2
-        ? result.players.map((pid) => ({ pid, displayName: result.game[pid].displayName }))
-        : Object.keys(result.game).map((pid) => ({ pid })),
+        ? result.players.map((pid) => ({
+            pid,
+            displayName: result.game[pid].displayName,
+            handicap: result.game[pid].handicap,
+          }))
+        : Object.keys(result.game)
+            .toSorted((a, b) => (defaultOrder[a] ?? 999) - (defaultOrder[b] ?? 999))
+            .map((pid) => ({ pid })),
     results: gameResultFactory(
       Object.entries(result.game).map(([pid, { rounds }]) => [pid, rounds]),
     ) as Map<string, PlayerDataForStats<TurnData27>>,

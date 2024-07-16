@@ -51,4 +51,18 @@ export const useBasicConfig = makeConfigComposable({
       return res;
     },
   } /*satisfies*/ as StorageValue<DefaultView>,
+  tiebreakTypes: {
+    fallback: ["Bullseye", "Double 20", "High score"],
+    location: StorageLocation.Local,
+    parse: "json",
+    merge: (partial, fallback) => {
+      const all = new Set<string>(
+        [
+          ...(partial.get(StorageLocation.Session) ?? []),
+          ...(partial.get(StorageLocation.Local) ?? []),
+        ].filter((s) => s) as string[],
+      );
+      return all.size > 0 ? [...all] : fallback;
+    },
+  } satisfies StorageValue<string[]>,
 });

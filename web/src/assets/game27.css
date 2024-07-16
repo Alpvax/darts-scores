@@ -103,6 +103,23 @@ table.game.twentyseven {
     background-color: #00ff00;
   } */
 
+  & tr.jesusRow {
+    & input {
+      display: block;
+      margin: 0 auto;
+    }
+    & input::after {
+      position: absolute;
+      transform: translate(1.2em);
+    }
+    & input:not(:checked)::after {
+      content: "No";
+    }
+    & input:checked::after {
+      content: "Yes";
+    }
+  }
+
   & tr.totalHitsRow > th {
     border-top: 1px dashed black;
     font-size: 0.95em;

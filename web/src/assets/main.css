@@ -5,6 +5,8 @@
 @import "./summary.css";
 @import "./history.css";
 
+@import "vue-select/dist/vue-select.css";
+
 #app {
   /* max-width: 100%; */
   margin: 0 auto;

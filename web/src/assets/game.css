@@ -26,3 +26,12 @@ div.gameDiv {
     grid-area: completed;
   }
 }
+
+table.game tbody {
+  & td.winner {
+    background-color: #00ff00;
+  }
+  & td.tie:not(.winner) {
+    background-color: #bbff66;
+  }
+}

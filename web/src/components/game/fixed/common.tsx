@@ -207,7 +207,7 @@ export const createComponent = <
       );
       /** Fallback events to use to focusEmpty */
       const focusEvents: (keyof WindowEventMap)[] = [
-        "click",
+        // "click", //DOES NOT ALLOW CLICKING INPUTS!
         // "keydown",
       ];
       onMounted(() => {

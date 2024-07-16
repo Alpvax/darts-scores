@@ -383,7 +383,10 @@ export const summaryFactory = makeSummaryAccumulatorFactoryFor<TurnData27>()(
         ),
       { best: "highest", label: "Piranha" },
     ),
-    // jesus: boolean(data => ),
+    jesus: boolean((data) => data.allTurns.get(19)?.value === 1 && data.score === -393 + 80, {
+      best: "highest",
+      label: { count: "Jesus" },
+    }),
     hits: numeric((data) => [...data.turns.values()].reduce((hits, turn) => hits + turn.value, 0), {
       best: "highest",
       label: ["Hit", { mean: "Average Hits" }],
@@ -436,7 +439,7 @@ export const defaultSummaryFields: SummaryFieldKeysFor<typeof summaryFactory>[] 
   "hans.total",
   "goblins.count",
   "piranhas.count",
-  // "jesus.count",
+  "jesus.count",
   "dreams.latest",
   "allPos.count",
   "allPos.latest",

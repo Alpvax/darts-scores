@@ -50,4 +50,19 @@ div.historyDiv {
   & table:not(.gamesList) {
     grid-area: side;
   }
+
+  & div#pastGameOverlay {
+    background: var(--color-background);
+    border: 2px lightslategrey solid;
+    /* margin: 5em; */
+
+    & th.gameDate > span {
+      font-weight: bold;
+    }
+
+    & input {
+      /* Currently disabled until game sharing is re-implemented*/
+      display: none;
+    }
+  }
 }

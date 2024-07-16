@@ -4,7 +4,7 @@ table#gameSummaryTable {
     font-size: 0.8em;
     line-height: 1.2;
   }
-  & tr:hover {
+  & tbody tr:hover {
     background-color: var(--colour-table-hover);
   }
   & .rowLabel {
