@@ -1,5 +1,5 @@
 import type { MoveFocus } from "@/utils";
-import type { FixedLengthArray, FixedLengthArrayLookup, NumericRange } from "@/utils/types";
+import type { FixedLengthArray, NumericRange } from "@/utils/types";
 import type { VNodeChild } from "vue";
 
 export type PlayerGameData<Turns, Extra extends {} = {}> = {
@@ -14,6 +14,7 @@ export type GameResult<PData extends PlayerGameData<any, any>, PlayerId extends 
   date: Date;
   playerOrder: PlayerId[];
   tiebreak?: {
+    players: PlayerId[];
     type: string;
     winner: PlayerId;
   };
@@ -102,23 +103,11 @@ export type TurnMetaDefLookup<M extends TurnMetaDef<any, any>> =
       ? TurnMeta<V, Stats, V>
       : never;
 
-type TLU = TurnMetaDefLookup<ReturnType<TMeta27["turnFactory"]>>["untakenValue"];
-
-export function defineTurn<V, Stats>(
-  meta: TurnMetaNoFallback<V, Stats>,
-): TurnMeta<V, Stats, V | undefined>;
-export function defineTurn<V, Stats>(meta: TurnMetaWithFallback<V, Stats>): TurnMeta<V, Stats, V>;
-export function defineTurn<V, Stats>({
-  deltaScore,
-  turnStats,
-  component,
-  untakenValue,
-}: TurnMetaBase<V | undefined, Stats> & { untakenValue?: V | (() => V) }): TurnMeta<
-  V,
-  Stats,
-  V | undefined
-> {
-  // @ts-ignore
+export const defineTurn: {
+  <V, Stats>(meta: TurnMetaNoFallback<V, Stats>): TurnMeta<V, Stats, V | undefined>;
+  <V, Stats>(meta: TurnMetaWithFallback<V, Stats>): TurnMeta<V, Stats, V>;
+} = <V, Stats>(meta: TurnMetaDef<V, Stats>) => {
+  const { deltaScore, turnStats, component, untakenValue } = meta;
   return {
     deltaScore,
     turnStats,
@@ -131,23 +120,7 @@ export function defineTurn<V, Stats>({
         : component,
     untakenValue,
   };
-}
-
-// type RoundsDefinition<T extends TurnMeta<any, any, any>[] | Record<string | number | symbol, TurnMeta<any, any, any>>>
-//   = T extends any[]
-//   ? T
-//   : {
-//     order: (keyof T)[];
-//     rounds: T;
-//   };
-
-// type T = RoundsDefinition<typeof turns27>
-
-// type RoundsDefinition<V, T extends Record<string | number | symbol, TurnMeta<any, any, any>> =
-
-// type FixedTurnsMeta<T extends Record<string | number | symbol, TurnMeta<any, any, any>> = {
-
-// }
+};
 
 const turn27_4 = defineTurn<NumericRange<4>, { cliff: boolean; dd: boolean; hits: number }>({
   untakenValue: 0,
@@ -174,53 +147,55 @@ type TMeta27_4 = typeof turn27_4;
 type TVal27 = TMeta27_4 extends TurnMeta<infer V, any, infer MV> ? V : unknown;
 type TStats27 = TMeta27_4 extends TurnMeta<any, infer S, infer MV> ? S : unknown;
 
-export const defineFixedArrayTurnsFor =
-  <V, Stats>() =>
-  <Len extends number, M extends TurnMetaDef<V, Stats>>(
-    length: Len,
-    turnFactory: (index: NumericRange<Len>) => M,
-  ): FixedArrayTurns<Len, V, Stats, TurnMetaDefLookup<M>> =>
-    defineFixedArrayTurns(length, turnFactory);
-export const defineFixedArrayTurns = <
-  Len extends number,
-  V,
-  Stats,
-  M extends TurnMetaDef<V, Stats>,
->(
-  length: Len,
-  turnFactory: (index: NumericRange<Len>) => M,
-): FixedArrayTurns<Len, V, Stats, TurnMetaDefLookup<M>> => ({
-  length,
-  // @ts-ignore
-  turnFactory: (idx) => defineTurn(turnFactory(idx)),
-});
+// export const defineFixedArrayTurnsFor =
+//   <V, Stats>() =>
+//   <Len extends number, M extends TurnMetaDef<V, Stats>>(
+//     length: Len,
+//     turnFactory: (index: NumericRange<Len>) => M,
+//   ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer MV>
+//     ? FixedArrayTurns<Len, V, Stats, TurnMeta<V, Stats, MV>>
+//     : unknown =>
+//     defineFixedArrayTurns(length, turnFactory);
+// export const defineFixedArrayTurns = <
+//   Len extends number,
+//   V,
+//   Stats,
+//   M extends TurnMetaDef<V, Stats>,
+// >(
+//   length: Len,
+//   turnFactory: (index: NumericRange<Len>) => M,
+// ): FixedArrayTurns<Len, V, Stats, TurnMetaDefLookup<M>> => ({
+//   length,
+//   // @ts-ignore
+//   turnFactory: (idx) => defineTurn(turnFactory(idx)),
+// });
 
-const turns27 = defineFixedArrayTurnsFor<
-  NumericRange<4>,
-  { cliff: boolean; dd: boolean; hits: number }
->()(20, (idx) => ({
-  untakenValue: 0, // as NumericRange<4>,
-  deltaScore: (val) => {
-    switch (val) {
-      case 0:
-        return idx * -2;
-      case 1:
-        return idx * 2;
-      case 2:
-        return idx * 4;
-      case 3:
-        return idx * 6;
-    }
-  },
-  turnStats: (val) => ({
-    cliff: val === 3,
-    dd: val >= 2,
-    hits: val,
-  }),
-  component: (val, { deltaScore, score }) => "TODO: mutable cell",
-}));
+// const turns27 = defineFixedArrayTurnsFor<
+//   NumericRange<4>,
+//   { cliff: boolean; dd: boolean; hits: number }
+// >()(20, (idx) => ({
+//   untakenValue: 0, // as NumericRange<4>,
+//   deltaScore: (val) => {
+//     switch (val) {
+//       case 0:
+//         return idx * -2;
+//       case 1:
+//         return idx * 2;
+//       case 2:
+//         return idx * 4;
+//       case 3:
+//         return idx * 6;
+//     }
+//   },
+//   turnStats: (val) => ({
+//     cliff: val === 3,
+//     dd: val >= 2,
+//     hits: val,
+//   }),
+//   component: (val, { deltaScore, score }) => "TODO: mutable cell",
+// }));
 
-type TMeta27 = typeof turns27;
+// type TMeta27 = typeof turns27;
 
 type FixedArrayTurns<Len extends number, V, Stats, Meta extends TurnMeta<V, Stats, any>> = {
   length: Len;
@@ -265,7 +240,7 @@ export type GameStatsFactory<GR extends GameResult<any, any>, Stats> =
     : never;
 
 type Test27Plyr = PlayerGameData<
-  { [K in NumericRange<20>]: 0 | 1 | 2 | 3 } & (0 | 1 | 2 | 3)[],
+  FixedLengthArray<0 | 1 | 2 | 3, 20>,
   {
     jesus?: boolean;
   }
@@ -301,4 +276,4 @@ type Stats27 = ArrayGameStats<
 // })
 
 type TestBEPlyr = PlayerGameData<(0 | 1 | 2 | 3 | 5 | 6)[]>;
-type TestBE = GameResult<Test27Plyr>;
+type TestBE = GameResult<TestBEPlyr>;
