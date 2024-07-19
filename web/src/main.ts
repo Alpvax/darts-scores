@@ -30,3 +30,6 @@ app.component("v-select", VueSelect);
 app.mount("#app");
 
 initialiseAPI();
+
+//Run GameDefV2 tests
+import * as _ from "@/gameDefinitionV2/tests"; //XXX

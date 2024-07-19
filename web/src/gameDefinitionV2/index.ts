@@ -1,22 +1,26 @@
 import type { NumericRange } from "@/utils/types";
 import { defineTurn, type TurnMeta, type TurnMetaDef, type TurnMetaDefLookup } from "./rounds";
 
+export type InitialStateFactory<PlayerState, PlayerId extends string = string> = (
+  playerId: PlayerId,
+) => PlayerState;
+
 export type GameDefinitionCore<GameId extends string, PlayerState> = {
   gameId: GameId;
-  makeInitialState: (playerId: string) => PlayerState;
+  makeInitialState: InitialStateFactory<PlayerState>;
 };
 
 type _WARFCurried<GameId extends string, PlayerState, V, Stats> = {
   <Len extends number>(
     length: Len,
     turnFactory: (index: NumericRange<Len>) => TurnMetaDef<V, Stats>,
-  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer VMut>
-    ? ArrayGameDef<GameId, PlayerState, V, Stats, VMut, Len>
+  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer UntakenVal>
+    ? ArrayGameDef<GameId, PlayerState, V, Stats, UntakenVal, Len>
     : unknown;
   (
     turnFactory: (index: number) => TurnMetaDef<V, Stats>,
-  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer VMut>
-    ? ArrayGameDef<GameId, PlayerState, V, Stats, VMut, number>
+  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer UntakenVal>
+    ? ArrayGameDef<GameId, PlayerState, V, Stats, UntakenVal, number>
     : unknown;
 };
 type WithArrayRoundsFunc<GameId extends string, PlayerState> = {
@@ -24,13 +28,13 @@ type WithArrayRoundsFunc<GameId extends string, PlayerState> = {
   <V, Stats, Len extends number>(
     length: Len,
     turnFactory: (index: NumericRange<Len>) => TurnMetaDef<V, Stats>,
-  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer VMut>
-    ? ArrayGameDef<GameId, PlayerState, V, Stats, VMut, Len>
+  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer UntakenVal>
+    ? ArrayGameDef<GameId, PlayerState, V, Stats, UntakenVal, Len>
     : unknown;
   <V, Stats>(
     turnFactory: (index: number) => TurnMetaDef<V, Stats>,
-  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer VMut>
-    ? ArrayGameDef<GameId, PlayerState, V, Stats, VMut, number>
+  ): TurnMetaDefLookup<ReturnType<typeof turnFactory>> extends TurnMeta<any, any, infer UntakenVal>
+    ? ArrayGameDef<GameId, PlayerState, V, Stats, UntakenVal, number>
     : unknown;
 };
 
@@ -60,9 +64,9 @@ const makeWithArrayRounds = <GameId extends string, PlayerState>(
           | (TurnMetaDefLookup<ReturnType<NonNullable<typeof maybeFactory>>> extends TurnMeta<
               any,
               any,
-              infer VMut
+              infer UntakenVal
             >
-              ? ArrayGameDef<GameId, PlayerState, V, Stats, VMut, Len>
+              ? ArrayGameDef<GameId, PlayerState, V, Stats, UntakenVal, Len>
               : unknown));
   }) as WithArrayRoundsFunc<GameId, PlayerState>;
   return withArrayRounds;
@@ -87,23 +91,23 @@ type GameDefRoundsBuilder<GameId extends string, PlayerState> = Readonly<
 export function gameDefinitionBuilder<GameId extends string>(
   gameId: GameId,
 ): <PlayerState>(
-  makeInitialState: (playerId: string) => PlayerState,
+  makeInitialState: InitialStateFactory<PlayerState>,
 ) => GameDefRoundsBuilder<GameId, PlayerState>;
 export function gameDefinitionBuilder<GameId extends string, PlayerState>(
   gameId: GameId,
-  makeInitialState: (playerId: string) => PlayerState,
+  makeInitialState: InitialStateFactory<PlayerState>,
 ): GameDefRoundsBuilder<GameId, PlayerState>;
 export function gameDefinitionBuilder<GameId extends string, PlayerState>(
   gameId: GameId,
-  makeInitialState?: (playerId: string) => PlayerState,
+  makeInitialState?: InitialStateFactory<PlayerState>,
 ):
   | GameDefRoundsBuilder<GameId, PlayerState>
   | ((
-      makeInitialState: (playerId: string) => PlayerState,
+      makeInitialState: InitialStateFactory<PlayerState>,
     ) => GameDefRoundsBuilder<GameId, PlayerState>) {
   const makeGameDefBuilder = (
     gameId: GameId,
-    makeInitialState: (playerId: string) => PlayerState,
+    makeInitialState: InitialStateFactory<PlayerState>,
   ): GameDefRoundsBuilder<GameId, PlayerState> => ({
     gameId: gameId,
     makeInitialState,
@@ -132,25 +136,29 @@ export function gameDefinitionBuilder<GameId extends string, PlayerState>(
     : makeGameDefBuilder(gameId, makeInitialState);
 }
 
-type ArrayGameDef<
+export type AnyGameDefinition<Len extends number> =
+  | ArrayGameDef<any, any, any, any, any, Len>
+  | ObjectGameDef<any, any, any>;
+
+export type ArrayGameDef<
   GameId extends string,
   PlayerState,
   V,
   Stats,
-  VMut extends V | undefined,
+  UntakenVal extends V | undefined,
   Len extends number = number,
 > = GameDefinitionCore<GameId, PlayerState> &
   (number extends Len
     ? {
         type: "dynamic";
-        roundFactory: (idx: number) => TurnMeta<V, Stats, VMut>;
+        roundFactory: (idx: number) => TurnMeta<V, Stats, UntakenVal>;
       }
     : {
         type: "fixedArray";
-        rounds: { [K in NumericRange<Len>]: TurnMeta<V, Stats, VMut> };
+        rounds: { [K in NumericRange<Len>]: TurnMeta<V, Stats, UntakenVal> };
       });
 
-type ObjectGameDef<
+export type ObjectGameDef<
   GameId extends string,
   PlayerState,
   Rounds extends {
@@ -161,69 +169,3 @@ type ObjectGameDef<
   roundOrder: (keyof Rounds)[];
   rounds: Rounds;
 };
-
-/*
- * ============================================================================
- * TEMPORARY TEST TYPES AND VALUES
- * ============================================================================
- */
-
-const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(() => ({
-  score: 27,
-})).withArrayRounds<NumericRange<4>, { cliff: boolean; dd: boolean; hits: number }>()(
-  20,
-  (idx) => ({
-    untakenValue: 0, // as NumericRange<4>,
-    deltaScore: (val) => {
-      switch (val) {
-        case 0:
-          return idx * -2;
-        case 1:
-          return idx * 2;
-        case 2:
-          return idx * 4;
-        case 3:
-          return idx * 6;
-      }
-    },
-    turnStats: (val) => ({
-      cliff: val === 3,
-      dd: val >= 2,
-      hits: val,
-    }),
-    component: (val, { deltaScore, score, mutable, focus }) => "TODO: component" /*{
-      mutable: (val, { deltaScore, score, mutable, focus }) => "TODO: mutable cell",
-      immutable: (val, { deltaScore, score, mutable, focus }) => "TODO: immutable cell",
-    }//*/,
-  }),
-);
-
-type T27GameDefTarget = ArrayGameDef<
-  "twentyseven",
-  { score: number; jesus?: boolean },
-  NumericRange<4>,
-  { cliff: boolean; dd: boolean; hits: number },
-  NumericRange<4>,
-  20
->;
-type T27GameDefRet = typeof gameType27;
-type RetRoundsV1 = T27GameDefRet["rounds"];
-type TrgRounds = T27GameDefTarget["rounds"];
-
-type Cmp<A, B> = A extends B
-  ? B extends A
-    ? true
-    : "A = B, B ! A"
-  : B extends A
-    ? "B = A, A ! B"
-    : false;
-
-type T27GameDefCmp = Cmp<T27GameDefTarget, T27GameDefRet>;
-type T27DetailedCmp = {
-  [K in keyof T27GameDefTarget]: Cmp<T27GameDefTarget[K], T27GameDefRet[K]> extends infer C
-    ? C extends true
-      ? true
-      : [C, T27GameDefTarget[K], T27GameDefRet[K]]
-    : never;
-};
-type T27RoundsCmp = Cmp<TrgRounds, RetRoundsV1>;

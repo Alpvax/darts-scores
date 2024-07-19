@@ -30,6 +30,15 @@ export type NumericRange<End extends number, Start extends number = 0> = _Numeri
 >;
 
 /**
+ * Find the maximum of a number union (such as a NumericRange)
+ */
+export type NumericMaximum<N extends number, R extends never[] = []> = number extends N
+  ? number
+  : R["length"] extends N
+    ? NumericMaximum<N, [never, ...R]>
+    : R["length"];
+
+/**
  * A Record of numeric keys in the range 0..Len (excluding Len), with values `T`.
  * Equivalent to a `T[]` of length `Len`
  */

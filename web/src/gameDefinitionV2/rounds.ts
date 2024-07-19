@@ -55,11 +55,11 @@ type TurnMetaBase<V, Stats> = {
   turnStats: (value: V) => Stats;
   component: TurnComponentFactoryMeta<V, Stats>;
 };
-export type TurnMeta<V, Stats, MutVal extends V | undefined> = {
-  readonly deltaScore: (value: MutVal) => number;
-  readonly turnStats: (value: MutVal) => Stats;
-  readonly component: TurnComponentFactoryDef<MutVal, Stats>;
-} & (undefined extends MutVal
+export type TurnMeta<V, Stats, UntakenVal extends V | undefined> = {
+  readonly deltaScore: (value: UntakenVal) => number;
+  readonly turnStats: (value: UntakenVal) => Stats;
+  readonly component: TurnComponentFactoryDef<UntakenVal, Stats>;
+} & (undefined extends UntakenVal
   ? {
       readonly untakenValue: undefined;
     }
