@@ -22,6 +22,7 @@ type GameState<PlayerState, RoundState extends {} | any[], PlayerId extends stri
   {
     state: PlayerState;
     turns: RoundState;
+    latestTurnTaken?: keyof RoundState;
   }
 >;
 type GameStateFor<
@@ -29,7 +30,7 @@ type GameStateFor<
   PlayerId extends string = string,
 > =
   G extends ArrayGameDef<any, infer PlayerState, infer V, any, infer _UntakenVal, infer Len>
-    ? GameState<PlayerState, FixedLengthArray<V | undefined, Len>, PlayerId>
+    ? GameState<PlayerState, FixedLengthArray<_UntakenVal, Len>, PlayerId>
     : G extends ObjectGameDef<
           any,
           infer PlayerState,
@@ -375,22 +376,27 @@ export const makePlayerGameState: PlayerGameStateFactory = <
 //   }
 // }
 
-type T = GameStateFor<
+type T27 = GameStateFor<
   ArrayGameDef<
     "twentyseven",
     { score: number; jesus?: boolean },
     NumericRange<4>,
     { cliff: boolean; dd: boolean; hits: number },
-    NumericRange<4>
+    NumericRange<4>,
+    20
   >
 >;
-type FixedArrayGameData<
-  PlayerState,
-  V,
-  RoundStats,
-  UntakenVal extends V | undefined,
-  Len extends number,
-  PlayerId extends string = string,
-> = {
-  playerState: Map<PlayerId, { state: PlayerState; turns: FixedLengthArray<V | undefined, Len> }>;
-};
+
+type TObj = GameStateFor<
+  ObjectGameDef<
+    "twentyseven",
+    { score: number; foo?: boolean; bar?: number },
+    {
+      round1: TurnMeta<number, { baz: number; far: boolean }, number | undefined>;
+      round2: TurnMeta<number, { baz: number; far: boolean }, number | undefined>;
+      round3: TurnMeta<number, { x: number; y: boolean }, number | undefined>;
+      round4: TurnMeta<number, {}, number | undefined>;
+      round5: TurnMeta<number, { y: number }, number | undefined>;
+    }
+  >
+>;

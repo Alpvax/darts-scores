@@ -1,5 +1,14 @@
 import type { NumericRange } from "@/utils/types";
 import { defineTurn, type TurnMeta, type TurnMetaDef, type TurnMetaDefLookup } from "./rounds";
+import type { StatsSubset } from "./stats";
+
+type PositionsOrder = "highestFirst" | "lowestFirst";
+
+type GamePositionsDef<PlayerData> = {
+  scoreField: keyof StatsSubset<number, PlayerData>;
+  order: PositionsOrder;
+};
+export type Position = { pos: number; players: string[] };
 
 export type InitialStateFactory<PlayerState, PlayerId extends string = string> = (
   playerId: PlayerId,
@@ -8,6 +17,7 @@ export type InitialStateFactory<PlayerState, PlayerId extends string = string> =
 export type GameDefinitionCore<GameId extends string, PlayerState> = {
   gameId: GameId;
   makeInitialState: InitialStateFactory<PlayerState>;
+  positions: GamePositionsDef<PlayerState>;
 };
 
 type _WARFCurried<GameId extends string, PlayerState, V, Stats> = {
@@ -77,6 +87,7 @@ type GameDefRoundsBuilder<GameId extends string, PlayerState> = Readonly<
 > & {
   withArrayRounds: WithArrayRoundsFunc<GameId, PlayerState>;
   withObjRounds: <Rounds extends Record<any, TurnMetaDef<any, any>>>(
+    positions: GamePositionsDef<PlayerState>,
     rounds: Rounds,
     order: (keyof Rounds)[],
   ) => ObjectGameDef<
@@ -92,33 +103,41 @@ export function gameDefinitionBuilder<GameId extends string>(
   gameId: GameId,
 ): <PlayerState>(
   makeInitialState: InitialStateFactory<PlayerState>,
+  positions: GamePositionsDef<PlayerState>,
 ) => GameDefRoundsBuilder<GameId, PlayerState>;
 export function gameDefinitionBuilder<GameId extends string, PlayerState>(
   gameId: GameId,
   makeInitialState: InitialStateFactory<PlayerState>,
+  positions: GamePositionsDef<PlayerState>,
 ): GameDefRoundsBuilder<GameId, PlayerState>;
 export function gameDefinitionBuilder<GameId extends string, PlayerState>(
   gameId: GameId,
   makeInitialState?: InitialStateFactory<PlayerState>,
+  positions?: GamePositionsDef<PlayerState>,
 ):
   | GameDefRoundsBuilder<GameId, PlayerState>
   | ((
       makeInitialState: InitialStateFactory<PlayerState>,
+      positions: GamePositionsDef<PlayerState>,
     ) => GameDefRoundsBuilder<GameId, PlayerState>) {
   const makeGameDefBuilder = (
     gameId: GameId,
     makeInitialState: InitialStateFactory<PlayerState>,
+    positions: GamePositionsDef<PlayerState>,
   ): GameDefRoundsBuilder<GameId, PlayerState> => ({
     gameId: gameId,
     makeInitialState,
-    withArrayRounds: makeWithArrayRounds({ gameId: gameId, makeInitialState }),
+    positions,
+    withArrayRounds: makeWithArrayRounds({ gameId: gameId, makeInitialState, positions }),
     withObjRounds: <Rounds extends Record<any, TurnMetaDef<any, any>>>(
+      positions: GamePositionsDef<PlayerState>,
       rounds: Rounds,
       roundOrder: (keyof Rounds)[],
     ) => ({
       gameId,
       makeInitialState,
       type: "fixedObj",
+      positions,
       roundOrder,
       rounds: Object.entries(rounds).reduce(
         (obj, [key, turnDef]) =>
@@ -132,8 +151,8 @@ export function gameDefinitionBuilder<GameId extends string, PlayerState>(
     }),
   });
   return makeInitialState === undefined
-    ? (makeInitialState) => makeGameDefBuilder(gameId, makeInitialState)
-    : makeGameDefBuilder(gameId, makeInitialState);
+    ? (makeInitialState) => makeGameDefBuilder(gameId, makeInitialState, positions!)
+    : makeGameDefBuilder(gameId, makeInitialState, positions!);
 }
 
 export type AnyGameDefinition<Len extends number> =
@@ -168,4 +187,51 @@ export type ObjectGameDef<
   type: "fixedObj";
   roundOrder: (keyof Rounds)[];
   rounds: Rounds;
+};
+
+export const makePlayerPositions = (
+  playerScores: Map<string, number>,
+  positionOrder: PositionsOrder,
+) => {
+  return () => {
+    const orderedScores = [...playerScores.values()];
+    orderedScores.sort((a, b) => {
+      switch (positionOrder) {
+        case "highestFirst":
+          return b - a;
+        case "lowestFirst":
+          return a - b;
+      }
+    });
+    const scorePlayerLookup = [...playerScores.entries()].reduce((acc, [pid, score]) => {
+      if (acc.has(score)) {
+        acc.get(score)!.push(pid);
+      } else {
+        acc.set(score, [pid]);
+      }
+      return acc;
+    }, new Map<number, string[]>());
+
+    const { ordered, playerLookup } = orderedScores.reduce(
+      ({ scores, ordered, playerLookup }, score, idx) => {
+        const pos = idx + 1;
+        if (!scores.has(score)) {
+          scores.add(score);
+          const players = scorePlayerLookup.get(score)!;
+          ordered.push({ pos, players });
+          for (const p of players) {
+            playerLookup.set(p, { pos, players });
+          }
+        }
+        return { scores, ordered, playerLookup };
+      },
+      {
+        scores: new Set<number>(),
+        ordered: [] as Position[],
+        playerLookup: new Map<string, Position>(),
+      },
+    );
+
+    return { ordered, playerLookup };
+  };
 };

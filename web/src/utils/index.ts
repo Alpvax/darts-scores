@@ -217,3 +217,17 @@ export const shuffleArray = <T>(array: T[], inPlace = true): T[] => {
   }
   return arr;
 };
+
+export const numberOrdinal = (num: number) => {
+  if (num < 4 || num > 20) {
+    switch (num % 10) {
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+    }
+  }
+  return "th";
+};
