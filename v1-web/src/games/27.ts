@@ -112,6 +112,7 @@ export type PlayerGameResult27 = {
   handicap?: number;
 };
 export type Result27 = {
+  dataVersion: 1;
   date: string;
   winner: string | {
     tie: string[];

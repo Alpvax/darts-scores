@@ -236,6 +236,7 @@ export const use27History = defineStore("history27", () => {
         subscription = onSnapshot(
           query(
             gamesRef,
+            where("dataVersion", "==", 1),
             orderBy("date", "desc"),
             where("date", ">=", fromDate),
             where("date", "<=", td.toISOString().slice(0, 10)),

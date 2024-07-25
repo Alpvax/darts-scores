@@ -49,8 +49,8 @@
           :class="{
             winner: typeof game.winner === 'string'
               ? game.winner == player
-              : game.winner.tie.includes(player),
-            tie: typeof game.winner === 'object',
+              : game.winner.tiebreak.winner === player,
+            tie: typeof game.winner === 'object' && game.winner.tie.includes(player),
             allPos: Object.hasOwn(game.game, player) && game.game[player].allPositive,
             fatNickGame: Object.hasOwn(game.game, player) && game.game[player].score <= -393,
             cliffGame: Object.hasOwn(game.game, player) && game.game[player].cliffs > 0,
@@ -209,7 +209,7 @@ export default defineComponent({
 #histBodyContainer tbody tr:hover {
   background-color: bisque;
 }
-#gameResults td.tie.winner {
+#gameResults td.tie {
   background-color: #bbff66;
 }
 #gameResults td.winner {
