@@ -14,6 +14,7 @@ import {
   useFloating,
   type UseFloatingOptions,
   type MaybeElement,
+  type VirtualElement,
 } from "@floating-ui/vue";
 import { injectClose, injectItems } from "@/contextMenu/inject";
 
@@ -149,7 +150,7 @@ const SubMenu = defineComponent({
 export const ContextMenu = defineComponent({
   props: {
     items: { type: Array as PropType<ContextMenuItem[]>, required: true },
-    positionRef: { type: Object as PropType<Ref<MaybeElement<HTMLElement>>>, default: null },
+    positionRef: { type: Object as PropType<Ref<MaybeElement<Element | VirtualElement>>>, default: null },
     menuClass: { type: String, default: "contextmenu-root" },
     menuProps: {
       type: Object as PropType<UseFloatingOptions<Element>>,

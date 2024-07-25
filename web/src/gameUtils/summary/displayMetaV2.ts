@@ -1,5 +1,5 @@
-import { registerPrefsZod } from "@/utils/preferences/internal";
-import { ZodAny, z } from "zod";
+// import { registerPrefsZod } from "@/utils/preferences/internal";
+// import { ZodAny, z } from "zod";
 
 type FormatArg =
   | {
@@ -43,47 +43,47 @@ PARENT_FORMATS.set("DEFAULT", BASE_FORMAT);
 //   }
 // };
 
-const formatSchema = z
-  .object({
-    localeMatcher: z.string().optional(), //.enum(Intl.Locale.prototype.getNumberingSystems()).optional(),
-    style: z.enum(["decimal", "currency", "percent", "unit"]).optional(),
-    currency: z
-      .string()
-      .describe('ISO 4217 currency code. Required if style set to "currency"')
-      .optional(),
-    currencyDisplay: z.enum(["code", "symbol", "narrowSymbol", "name"]).optional(),
-    currencySign: z.enum(["standard", "accounting"]).optional(),
-    // unit:
-    // unitDisplay:
-    useGrouping: z.boolean().optional(),
-    minimumIntegerDigits: z.number().min(1).max(21).optional(),
-    minimumFractionDigits: z.number().min(0).max(20).optional(),
-    maximumFractionDigits: z.number().min(0).max(20).optional(),
-    minimumSignificantDigits: z.number().min(1).max(21).optional(),
-    maximumSignificantDigits: z.number().min(1).max(21).optional(),
-  })
-  .describe(
-    "The options object (second parameter) of Intl.NumberFormat." +
-      "See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat",
-  )
-  .passthrough();
-// .transform((opts) => new Intl.NumberFormat(undefined, opts));
+// const formatSchema = z
+//   .object({
+//     localeMatcher: z.string().optional(), //.enum(Intl.Locale.prototype.getNumberingSystems()).optional(),
+//     style: z.enum(["decimal", "currency", "percent", "unit"]).optional(),
+//     currency: z
+//       .string()
+//       .describe('ISO 4217 currency code. Required if style set to "currency"')
+//       .optional(),
+//     currencyDisplay: z.enum(["code", "symbol", "narrowSymbol", "name"]).optional(),
+//     currencySign: z.enum(["standard", "accounting"]).optional(),
+//     // unit:
+//     // unitDisplay:
+//     useGrouping: z.boolean().optional(),
+//     minimumIntegerDigits: z.number().min(1).max(21).optional(),
+//     minimumFractionDigits: z.number().min(0).max(20).optional(),
+//     maximumFractionDigits: z.number().min(0).max(20).optional(),
+//     minimumSignificantDigits: z.number().min(1).max(21).optional(),
+//     maximumSignificantDigits: z.number().min(1).max(21).optional(),
+//   })
+//   .describe(
+//     "The options object (second parameter) of Intl.NumberFormat." +
+//       "See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat/NumberFormat",
+//   )
+//   .passthrough();
+// // .transform((opts) => new Intl.NumberFormat(undefined, opts));
 
-const summaryMetaLabelSchema = z.string().min(1);
-const summaryMetaFormatSchema = formatSchema.or(z.string().startsWith("!").min(2));
-const BWSchema = z.enum(["best", "worst"]);
-const highlightSchema = z
-  .record(z.enum(["highest", "lowest"]))
-  .or(
-    z
-      .array(BWSchema)
-      .min(1)
-      .max(2)
-      .refine((items) => items.length === 1 || items.length === new Set(items).size, {
-        message: "each criteria can only be specified once",
-      }),
-  )
-  .or(BWSchema);
+// const summaryMetaLabelSchema = z.string().min(1);
+// const summaryMetaFormatSchema = formatSchema.or(z.string().startsWith("!").min(2));
+// const BWSchema = z.enum(["best", "worst"]);
+// const highlightSchema = z
+//   .record(z.enum(["highest", "lowest"]))
+//   .or(
+//     z
+//       .array(BWSchema)
+//       .min(1)
+//       .max(2)
+//       .refine((items) => items.length === 1 || items.length === new Set(items).size, {
+//         message: "each criteria can only be specified once",
+//       }),
+//   )
+//   .or(BWSchema);
 
 export type HighlightRules =
   | Record<string, "highest" | "lowest">
@@ -91,29 +91,29 @@ export type HighlightRules =
   | "best"
   | "worst";
 
-type Overrides<
-  T,
-  Z extends z.ZodType<T, Def, Input>,
-  Def extends z.ZodTypeDef = z.ZodTypeDef,
-  Input = T,
-> = {
-  schema: Z;
-  default: T;
-  overrides: Record<string, T>;
-};
-type ValOrOverride<Z extends ZodAny> = z.infer<Z> | {};
+// type Overrides<
+//   T,
+//   Z extends z.ZodType<T, Def, Input>,
+//   Def extends z.ZodTypeDef = z.ZodTypeDef,
+//   Input = T,
+// > = {
+//   schema: Z;
+//   default: T;
+//   overrides: Record<string, T>;
+// };
+// type ValOrOverride<Z extends ZodAny> = z.infer<Z> | {};
 
-// registerPrefsZod(
-//   "displayMetadata",
-//   z
-//     .object({
-//       core: z.object({}).default({}),
-//     })
-//     .default({}),
-// );
+// // registerPrefsZod(
+// //   "displayMetadata",
+// //   z
+// //     .object({
+// //       core: z.object({}).default({}),
+// //     })
+// //     .default({}),
+// // );
 
-export type DisplayMetadata = {
-  label: z.output<typeof summaryMetaLabelSchema>;
-  format?: z.output<typeof summaryMetaFormatSchema>;
-  highlight?: z.output<typeof highlightSchema>;
-};
+// export type DisplayMetadata = {
+//   label: z.output<typeof summaryMetaLabelSchema>;
+//   format?: z.output<typeof summaryMetaFormatSchema>;
+//   highlight?: z.output<typeof highlightSchema>;
+// };

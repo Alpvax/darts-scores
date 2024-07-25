@@ -1,11 +1,10 @@
-import type { NumericRange } from "@/utils/types";
+import type { NumericRange, ValuesSubset } from "@/utils/types";
 import { defineTurn, type TurnMeta, type TurnMetaDef, type TurnMetaDefLookup } from "./rounds";
-import type { StatsSubset } from "./stats";
 
 type PositionsOrder = "highestFirst" | "lowestFirst";
 
 type GamePositionsDef<PlayerData> = {
-  scoreField: keyof StatsSubset<number, PlayerData>;
+  scoreField: keyof ValuesSubset<number, PlayerData>;
   order: PositionsOrder;
 };
 export type Position = { pos: number; players: string[] };
