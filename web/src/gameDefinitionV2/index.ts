@@ -332,8 +332,8 @@ function withGameStats<
       soloStatsFactory: maybeSolo,
     };
   }
-  // @ts-ignore
   return (game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>) =>
+    // @ts-ignore
     withGameStats(maybeSolo, game);
 }
 
@@ -365,8 +365,8 @@ const withGameStatsArr =
       soloState: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
       gameState: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
     ): ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
-    // @ts-expect-error
   } =>
+  // @ts-expect-error
   <SoloStats extends {}, GameStats extends {}>(
     maybeSolo?: SoloStatsFactory<any, PlayerState, Rounds>,
     maybeGame?: GameStatsFactory<any, any, PlayerState, Rounds>,
@@ -427,8 +427,8 @@ const withGameStatsObj =
       soloState: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
       gameState: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
     ): ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
-    // @ts-expect-error
   } =>
+  // @ts-expect-error
   <SoloStats extends {}, GameStats extends {}>(
     maybeSolo?: SoloStatsFactory<any, PlayerState, Rounds>,
     maybeGame?: GameStatsFactory<any, any, PlayerState, Rounds>,

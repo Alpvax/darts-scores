@@ -105,7 +105,7 @@ class GameDefBuilder<GameType extends string, PlayerState extends {}, SharedStat
     maybeFactory?: (index: number) => TurnMetaDef<V, Stats>,
   ) {
     return maybeLenOrFactory === undefined
-      ? this.withArrayRounds
+      ? this.withArrayRounds.bind(this)
       : maybeFactory === undefined
         ? new ArrayGameDefBuilderNoStats(
             this,
@@ -538,8 +538,8 @@ class ArrayGameDefBuilderNoStats<
     arg3?: Len | ((index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>),
     arg4?: (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
   ) {
-    // @ts-expect-error
     super(
+      // @ts-expect-error
       baseOrGameType,
       arg1,
       arg2,
