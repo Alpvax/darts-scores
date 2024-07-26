@@ -1,51 +1,70 @@
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
-import type { AnyGameDefinition, ArrayGameDef, InitialStateFactory, ObjectGameDef } from ".";
+import type { AnyGameDefinition, ArrayGameDef, ObjectGameDef } from ".";
 import type { TurnMeta } from "./rounds";
 import { reactive, ref } from "vue";
 
-type PlayerGameDataFactory = {
-  <PlayerState, V, RoundStats, UntakenVal extends V | undefined, Len extends number = number>(
-    makeInitialState: InitialStateFactory<PlayerState>,
-  ): void;
-  <
-    PlayerState,
-    Rounds extends {
-      [k: string | number | symbol]: TurnMeta<any, any, any>;
-    },
-  >(
-    gameDef: ObjectGameDef<any, PlayerState, Rounds>,
-  ): void;
-};
-
-type GameState<PlayerState, RoundState extends {} | any[], PlayerId extends string = string> = Map<
-  PlayerId,
-  {
-    state: PlayerState;
-    turns: RoundState;
-    latestTurnTaken?: keyof RoundState;
-  }
->;
-type GameStateFor<
-  G /* extends ArrayGameDef<any, any, any, any, any, any> /*| ObjectGameDef<any, any, any>*/,
+// type PlayerGameDataFactory = {
+//   <PlayerState, V, RoundStats, UntakenVal extends V | undefined, Len extends number = number>(
+//     makeInitialState: InitialStateFactory<PlayerState>,
+//   ): void;
+//   <
+//     PlayerState,
+//     Rounds extends {
+//       [k: string | number | symbol]: TurnMeta<any, any, any>;
+//     },
+//   >(
+//     gameDef: ObjectGameDef<any, PlayerState, Rounds>,
+//   ): void;
+// };
+export type PlayerData<PlayerState, RoundState extends {} | any[], RoundKey> = {
+  state: PlayerState;
+  turns: RoundState;
+} & (
+  | {
+      complete: true;
+      latestTurnTaken?: undefined;
+    }
+  | {
+      complete: false;
+      latestTurnTaken?: RoundKey;
+    }
+);
+export type PlayerDataWithId<
+  PlayerState,
+  RoundState extends {} | any[],
+  RoundKey,
   PlayerId extends string = string,
-> =
-  G extends ArrayGameDef<any, infer PlayerState, infer V, any, infer _UntakenVal, infer Len>
-    ? GameState<PlayerState, FixedLengthArray<_UntakenVal, Len>, PlayerId>
-    : G extends ObjectGameDef<
-          any,
-          infer PlayerState,
-          infer Rounds extends Record<any, TurnMeta<any, any, any>>
-        >
-      ? GameState<
-          PlayerState,
-          {
-            [K in keyof Rounds]: Rounds[K] extends TurnMeta<infer V, any, any>
-              ? V | undefined
-              : never;
-          },
-          PlayerId
-        >
-      : [never, "Unknown GameDefinition:", G];
+> = {
+  playerId: PlayerId;
+} & PlayerData<PlayerState, RoundState, RoundKey>;
+
+type GameState<
+  PlayerState,
+  RoundState extends {} | any[],
+  RoundKey /* extends keyof RoundState*/,
+  PlayerId extends string = string,
+> = Map<PlayerId, PlayerData<PlayerState, RoundState, RoundKey>>;
+// type GameStateFor<
+//   G /* extends ArrayGameDef<any, any, any, any, any, any> /*| ObjectGameDef<any, any, any>*/,
+//   PlayerId extends string = string,
+// > =
+//   G extends ArrayGameDef<any, infer PlayerState, infer V, any, infer _UntakenVal, infer Len>
+//     ? GameState<PlayerState, FixedLengthArray<_UntakenVal, Len>, PlayerId>
+//     : G extends ObjectGameDef<
+//           any,
+//           infer PlayerState,
+//           infer Rounds extends Record<any, TurnMeta<any, any, any>>
+//         >
+//       ? GameState<
+//           PlayerState,
+//           {
+//             [K in keyof Rounds]: Rounds[K] extends TurnMeta<infer V, any, any>
+//               ? V | undefined
+//               : never;
+//           },
+//           PlayerId
+//         >
+//       : [never, "Unknown GameDefinition:", G];
 
 interface PlayerGameState<
   PlayerState,
@@ -376,7 +395,7 @@ export const makePlayerGameState: PlayerGameStateFactory = <
 //   }
 // }
 
-type T27 = GameStateFor<
+type T27 = GameDataFor<
   ArrayGameDef<
     "twentyseven",
     { score: number; jesus?: boolean },
@@ -387,7 +406,7 @@ type T27 = GameStateFor<
   >
 >;
 
-type TObj = GameStateFor<
+type TObj = GameDataFor<
   ObjectGameDef<
     "twentyseven",
     { score: number; foo?: boolean; bar?: number },
@@ -400,3 +419,60 @@ type TObj = GameStateFor<
     }
   >
 >;
+
+export type GameDataFor<
+  G /* extends ArrayGameDef<any, any, any, any, any, any> /*| ObjectGameDef<any, any, any>*/,
+  PlayerId extends string = string,
+> =
+  G extends ArrayGameDef<any, infer PlayerState, infer V, infer S, infer UntakenVal, infer Len>
+    ? {
+        raw: GameState<
+          PlayerState,
+          FixedLengthArray<UntakenVal, Len>,
+          number extends Len ? number : NumericRange<Len>,
+          PlayerId
+        >;
+        calculated: GameState<
+          PlayerState,
+          FixedLengthArray<S, Len>,
+          number extends Len ? number : NumericRange<Len>,
+          PlayerId
+        >;
+      }
+    : G extends ObjectGameDef<
+          any,
+          infer PlayerState,
+          infer Rounds extends Record<any, TurnMeta<any, any, any>>
+        >
+      ? {
+          raw: GameState<
+            PlayerState,
+            {
+              [K in keyof Rounds]: Rounds[K] extends TurnMeta<infer V, any, infer UntakenVal>
+                ? UntakenVal
+                : never;
+            },
+            keyof Rounds,
+            PlayerId
+          >;
+          calculated: GameState<
+            PlayerState,
+            {
+              [K in keyof Rounds]: Rounds[K] extends TurnMeta<infer V, infer S, infer UntakenVal>
+                ? S
+                : never;
+            },
+            keyof Rounds,
+            PlayerId
+          >;
+        }
+      : {
+          raw: never;
+          calculated: never;
+          error: ["Unknown GameDefinition:", G];
+        };
+
+export type CalculatedPlayerData<
+  G /*extends ArrayGameDef<any, any, any, any, any, any> | ObjectGameDef<any, any, any>*/,
+  PlayerId extends string = string,
+> = GameDataFor<G, PlayerId>["calculated"] extends Map<PlayerId, infer PData> ? PData : never;

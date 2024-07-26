@@ -1,5 +1,6 @@
 import type { NumericRange, ValuesSubset } from "@/utils/types";
 import { defineTurn, type TurnMeta, type TurnMetaDef, type TurnMetaDefLookup } from "./rounds";
+import type { PlayerDataWithId } from "./gameData";
 
 type PositionsOrder = "highestFirst" | "lowestFirst";
 
@@ -147,6 +148,22 @@ export function gameDefinitionBuilder<GameId extends string, PlayerState>(
           [K in keyof Rounds]: TurnMetaDefLookup<Rounds[K]>;
         },
       ),
+      withGameStats: withGameStatsObj({
+        gameId,
+        makeInitialState,
+        type: "fixedObj",
+        positions,
+        roundOrder,
+        rounds: Object.entries(rounds).reduce(
+          (obj, [key, turnDef]) =>
+            Object.assign(obj, {
+              [key]: defineTurn(turnDef),
+            }),
+          {} as {
+            [K in keyof Rounds]: TurnMetaDefLookup<Rounds[K]>;
+          },
+        ),
+      }),
     }),
   });
   return makeInitialState === undefined
@@ -165,16 +182,24 @@ export type ArrayGameDef<
   Stats,
   UntakenVal extends V | undefined,
   Len extends number = number,
+  SoloStats extends {} = {},
+  GameStats extends {} = {},
 > = GameDefinitionCore<GameId, PlayerState> &
   (number extends Len
     ? {
         type: "dynamic";
         roundFactory: (idx: number) => TurnMeta<V, Stats, UntakenVal>;
-      }
+      } & GameStatsDefPart<SoloStats, GameStats, PlayerState, TurnMeta<V, Stats, UntakenVal>[]>
     : {
         type: "fixedArray";
         rounds: { [K in NumericRange<Len>]: TurnMeta<V, Stats, UntakenVal> };
-      });
+      } & GameStatsDefPart<
+        SoloStats,
+        GameStats,
+        PlayerState,
+        { [K in NumericRange<Len>]: TurnMeta<V, Stats, UntakenVal> },
+        NumericRange<Len>
+      >);
 
 export type ObjectGameDef<
   GameId extends string,
@@ -182,11 +207,393 @@ export type ObjectGameDef<
   Rounds extends {
     [k: string | number | symbol]: TurnMeta<any, any, any>;
   },
+  SoloStats extends {} = {},
+  GameStats extends {} = {},
 > = GameDefinitionCore<GameId, PlayerState> & {
   type: "fixedObj";
   roundOrder: (keyof Rounds)[];
   rounds: Rounds;
+} & ({} extends GameStats
+    ? {
+        withGameStats: ReturnType<typeof withGameStatsObj<GameId, PlayerState, Rounds>>;
+      }
+    : {
+        soloStatsFactory: SoloStatsFactory<SoloStats, PlayerState, Rounds> | undefined;
+        gameStatsFactory: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>;
+      });
+
+type T = keyof ArrayGameDef<
+  "foo",
+  { score: number },
+  NumericRange<4>,
+  { bar: boolean },
+  NumericRange<4>,
+  20,
+  {},
+  { loser: boolean }
+>;
+
+type SoloStatsFactory<
+  SoloStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+> = (
+  playerData: PlayerDataWithId<
+    PlayerState,
+    { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+    RoundKey
+  >,
+) => SoloStats;
+type GameStatsFactory<
+  SoloStats extends {},
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+> = (
+  playerData: PlayerDataWithId<
+    PlayerState,
+    { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+    RoundKey
+  > &
+    SoloStats & {
+      position: Position;
+    },
+) => GameStats;
+
+function withGameStats<
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+>(): (game: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>) => {
+  soloStatsFactory?: undefined;
+  gameStatsFactory: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>;
 };
+function withGameStats<
+  SoloStats extends {},
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+>(
+  solo: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>,
+): (game: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>) => {
+  soloStatsFactory: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>;
+  gameStatsFactory: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>;
+};
+function withGameStats<
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+>(
+  solo: undefined,
+  game: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>,
+): {
+  soloStatsFactory?: undefined;
+  gameStatsFactory: GameStatsFactory<{}, GameStats, PlayerState, Rounds, RoundKey>;
+};
+function withGameStats<
+  SoloStats extends {},
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+>(
+  solo: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>,
+  game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>,
+): {
+  soloStatsFactory: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>;
+  gameStatsFactory: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>;
+};
+function withGameStats<
+  SoloStats extends {},
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+>(
+  maybeSolo?: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>,
+  maybeGame?: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>,
+):
+  | {
+      soloStatsFactory?: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>;
+      gameStatsFactory: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>;
+    }
+  | ((game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>) => {
+      soloStatsFactory?: SoloStatsFactory<SoloStats, PlayerState, Rounds, RoundKey>;
+      gameStatsFactory: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>;
+    }) {
+  if (maybeGame) {
+    return {
+      gameStatsFactory: maybeGame,
+      soloStatsFactory: maybeSolo,
+    };
+  }
+  // @ts-ignore
+  return (game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds, RoundKey>) =>
+    withGameStats(maybeSolo, game);
+}
+
+const withGameStatsArr =
+  <
+    GameId extends string,
+    PlayerState,
+    Rounds extends {
+      [k: string | number | symbol]: TurnMeta<any, any, any>;
+    },
+  >(
+    gameDef: Omit<ObjectGameDef<GameId, PlayerState, Rounds>, "withGameStats">,
+  ): {
+    (
+      solo?: undefined,
+    ): <GameStats extends {}>(
+      game: GameStatsFactory<{}, GameStats, PlayerState, Rounds>,
+    ) => ObjectGameDef<GameId, PlayerState, Rounds, {}, GameStats>;
+    <SoloStats extends {}>(
+      solo: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
+    ): <GameStats extends {}>(
+      game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
+    ) => ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    <GameStats extends {}>(
+      soloState: undefined,
+      gameState: GameStatsFactory<{}, GameStats, PlayerState, Rounds>,
+    ): ObjectGameDef<GameId, PlayerState, Rounds, {}, GameStats>;
+    <SoloStats extends {}, GameStats extends {}>(
+      soloState: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
+      gameState: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
+    ): ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    // @ts-expect-error
+  } =>
+  <SoloStats extends {}, GameStats extends {}>(
+    maybeSolo?: SoloStatsFactory<any, PlayerState, Rounds>,
+    maybeGame?: GameStatsFactory<any, any, PlayerState, Rounds>,
+  ) => {
+    if (maybeGame) {
+      return Object.assign(
+        {
+          gameStatsFactory: maybeGame,
+          soloStatsFactory: maybeSolo,
+        },
+        gameDef,
+      ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    }
+    return maybeSolo
+      ? <GS extends {}>(game: GameStatsFactory<SoloStats, GS, PlayerState, Rounds>) =>
+          Object.assign(
+            {
+              gameStatsFactory: game,
+              soloStatsFactory: maybeSolo,
+            },
+            gameDef,
+          ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GS>
+      : <GS extends {}>(game: GameStatsFactory<SoloStats, GS, PlayerState, Rounds>) =>
+          Object.assign(
+            {
+              gameStatsFactory: game,
+              soloStatsFactory: undefined,
+            },
+            gameDef,
+          ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, {}, GS>;
+  };
+
+const withGameStatsObj =
+  <
+    GameId extends string,
+    PlayerState,
+    Rounds extends {
+      [k: string | number | symbol]: TurnMeta<any, any, any>;
+    },
+  >(
+    gameDef: Omit<ObjectGameDef<GameId, PlayerState, Rounds>, "withGameStats">,
+  ): {
+    (
+      solo?: undefined,
+    ): <GameStats extends {}>(
+      game: GameStatsFactory<{}, GameStats, PlayerState, Rounds>,
+    ) => ObjectGameDef<GameId, PlayerState, Rounds, {}, GameStats>;
+    <SoloStats extends {}>(
+      solo: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
+    ): <GameStats extends {}>(
+      game: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
+    ) => ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    <GameStats extends {}>(
+      soloState: undefined,
+      gameState: GameStatsFactory<{}, GameStats, PlayerState, Rounds>,
+    ): ObjectGameDef<GameId, PlayerState, Rounds, {}, GameStats>;
+    <SoloStats extends {}, GameStats extends {}>(
+      soloState: SoloStatsFactory<SoloStats, PlayerState, Rounds>,
+      gameState: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>,
+    ): ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    // @ts-expect-error
+  } =>
+  <SoloStats extends {}, GameStats extends {}>(
+    maybeSolo?: SoloStatsFactory<any, PlayerState, Rounds>,
+    maybeGame?: GameStatsFactory<any, any, PlayerState, Rounds>,
+  ) => {
+    if (maybeGame) {
+      return Object.assign(
+        {
+          gameStatsFactory: maybeGame,
+          soloStatsFactory: maybeSolo,
+        },
+        gameDef,
+      ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GameStats>;
+    }
+    return maybeSolo
+      ? <GS extends {}>(game: GameStatsFactory<SoloStats, GS, PlayerState, Rounds>) =>
+          Object.assign(
+            {
+              gameStatsFactory: game,
+              soloStatsFactory: maybeSolo,
+            },
+            gameDef,
+          ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, SoloStats, GS>
+      : <GS extends {}>(game: GameStatsFactory<SoloStats, GS, PlayerState, Rounds>) =>
+          Object.assign(
+            {
+              gameStatsFactory: game,
+              soloStatsFactory: undefined,
+            },
+            gameDef,
+          ) as unknown as ObjectGameDef<GameId, PlayerState, Rounds, {}, GS>;
+  };
+
+// const withGameStats = <SoloStats extends {}, GameStats extends {}, PlayerState, Rounds extends {} | any[], RoundKey extends keyof Rounds = keyof Rounds>(
+//   solo?: (playerData: PlayerDataWithId<PlayerState, { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never }, RoundKey>) => SoloStats,
+//   game?: (playerData: PlayerDataWithId<PlayerState, { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never }, RoundKey> & SoloStats & {
+//     position: Position;
+//   }) => GameStats,
+// ): ReturnType<GameStatsDefPart<SoloStats, GameStats, PlayerState, Rounds, RoundKey>["withGameStats"]> => {
+//   if (game === undefined) {
+//     return (game?: (playerData: PlayerDataWithId<PlayerState, { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never }, RoundKey> & SoloStats & {
+//       position: Position;
+//     }) => GameStats) => withGameStats(solo, game);
+//   }
+//   return {
+//     gameStatsFactory: game,
+//     soloStatsFactory: solo ?? (() => {}),
+//   }
+// }
+
+type GameStatsDefPart<
+  SoloStats extends {},
+  GameStats extends {},
+  PlayerState,
+  Rounds extends {} | any[],
+  RoundKey extends keyof Rounds = keyof Rounds,
+> = {} extends SoloStats
+  ? {} extends GameStats
+    ? {
+        // Neither specified
+        withGameStats: {
+          <SS extends {}, GS extends {}>(
+            soloState: (
+              playerData: PlayerDataWithId<
+                PlayerState,
+                {
+                  [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never;
+                },
+                RoundKey
+              >,
+            ) => SS | undefined,
+            gameState: (
+              playerData: PlayerDataWithId<
+                PlayerState,
+                {
+                  [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never;
+                },
+                RoundKey
+              > &
+                SS & {
+                  position: Position;
+                },
+            ) => GS,
+          ): GameStatsDefPart<SS, GS, PlayerState, Rounds, RoundKey>;
+          <SS extends {}>(
+            soloState?: (
+              playerData: PlayerDataWithId<
+                PlayerState,
+                {
+                  [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never;
+                },
+                RoundKey
+              >,
+            ) => SS,
+          ): <GS extends {}>(
+            gameState: (
+              playerData: PlayerDataWithId<
+                PlayerState,
+                {
+                  [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never;
+                },
+                RoundKey
+              > &
+                SS & {
+                  position: Position;
+                },
+            ) => GS,
+          ) => GameStatsDefPart<SS, GS, PlayerState, Rounds, RoundKey>;
+        };
+      }
+    : {
+        // GameStats specified with no solo stats
+        gameStatsFactory: (
+          playerData: PlayerDataWithId<
+            PlayerState,
+            { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+            RoundKey
+          > &
+            SoloStats & {
+              position: Position;
+            },
+        ) => GameStats;
+      }
+  : {} extends GameStats
+    ? {
+        // SoloStats specified with no game stats
+        soloStatsFactory: (
+          playerData: PlayerDataWithId<
+            PlayerState,
+            { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+            RoundKey
+          >,
+        ) => SoloStats;
+        withGameStats: <GS extends {}>(
+          gameState: (
+            playerData: PlayerDataWithId<
+              PlayerState,
+              { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+              RoundKey
+            > &
+              SoloStats & {
+                position: Position;
+              },
+          ) => GS,
+        ) => GameStatsDefPart<SoloStats, GS, PlayerState, Rounds, RoundKey>;
+      }
+    : {
+        // Both specified
+        soloStatsFactory: (
+          playerData: PlayerDataWithId<
+            PlayerState,
+            { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+            RoundKey
+          >,
+        ) => SoloStats;
+        gameStatsFactory: (
+          playerData: PlayerDataWithId<
+            PlayerState,
+            { [K in RoundKey]: Rounds[K] extends TurnMeta<any, infer RS, infer V> ? RS : never },
+            RoundKey
+          > &
+            SoloStats & {
+              position: Position;
+            },
+        ) => GameStats;
+      };
 
 export const makePlayerPositions = (
   playerScores: Map<string, number>,

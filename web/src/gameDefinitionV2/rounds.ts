@@ -80,6 +80,9 @@ export type TurnMetaDefLookup<M extends TurnMetaDef<any, any>> =
     : M extends TurnMetaWithFallback<infer V, infer Stats>
       ? TurnMeta<V, Stats, V>
       : never;
+export type TurnMetaDefFor<V, Stats, UntakenVal> = undefined extends UntakenVal
+  ? TurnMetaNoFallback<V, Stats>
+  : TurnMetaWithFallback<V, Stats>;
 
 export const defineTurn: {
   <V, Stats>(meta: TurnMetaNoFallback<V, Stats>): TurnMeta<V, Stats, V | undefined>;
