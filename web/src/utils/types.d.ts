@@ -71,7 +71,7 @@ export type CountedFixedLenArray<Len extends number, R extends number[] = []> = 
     : CountedFixedLenArray<Len, [...R, R["length"]]>;
 
 export type ValuesSubset<V, T> = T extends {}
-? {
-    [K in keyof T as T[K] extends V ? K : never]: T[K];
-  }
-: {};
+  ? {
+      [K in keyof T as T[K] extends V ? K : never]: T[K];
+    }
+  : {};
