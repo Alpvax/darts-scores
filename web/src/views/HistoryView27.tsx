@@ -185,6 +185,7 @@ export default defineComponent({
                     e.stopPropagation();
                     e.preventDefault();
                   }}
+                  data-game-id={game.gameId}
                 >
                   <td class="rowLabel">{game.date.toLocaleDateString()}</td>
                   {players.value.map((pid) => {
