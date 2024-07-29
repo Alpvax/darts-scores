@@ -25,7 +25,6 @@ header {
   height: 2em;
 }
 header > .wrapper {
-  /* display: none; TODO: nav bar */
   display: inline-block;
   background-color: var(--color-background);
   box-shadow: 0 2px 5px;
