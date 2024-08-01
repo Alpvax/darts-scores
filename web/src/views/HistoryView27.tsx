@@ -180,6 +180,7 @@ export default defineComponent({
               ).playerPositions.value.playerLookup;
               return (
                 <tr
+                  class={game.isDebugGame ? "debugGame" : ""}
                   onClick={(e) => {
                     setDisplayedGame(game, e.currentTarget as Element | null);
                     e.stopPropagation();

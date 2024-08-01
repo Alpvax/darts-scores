@@ -232,7 +232,7 @@ export const use27History = defineStore("27History", () => {
   let subscriptions: Unsubscribe[] = [];
   const games = reactive(new Map<string, GameResult<TurnData27>>());
 
-  const handleSnapshot = (snapshot: QuerySnapshot) =>
+  const handleSnapshot = (snapshot: QuerySnapshot, isDebugGame?: boolean) =>
     snapshot.docChanges().forEach(async (change) => {
       const gameId = change.doc.id;
       if (change.type === "removed") {
@@ -240,6 +240,9 @@ export const use27History = defineStore("27History", () => {
       } else {
         const data = change.doc.data() as Result27;
         const gameData = intoGameResult(data);
+        if (isDebugGame) {
+          gameData.isDebugGame = true;
+        }
         games.set(gameId, gameData);
       }
     });
@@ -290,7 +293,7 @@ export const use27History = defineStore("27History", () => {
           subscriptions.push(
             onSnapshot(
               query(collection(db, "27testgames"), orderBy("date", "desc"), limit(50)),
-              handleSnapshot,
+              (s) => handleSnapshot(s, true),
             ),
           );
         }
