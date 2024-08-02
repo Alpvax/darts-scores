@@ -12,7 +12,7 @@ export type Position = { pos: number; players: string[] };
 
 export type InitialStateFactory<PlayerState, PlayerId extends string = string> = (
   playerId: PlayerId,
-) => PlayerState;
+) => PlayerState & { startScore: number };
 
 export type GameDefinitionCore<GameId extends string, PlayerState> = {
   gameId: GameId;
@@ -221,17 +221,6 @@ export type ObjectGameDef<
         soloStatsFactory: SoloStatsFactory<SoloStats, PlayerState, Rounds> | undefined;
         gameStatsFactory: GameStatsFactory<SoloStats, GameStats, PlayerState, Rounds>;
       });
-
-type T = keyof ArrayGameDef<
-  "foo",
-  { score: number },
-  NumericRange<4>,
-  { bar: boolean },
-  NumericRange<4>,
-  20,
-  {},
-  { loser: boolean }
->;
 
 type SoloStatsFactory<
   SoloStats extends {},

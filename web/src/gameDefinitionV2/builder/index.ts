@@ -1,4 +1,4 @@
-import type { FixedLengthArray, NumericRange } from "@/utils/types";
+import type { NumericRange, ValuesSubset } from "@/utils/types";
 import type { InitialStateFactory, Position } from "..";
 import {
   defineTurn,
@@ -7,7 +7,9 @@ import {
   type TurnMetaDefFor,
   type TurnMetaDefLookup,
 } from "../rounds";
-import type { PlayerDataWithId } from "../gameData";
+import type { FullStatsFactory, SoloStatsFactory } from "../types";
+import { GameDefinition } from "../definition";
+import type { GameResult } from "../gameResult";
 
 type GameDefBuilderBase<GameType extends string, PlayerState extends {}, SharedState extends {}> = {
   /** Unique identifier for this game type. */
@@ -131,32 +133,7 @@ class GameDefBuilder<GameType extends string, PlayerState extends {}, SharedStat
   }
 }
 
-type SoloStatsFactory<
-  PlayerState,
-  RoundValues extends {} | [],
-  RoundKey,
-  SoloStats,
-  PlayerId extends string = string,
-> = (playerData: PlayerDataWithId<PlayerState, RoundValues, RoundKey, PlayerId>) => SoloStats;
-type FullStatsFactory<
-  PlayerState,
-  SharedState,
-  RoundStats extends {} | [],
-  RoundKey,
-  SoloStats,
-  FullStats,
-  PlayerId extends string = string,
-> = (
-  playerData: PlayerDataWithId<PlayerState, RoundStats, RoundKey, PlayerId> &
-    SoloStats & { position: Position },
-  shared: SharedState,
-  positions: {
-    ordered: Position[];
-    playerLookup: Map<PlayerId, Position>;
-  },
-) => FullStats;
-
-class ArrayGameDefBuilder<
+export class ArrayGameDefBuilder<
   GameType extends string,
   PlayerState extends {},
   SharedState extends {},
@@ -178,15 +155,21 @@ class ArrayGameDefBuilder<
 
   readonly soloStatsFactory: SoloStatsFactory<
     PlayerState,
-    FixedLengthArray<UntakenVal, Len>,
-    NumericRange<Len>,
+    {
+      valueType: UntakenVal;
+      statsType: RoundStats;
+      length: Len;
+    },
     SoloStats
   >;
   readonly fullStatsFactory: FullStatsFactory<
     PlayerState,
     SharedState,
-    FixedLengthArray<RoundStats, Len>,
-    NumericRange<Len>,
+    {
+      valueType: UntakenVal;
+      statsType: RoundStats;
+      length: Len;
+    },
     SoloStats,
     FullPlayerStats
   >;
@@ -201,15 +184,21 @@ class ArrayGameDefBuilder<
     turnFactory: (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats,
       FullPlayerStats
     >,
@@ -223,15 +212,21 @@ class ArrayGameDefBuilder<
     turnFactory: (index: number) => TurnMetaDef<V, RoundStats>,
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats,
       FullPlayerStats
     >,
@@ -243,15 +238,21 @@ class ArrayGameDefBuilder<
     turnFactory: (index: number) => TurnMetaDef<V, RoundStats>,
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats,
       FullPlayerStats
     >,
@@ -264,15 +265,21 @@ class ArrayGameDefBuilder<
     turnFactory: (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats,
       FullPlayerStats
     >,
@@ -290,8 +297,11 @@ class ArrayGameDefBuilder<
       | ((index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>)
       | SoloStatsFactory<
           PlayerState,
-          FixedLengthArray<UntakenVal, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats
         >,
     // (base: Len | turnDef | Solo | Full
@@ -300,15 +310,21 @@ class ArrayGameDefBuilder<
       | ((index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>)
       | SoloStatsFactory<
           PlayerState,
-          FixedLengthArray<UntakenVal, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats
         >
       | FullStatsFactory<
           PlayerState,
           SharedState,
-          FixedLengthArray<RoundStats, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats,
           FullPlayerStats
         >,
@@ -317,15 +333,21 @@ class ArrayGameDefBuilder<
       | ((index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>)
       | SoloStatsFactory<
           PlayerState,
-          FixedLengthArray<UntakenVal, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats
         >
       | FullStatsFactory<
           PlayerState,
           SharedState,
-          FixedLengthArray<RoundStats, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats,
           FullPlayerStats
         >,
@@ -333,15 +355,21 @@ class ArrayGameDefBuilder<
     arg5?:
       | SoloStatsFactory<
           PlayerState,
-          FixedLengthArray<UntakenVal, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats
         >
       | FullStatsFactory<
           PlayerState,
           SharedState,
-          FixedLengthArray<RoundStats, Len>,
-          NumericRange<Len>,
+          {
+            valueType: UntakenVal;
+            statsType: RoundStats;
+            length: Len;
+          },
           SoloStats,
           FullPlayerStats
         >,
@@ -349,8 +377,11 @@ class ArrayGameDefBuilder<
     arg6?: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats,
       FullPlayerStats
     >,
@@ -359,15 +390,21 @@ class ArrayGameDefBuilder<
       (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
       SoloStatsFactory<
         PlayerState,
-        FixedLengthArray<UntakenVal, Len>,
-        NumericRange<Len>,
+        {
+          valueType: UntakenVal;
+          statsType: RoundStats;
+          length: Len;
+        },
         SoloStats
       >,
       FullStatsFactory<
         PlayerState,
         SharedState,
-        FixedLengthArray<RoundStats, Len>,
-        NumericRange<Len>,
+        {
+          valueType: UntakenVal;
+          statsType: RoundStats;
+          length: Len;
+        },
         SoloStats,
         FullPlayerStats
       >,
@@ -383,15 +420,21 @@ class ArrayGameDefBuilder<
               arg4 as (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
               arg5 as SoloStatsFactory<
                 PlayerState,
-                FixedLengthArray<UntakenVal, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats
               >,
               arg6 as FullStatsFactory<
                 PlayerState,
                 SharedState,
-                FixedLengthArray<RoundStats, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats,
                 FullPlayerStats
               >,
@@ -401,15 +444,21 @@ class ArrayGameDefBuilder<
               arg3 as (index: number) => TurnMetaDef<V, RoundStats>,
               arg4 as SoloStatsFactory<
                 PlayerState,
-                FixedLengthArray<UntakenVal, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats
               >,
               arg5 as FullStatsFactory<
                 PlayerState,
                 SharedState,
-                FixedLengthArray<RoundStats, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats,
                 FullPlayerStats
               >,
@@ -426,15 +475,21 @@ class ArrayGameDefBuilder<
               arg2 as (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
               arg3 as SoloStatsFactory<
                 PlayerState,
-                FixedLengthArray<UntakenVal, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats
               >,
               arg4 as FullStatsFactory<
                 PlayerState,
                 SharedState,
-                FixedLengthArray<RoundStats, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats,
                 FullPlayerStats
               >,
@@ -444,15 +499,21 @@ class ArrayGameDefBuilder<
               arg1 as (index: NumericRange<Len>) => TurnMetaDef<V, RoundStats>,
               arg2 as SoloStatsFactory<
                 PlayerState,
-                FixedLengthArray<UntakenVal, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats
               >,
               arg3 as FullStatsFactory<
                 PlayerState,
                 SharedState,
-                FixedLengthArray<RoundStats, Len>,
-                NumericRange<Len>,
+                {
+                  valueType: UntakenVal;
+                  statsType: RoundStats;
+                  length: Len;
+                },
                 SoloStats,
                 FullPlayerStats
               >,
@@ -476,6 +537,82 @@ class ArrayGameDefBuilder<
       this.cachedRoundMeta[index as number] = m;
     }
     return m;
+  }
+
+  build(positionOrder: "highestFirst" | "lowestFirst" /*TODO: dbAdapter:*/): GameDefinition<
+    GameType,
+    unknown,
+    GameResult<any>,
+    PlayerState,
+    SharedState,
+    {
+      valueType: UntakenVal;
+      statsType: RoundStats;
+      length: Len;
+    },
+    SoloStats,
+    FullPlayerStats
+  > {
+    return new GameDefinition(
+      this.gameType,
+      undefined,
+      positionOrder,
+      this.makeSharedState,
+      this.makeInitialPlayerState,
+      this.soloStatsFactory,
+      this.fullStatsFactory,
+      // @ts-expect-error
+      this.turnFactory,
+    );
+  }
+
+  withPositionCalc(
+    order: "highestFirst" | "lowestFirst",
+    scoreField: keyof ValuesSubset<number, PlayerState>,
+  ) {
+    return {
+      positions: (playerScores: Map<string, number>) => {
+        const orderedScores = [...playerScores.values()];
+        orderedScores.sort((a, b) => {
+          switch (order) {
+            case "highestFirst":
+              return b - a;
+            case "lowestFirst":
+              return a - b;
+          }
+        });
+        const scorePlayerLookup = [...playerScores.entries()].reduce((acc, [pid, score]) => {
+          if (acc.has(score)) {
+            acc.get(score)!.push(pid);
+          } else {
+            acc.set(score, [pid]);
+          }
+          return acc;
+        }, new Map<number, string[]>());
+
+        const { ordered, playerLookup } = orderedScores.reduce(
+          ({ scores, ordered, playerLookup }, score, idx) => {
+            const pos = idx + 1;
+            if (!scores.has(score)) {
+              scores.add(score);
+              const players = scorePlayerLookup.get(score)!;
+              ordered.push({ pos, players });
+              for (const p of players) {
+                playerLookup.set(p, { pos, players });
+              }
+            }
+            return { scores, ordered, playerLookup };
+          },
+          {
+            scores: new Set<number>(),
+            ordered: [] as Position[],
+            playerLookup: new Map<string, Position>(),
+          },
+        );
+
+        return { ordered, playerLookup };
+      },
+    };
   }
 }
 
@@ -551,14 +688,15 @@ class ArrayGameDefBuilderNoStats<
   }
 
   // Curried no solo
-  withGameStats(
-    solo?: undefined,
-  ): <FullPlayerStats extends {}>(
+  withGameStats(solo?: undefined): <FullPlayerStats extends {}>(
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       {},
       FullPlayerStats
     >,
@@ -577,16 +715,22 @@ class ArrayGameDefBuilderNoStats<
   withGameStats<SoloStats extends {}>(
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
   ): <FullPlayerStats extends {}>(
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       {},
       FullPlayerStats
     >,
@@ -607,8 +751,11 @@ class ArrayGameDefBuilderNoStats<
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       {},
       FullPlayerStats
     >,
@@ -627,15 +774,21 @@ class ArrayGameDefBuilderNoStats<
   withGameStats<SoloStats extends {}, FullPlayerStats extends {}>(
     soloStatsFactory: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       {},
       FullPlayerStats
     >,
@@ -653,15 +806,21 @@ class ArrayGameDefBuilderNoStats<
   withGameStats<SoloStats extends {}, FullPlayerStats extends {}>(
     soloStatsFactory?: SoloStatsFactory<
       PlayerState,
-      FixedLengthArray<UntakenVal, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       SoloStats
     >,
     fullStatsFactory?: FullStatsFactory<
       PlayerState,
       SharedState,
-      FixedLengthArray<RoundStats, Len>,
-      NumericRange<Len>,
+      {
+        valueType: UntakenVal;
+        statsType: RoundStats;
+        length: Len;
+      },
       {},
       FullPlayerStats
     >,
@@ -698,8 +857,11 @@ class ArrayGameDefBuilderNoStats<
             fullStatsFactory: FullStatsFactory<
               PlayerState,
               SharedState,
-              FixedLengthArray<RoundStats, Len>,
-              NumericRange<Len>,
+              {
+                valueType: UntakenVal;
+                statsType: RoundStats;
+                length: Len;
+              },
               SoloStats,
               FS
             >,
@@ -724,8 +886,11 @@ class ArrayGameDefBuilderNoStats<
             fullStatsFactory: FullStatsFactory<
               PlayerState,
               SharedState,
-              FixedLengthArray<RoundStats, Len>,
-              NumericRange<Len>,
+              {
+                valueType: UntakenVal;
+                statsType: RoundStats;
+                length: Len;
+              },
               {},
               FS
             >,
