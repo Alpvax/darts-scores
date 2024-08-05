@@ -10,7 +10,9 @@ import { gameDefinitionBuilder as gameDefBuilder } from "./builder";
 import { makePlayerGameState, type CalculatedPlayerData } from "./gameData";
 import type { SoloGameStatsFactory } from "./stats";
 import { makeGameInstanceFactoryFor } from "./gameDataInstance";
-import { GameDefinition } from "./definition";
+import { GameDefinition, type PlayerDataForGame } from "./definition";
+import type { PlayerDataFull, TurnKey } from "./types";
+import type { StatsTypeFor, StatsTypeForGame, SummaryFieldDef } from "./summary";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
   () => ({
@@ -114,6 +116,7 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
   // console.log("GameStats:", pdata, shared, pos);
   return {};
 });
+const gameDef27Built = gameType27v2.build("highestFirst");
 
 const randomRounds = () =>
   Array.from({ length: 20 }, () => {
@@ -159,10 +162,9 @@ const testGameScores = new Map([
     gameDefV3.calculateGameResult(testGameScores, {}),
   );
 
-  const gameDefV2 = gameType27v2.build("highestFirst");
   console.log(
     "Running gameType.build test game:",
-    gameDefV2.calculateGameResult(testGameScores, {}),
+    gameDef27Built.calculateGameResult(testGameScores, {}),
   );
 
   const gameInstanceFactory = makeGameInstanceFactoryFor(gameType27v2);
@@ -220,3 +222,26 @@ console.log("Player data 27:", playerData27.deltaScores);
 
 type T27Solo = SoloGameStatsFactory<T27GameDefRet, { hans: number }>;
 type T27PData = CalculatedPlayerData<T27GameDefRet>;
+
+type T27GDPDataFull = PlayerDataForGame<typeof gameDef27Built>;
+type T27GDTurnData =
+  typeof gameDef27Built extends GameDefinition<
+    any,
+    any,
+    any,
+    any,
+    any,
+    infer TurnData,
+    any,
+    any,
+    any
+  >
+    ? TurnData
+    : unknown;
+type T = { [K in TurnKey<T27GDTurnData>]: any };
+
+type T27StatsType = StatsTypeForGame<typeof gameDef27Built>;
+
+const defaultSummary27 = {
+  // score: {},
+} satisfies Record<string, SummaryFieldDef<any, PlayerDataForGame<typeof gameDef27Built>>>;

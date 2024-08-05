@@ -130,10 +130,10 @@ type TC = RoundStatDefinition<
 >;
 type TS = RoundStatDefinition<{ s1: boolean; s2: number }, boolean, undefined>;
 
-type TSF = StatFields<{
-  ts: TS;
-  tc: TC;
-}>;
+// type TSF = StatFields<{
+//   ts: TS;
+//   tc: TC;
+// }>;
 
 // export const defineRoundStat: DefineRoundStatsDefFunc = (...args) => ({})
 

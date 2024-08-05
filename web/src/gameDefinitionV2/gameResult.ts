@@ -21,8 +21,6 @@ export type GameResult<PData extends PlayerGameData<any, any>, PlayerId extends 
   };
 };
 
-export type PlayerStats<Turns, TurnStats, GameStats extends {}> = {};
-
 export type ArrayGameStats<Turns extends any[], TurnStats, GameStats extends {}> = GameStats & {
   rounds: { [K in keyof Turns]: TurnStats };
 };

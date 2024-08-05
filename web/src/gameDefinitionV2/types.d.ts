@@ -21,18 +21,18 @@ type TurnValueType<T> =
             [K in keyof Obj]: Obj[K]["value"];
           }
         : unknown & {};
-// type TurnStatsType<T> =
-//   T extends ArrayTurnDataType<any, infer S, infer Len>
-//     ? FixedLengthArray<S, Len>
-//     : T extends TupleTurnDataType<infer Tup>
-//       ? {
-//           [K in keyof Tup]: Tup[K]["stats"];
-//         }
-//       : T extends ObjectTurnDataType<infer Obj>
-//         ? {
-//             [K in keyof Obj]: Obj[K]["stats"];
-//           }
-//         : unknown;
+type TurnStatsType<T> =
+  T extends ArrayTurnDataType<any, infer S, infer Len>
+    ? FixedLengthArray<S, Len>
+    : T extends TupleTurnDataType<infer Tup>
+      ? {
+          [K in keyof Tup]: Tup[K]["stats"];
+        }
+      : T extends ObjectTurnDataType<infer Obj>
+        ? {
+            [K in keyof Obj]: Obj[K]["stats"];
+          }
+        : unknown;
 type TurnKey<T> =
   T extends ArrayTurnDataType<any, any, infer Len>
     ? NumericRange<Len>

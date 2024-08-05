@@ -22,7 +22,7 @@ type PositionRowLocation = "head" | "body" | "foot" | "none";
 
 export type GameDefinitionT<
   GameType extends string,
-  Instance extends GameInstance<any, any, any, any, any, PlayerId>,
+  Instance extends GameInstance<any, any, any, any, PlayerId>,
   DBTurns extends {} | [],
   DBExtra extends {} = {},
   PlayerId extends string = string,
@@ -235,6 +235,23 @@ export class GameDefinition<
     };
   }
 }
+
+export type PlayerDataForGame<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+> =
+  G extends GameDefinition<
+    any,
+    any,
+    any,
+    infer PlayerState,
+    any,
+    infer TurnType,
+    infer SoloStats,
+    infer FullPlayerStats,
+    infer PlayerId
+  >
+    ? PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+    : never;
 
 // export class FixedGameDefinition<
 // GameType extends string,
