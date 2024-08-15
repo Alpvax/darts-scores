@@ -11,8 +11,8 @@ import { makePlayerGameState, type CalculatedPlayerData } from "./gameData";
 import type { SoloGameStatsFactory } from "./stats";
 import { makeGameInstanceFactoryFor } from "./gameDataInstance";
 import { GameDefinition, type PlayerDataForGame } from "./definition";
-import type { PlayerDataFull, TurnKey } from "./types";
-import type { StatsTypeFor, StatsTypeForGame, SummaryFieldDef } from "./summary";
+import type { TurnKey } from "./types";
+import type { StatsTypeForGame, SummaryFieldDef } from "./summary";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
   () => ({
@@ -72,7 +72,7 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
       },
       turnStats: (val) => ({
         cliff: val === 3,
-        dd: val >= 2,
+        dd: val >= 2, //TODO: config27.ddIncludeCliffs
         hits: val,
       }),
       component: (val, { deltaScore, score, mutable, focus }) => "TODO: component" /*{

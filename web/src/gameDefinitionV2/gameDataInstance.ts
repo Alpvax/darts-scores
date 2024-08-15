@@ -11,6 +11,7 @@ import type {
   TurnValueType,
   PlayerDataForSolo,
 } from "./types";
+import { expandRoundStats } from "./summary/roundStats";
 
 export function makeGameInstanceFactoryFor<
   GameType extends string,
@@ -114,6 +115,10 @@ export const makeGameInstanceFunc = <
           playerId: pid,
           turns: newTurns,
           score,
+          // @ts-expect-error
+          roundStatsGameSummary: expandRoundStats(
+            Object.values(newTurns).map(({ stats }) => stats),
+          ),
         } as PlayerDataForSolo<PlayerState, TurnType, PlayerId>;
         return [pid, Object.assign(dataForSolo, soloStatsFactory(dataForSolo))]; // as [PlayerId, PlayerDataSolo<PlayerState, TurnKey, TurnValues, TurnStats, SoloStats, PlayerId>]
       }),

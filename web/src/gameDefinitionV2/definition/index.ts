@@ -17,6 +17,7 @@ import type {
 } from "../types";
 import type { Position } from "..";
 import type { TurnMeta } from "../rounds";
+import { expandRoundStats } from "../summary/roundStats";
 
 type PositionRowLocation = "head" | "body" | "foot" | "none";
 
@@ -213,6 +214,10 @@ export class GameDefinition<
           playerId: pid,
           turns: newTurns,
           score,
+          // @ts-expect-error
+          roundStatsGameSummary: expandRoundStats(
+            Object.values(newTurns).map(({ stats }) => stats),
+          ),
         } as PlayerDataForSolo<PlayerState, TurnType, PlayerId>;
         return [pid, Object.assign(dataForSolo, this.soloStatsFactory(dataForSolo))]; // as [PlayerId, PlayerDataSolo<PlayerState, TurnKey, TurnValues, TurnStats, SoloStats, PlayerId>]
       }),

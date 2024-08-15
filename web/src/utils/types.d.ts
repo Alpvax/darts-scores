@@ -75,3 +75,36 @@ export type ValuesSubset<V, T> = T extends {}
       [K in keyof T as T[K] extends V ? K : never]: T[K];
     }
   : {};
+
+/**
+ * Get the "last" (not guaranteed to be the last) type from a type union
+ */
+export type LastOfUnion<T> = (T extends any ? (a: () => T) => void : never) extends (
+  a: infer F,
+) => void
+  ? F extends () => infer R
+    ? R
+    : never
+  : never;
+/**
+ * "Pop" a type from a type union, returning a tuple of [remaining types, popped type].
+ * Equivalent to [Exclude<T, LastOfUnion<T>>, LastOfUnion<T>].
+ * If T is not a union, will return [never, T].
+ */
+export type PopUnionType<T> = LastOfUnion<T> extends infer L ? [Exclude<T, L>, L] : never;
+
+type __UnionisePropsInternal<T extends {}, U extends {} = {}, L = LastOfUnion<T>> = (
+  T extends never ? true : {} extends T ? true : false
+) extends true
+  ? { [K in keyof U]: U[K] }
+  : __UnionisePropsInternal<
+      Exclude<T, L>,
+      {
+        [K in keyof L]: K extends keyof U ? L[K] | U[K] : L[K];
+      } & Omit<U, keyof L>
+    >;
+/**
+ * Flattens a union of objects, resulting in an object with all properties being a union of the property type from each object in the union.
+ * Properties missing from types are ignored (not merged into a union of type | undefined).
+ */
+export type FlattenObjectUnion<T extends {}> = __UnionisePropsInternal<T>;

@@ -96,6 +96,7 @@ type PlayerDataForSolo<PlayerState, TurnType, PlayerId extends string = string> 
   completed: boolean;
   turns: PlayerTurnData<TurnType>;
   score: number;
+  roundStatsGameSummary: RoundStatsExpanded;
   displayName?: string;
   // handicap?: Handicap<Turns>
 };
