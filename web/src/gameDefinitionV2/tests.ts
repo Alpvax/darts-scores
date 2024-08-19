@@ -83,13 +83,15 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
   )
   .withGameStats((pData) => {
     const farDream = pData.turns.findIndex(({ stats: { hits } }) => hits < 1);
-    const farPos = pData.turns.findIndex(({ endingScore }) => endingScore > 0);
+    const farPos = pData.turns.findIndex(({ endingScore }) => endingScore < 0);
     return {
       fatNick: pData.turns.every(({ stats: { hits } }) => hits === 0),
       farDream,
-      dream: farDream >= pData.turns.length,
+      dream: farDream < 0,
       farPos,
-      allPos: farPos >= pData.turns.length,
+      allPos: farPos < 0,
+      /** Losing the allPos on the final round by a single point (ending on -1) */
+      banana: farPos === pData.turns.length - 1 && pData.score === -1,
       cliffs: pData.turns.reduce((total, { stats: { cliff } }) => (cliff ? total + 1 : total), 0),
       doubleDoubles: pData.turns.reduce((total, { stats: { dd } }) => (dd ? total + 1 : total), 0),
       hits: pData.turns.reduce((total, { stats: { hits } }) => total + hits, 0),
