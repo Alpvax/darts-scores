@@ -88,6 +88,7 @@ export default defineComponent({
     const config = use27Config();
     const playerConfig = usePlayerConfig();
     const router = useRouter();
+    const showHistoryOnSubmit = config.showHistoryOnSubmit.readonlyRef();
     const players = ref(config.defaultPlayers.readonlyRef().value);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
@@ -232,7 +233,8 @@ export default defineComponent({
         //   window.sessionStorage.clear(); //TODO: only clear relevant?
         // }
         submitted.value = true;
-        if (config.showHistoryOnSubmit.readonlyRef().value) {
+        if (showHistoryOnSubmit.value) {
+          console.debug("Changing to history view"); //XXX
           router.push({ name: "twentysevenHistory" });
         }
       }
