@@ -1,6 +1,7 @@
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
 import type { Position } from ".";
 import type { TurnMeta } from "./rounds";
+import type { RoundStatsExpanded } from "./summary/roundStats";
 
 type ArrayTurnDataType<V, S, Len extends number> = {
   valueType: V;
@@ -96,7 +97,7 @@ type PlayerDataForSolo<PlayerState, TurnType, PlayerId extends string = string> 
   completed: boolean;
   turns: PlayerTurnData<TurnType>;
   score: number;
-  roundStatsGameSummary: RoundStatsExpanded;
+  roundStatsGameSummary: RoundStatsExpanded<TurnStatsType<TurnType>>;
   displayName?: string;
   // handicap?: Handicap<Turns>
 };

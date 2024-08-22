@@ -12,10 +12,7 @@ import type { SoloGameStatsFactory } from "./stats";
 import { makeGameInstanceFactoryFor } from "./gameDataInstance";
 import { GameDefinition, type PlayerDataForGame } from "./definition";
 import type { TurnKey } from "./types";
-import {
-  makeSummaryAccumulatorFactoryFor,
-  type StatsTypeForGame,
-} from "./summary";
+import { makeSummaryAccumulatorFactoryFor, type StatsTypeForGame } from "./summary";
 import type { GameResult } from "./gameResult";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
@@ -85,21 +82,23 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
     }//*/,
     }),
   )
-  .withGameStats((pData) => {
-    const farDream = pData.turns.findIndex(({ stats: { hits } }) => hits < 1);
-    const farPos = pData.turns.findIndex(({ endingScore }) => endingScore < 0);
+  .withGameStats(({ score, turns }) => {
+    const farFN = turns.findIndex(({ stats: { hits } }) => hits > 0);
+    const farDream = turns.findIndex(({ stats: { hits } }) => hits < 1);
+    const farPos = turns.findIndex(({ endingScore }) => endingScore < 0);
     return {
-      fatNick: pData.turns.every(({ stats: { hits } }) => hits === 0),
+      farFN,
+      fatNick: farFN < 0,
       farDream,
       dream: farDream < 0,
       farPos,
       allPos: farPos < 0,
       /** Losing the allPos on the final round by a single point (ending on -1) */
-      banana: farPos === pData.turns.length - 1 && pData.score === -1,
-      cliffs: pData.turns.reduce((total, { stats: { cliff } }) => (cliff ? total + 1 : total), 0),
-      doubleDoubles: pData.turns.reduce((total, { stats: { dd } }) => (dd ? total + 1 : total), 0),
-      hits: pData.turns.reduce((total, { stats: { hits } }) => total + hits, 0),
-      hans: pData.turns.reduce(
+      banana: farPos === turns.length - 1 && score === -1,
+      cliffs: turns.reduce((total, { stats: { cliff } }) => (cliff ? total + 1 : total), 0),
+      doubleDoubles: turns.reduce((total, { stats: { dd } }) => (dd ? total + 1 : total), 0),
+      hits: turns.reduce((total, { stats: { hits } }) => total + hits, 0),
+      hans: turns.reduce(
         ({ count, preDD }, { stats: { dd } }) => {
           if (dd) {
             preDD += 1;
@@ -113,10 +112,9 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
         },
         { count: 0, preDD: 0 },
       ).count,
-      goblin: pData.turns.every(({ stats: { hits } }) => hits === 2 || hits === 0),
+      goblin: turns.every(({ stats: { hits } }) => hits === 2 || hits === 0),
       piranha:
-        pData.turns[0].stats.hits === 1 &&
-        pData.turns.slice(1).every(({ stats: { hits } }) => hits === 0),
+        turns[0].stats.hits === 1 && turns.slice(1).every(({ stats: { hits } }) => hits === 0),
     };
   })<{}>((pdata, shared, pos) => {
   // console.log("GameStats:", pdata, shared, pos);
@@ -254,7 +252,176 @@ type T27StatsKeys = keyof StatsTypeForGame<typeof gameDef27Built>;
 
 // ] satisfies SummaryFieldDef<any, PlayerDataForGame<typeof gameDef27Built>>[];
 
-const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {});
+const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
+  fatNicks: {
+    empty: () => ({
+      furthest: 0,
+      count: 0,
+    }),
+    push: ({ furthest, count }, { farFN, fatNick }) => ({
+      furthest: Math.max(farFN, furthest),
+      count: count + +fatNick,
+    }),
+  },
+  dreams: {
+    empty: () => ({
+      furthest: 0,
+      count: 0,
+    }),
+    push: ({ furthest, count }, { farDream, dream }) => ({
+      furthest: Math.max(farDream, furthest),
+      count: count + +dream,
+    }),
+  },
+  allPos: {
+    empty: () => ({
+      furthest: 0,
+      count: 0,
+    }),
+    push: ({ furthest, count }, { farPos, allPos }) => ({
+      furthest: Math.max(farPos, furthest),
+      count: count + +allPos,
+    }),
+  },
+  cliffs: {
+    empty: () => ({
+      most: 0,
+      least: 20, // Is it really worth calculating?
+      total: 0,
+      available: 0,
+      mean: 0,
+    }),
+    push: (
+      { most, least, total: prev, available: prevA, mean },
+      { roundStatsGameSummary: { cliff } },
+    ) => {
+      const total = prev + cliff.total;
+      const available = prevA + cliff.max;
+      return {
+        most: Math.max(most, cliff.total),
+        least: Math.min(least, cliff.total),
+        total,
+        available,
+        mean: total / available,
+      };
+    },
+  },
+  doubleDoubles: {
+    empty: () => ({
+      most: 0,
+      least: 20, // Is it really worth calculating?
+      total: 0,
+      available: 0,
+      mean: 0,
+    }),
+    push: (
+      { most, least, total: prev, available: prevA, mean },
+      { roundStatsGameSummary: { dd } },
+    ) => {
+      const total = prev + dd.total;
+      const available = prevA + dd.max;
+      return {
+        most: Math.max(most, dd.total),
+        least: Math.min(least, dd.total),
+        total,
+        available,
+        mean: total / available,
+      };
+    },
+  },
+  hits: {
+    empty: () => ({
+      most: 0,
+      least: 60,
+      total: 0,
+      available: 0,
+      mean: 0,
+    }),
+    push: (
+      { most, least, total: prev, available: prevA, mean },
+      { roundStatsGameSummary: { hits } },
+    ) => {
+      const total = prev + hits.total;
+      const available = prevA + hits.roundCounts.all;
+      return {
+        most: Math.max(most, hits.total),
+        least: Math.min(least, hits.total),
+        total,
+        available,
+        mean: total / available,
+      };
+    },
+  },
+  hans: {
+    empty: () => ({
+      most: 0,
+      least: 20, // Is it really worth calculating?
+      total: 0,
+      mean: 0,
+    }),
+    push: ({ most, least, total: prev, mean }, { hans }, numGames) => {
+      const total = prev + hans;
+      return {
+        most: Math.max(most, hans),
+        least: Math.min(least, hans),
+        total,
+        mean: total / numGames,
+      };
+    },
+  },
+  goblins: {
+    empty: () => ({
+      count: 0,
+      mean: 0,
+    }),
+    push: ({ count, mean }, { goblin }, numGames) => {
+      const total = count + +goblin;
+      return {
+        count: total,
+        mean: total / numGames,
+      };
+    },
+  },
+  piranhas: {
+    empty: () => ({
+      count: 0,
+      mean: 0,
+    }),
+    push: ({ count, mean }, { piranha }, numGames) => {
+      const total = count + +piranha;
+      return {
+        count: total,
+        mean: total / numGames,
+      };
+    },
+  },
+  jesus: {
+    empty: () => ({
+      count: 0,
+      mean: 0,
+    }),
+    push: ({ count, mean }, { jesus }, numGames) => {
+      const total = count + (jesus ? 1 : 0);
+      return {
+        count: total,
+        mean: total / numGames,
+      };
+    },
+  },
+  banana: {
+    empty: () => ({
+      count: 0,
+      mean: 0,
+    }),
+    push: ({ count, mean }, { banana }, numGames) => {
+      const total = count + +banana;
+      return {
+        count: total,
+        mean: total / numGames,
+      };
+    },
+  },
+});
 console.log("Summary parts:", summaryAcc27.parts);
 const makeGameSummary27 = (playerOrder = ["player1", "player2"], forceTie = false) => {
   const game = gameDef27Built.calculateGameResult(
