@@ -12,7 +12,11 @@ import type { SoloGameStatsFactory } from "./stats";
 import { makeGameInstanceFactoryFor } from "./gameDataInstance";
 import { GameDefinition, type PlayerDataForGame } from "./definition";
 import type { TurnKey } from "./types";
-import type { StatsTypeForGame, SummaryFieldDef } from "./summary";
+import {
+  makeSummaryAccumulatorFactoryFor,
+  type StatsTypeForGame,
+} from "./summary";
+import type { GameResult } from "./gameResult";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
   () => ({
@@ -125,26 +129,20 @@ const randomRounds = () =>
     const rnd = Math.random();
     return rnd < 0.75 ? 0 : rnd < 0.9 ? 1 : rnd < 0.98 ? 2 : 3;
   }) as FixedLengthArray<NumericRange<4>, 20>;
-const testGameScores = new Map([
-  [
-    "totally a real player",
-    {
-      score: 0,
-      startScore: 27,
-      completed: true,
-      turns: randomRounds(),
-    },
-  ],
-  [
-    "NotABot01",
-    {
-      score: 0,
-      startScore: 27,
-      completed: true,
-      turns: randomRounds(),
-    },
-  ],
-]);
+
+const randomGame = (players: string[]) =>
+  new Map(
+    players.map((pid) => [
+      pid,
+      {
+        // score: 0,
+        startScore: 27,
+        completed: true,
+        turns: randomRounds(),
+      },
+    ]),
+  );
+const testGameScores = randomGame(["totally a real player", "NotABot01"]);
 (() => {
   const gameDefV3 = new GameDefinition(
     "twentyseven",
@@ -243,7 +241,64 @@ type T27GDTurnData =
 type T = { [K in TurnKey<T27GDTurnData>]: any };
 
 type T27StatsType = StatsTypeForGame<typeof gameDef27Built>;
+type T27StatsKeys = keyof StatsTypeForGame<typeof gameDef27Built>;
 
-const defaultSummary27 = {
-  // score: {},
-} satisfies Record<string, SummaryFieldDef<any, PlayerDataForGame<typeof gameDef27Built>>>;
+// const defaultSummary27 = [
+//   {
+//     label: "Personal Best",
+//     value: ({ score }) => score,
+//     cmp: ,
+//     display: ,
+//     extended: ,
+//   },
+
+// ] satisfies SummaryFieldDef<any, PlayerDataForGame<typeof gameDef27Built>>[];
+
+const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {});
+console.log("Summary parts:", summaryAcc27.parts);
+const makeGameSummary27 = (playerOrder = ["player1", "player2"], forceTie = false) => {
+  const game = gameDef27Built.calculateGameResult(
+    forceTie
+      ? (() => {
+          const turns = randomRounds();
+          return new Map(
+            playerOrder.map((pid) => [
+              pid,
+              {
+                // score: 0,
+                startScore: 27,
+                completed: true,
+                turns,
+              },
+            ]),
+          );
+        })()
+      : randomGame(playerOrder),
+    {},
+  );
+  const result: GameResult<T27GDPDataFull> = {
+    date: new Date(),
+    playerOrder,
+    results: [...game.players].reduce(
+      (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
+      {},
+    ),
+  };
+  const winners = game.positionsOrdered[0].players;
+  if (winners.length > 1) {
+    result.tiebreak = {
+      players: winners,
+      type: "UNKNOWN",
+      winner: winners[Math.floor(Math.random() * winners.length)],
+    };
+  }
+  console.log("Summary for single game:", result.results, result.tiebreak);
+  console.log("=>", summaryAcc27.create(result));
+};
+
+console.log("Summary 1");
+makeGameSummary27();
+console.log("Summary 2");
+makeGameSummary27();
+console.log("Summary 3 (tie)");
+makeGameSummary27(undefined, true);

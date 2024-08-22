@@ -194,10 +194,13 @@ export class GameDefinition<
       [...playerData].map(([pid, { startScore, turns, ...raw }]) => {
         let score = startScore;
         const newTurns = (Array.isArray(turns) ? [] : {}) as PlayerTurnData<TurnType>;
-        for (const [key, value] of Object.entries(turns) as [
-          keyof TurnValueType<TurnType>,
+        for (const [strKey, value] of Object.entries(turns) as [
+          string,
           TurnValueType<TurnType>,
         ][]) {
+          const key = (
+            /\d+/.test(strKey) ? parseInt(strKey) : strKey
+          ) as keyof TurnValueType<TurnType>;
           const r = this.getRoundMeta(key as keyof TurnMetaType<TurnType>);
           const deltaScore = r.deltaScore(value);
           score += deltaScore;
@@ -214,8 +217,8 @@ export class GameDefinition<
           playerId: pid,
           turns: newTurns,
           score,
-          // @ts-expect-error
           roundStatsGameSummary: expandRoundStats(
+            // @ts-expect-error
             Object.values(newTurns).map(({ stats }) => stats),
           ),
         } as PlayerDataForSolo<PlayerState, TurnType, PlayerId>;

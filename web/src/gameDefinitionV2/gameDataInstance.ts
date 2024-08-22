@@ -115,8 +115,8 @@ export const makeGameInstanceFunc = <
           playerId: pid,
           turns: newTurns,
           score,
-          // @ts-expect-error
           roundStatsGameSummary: expandRoundStats(
+            // @ts-expect-error
             Object.values(newTurns).map(({ stats }) => stats),
           ),
         } as PlayerDataForSolo<PlayerState, TurnType, PlayerId>;
