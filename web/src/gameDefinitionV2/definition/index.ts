@@ -14,6 +14,7 @@ import type {
   PlayerDataSolo,
   TurnMetaType,
   TurnKey,
+  TurnStatsType,
 } from "../types";
 import type { Position } from "..";
 import type { TurnMeta } from "../rounds";
@@ -217,7 +218,8 @@ export class GameDefinition<
           playerId: pid,
           turns: newTurns,
           score,
-          roundStatsGameSummary: expandRoundStats(
+          // @ts-expect-error
+          roundStatsGameSummary: expandRoundStats<TurnStatsType<TurnType>>(
             // @ts-expect-error
             Object.values(newTurns).map(({ stats }) => stats),
           ),
