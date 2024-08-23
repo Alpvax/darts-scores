@@ -67,62 +67,10 @@ export const makeSummaryAccumulatorFactoryFor = <
   },
 ): {
   parts: {
-    score: SummaryPartAccumulator<
-      StatsTypeForGame<G>,
-      {
-        /** The best score in a single game */
-        best: number;
-        /** The worst score in a single game */
-        worst: number;
-        /** Sum of all the values the stat reached */
-        total: number;
-        mean: number;
-      }
-    >;
-    wins: SummaryPartAccumulator<
-      StatsTypeForGame<G>,
-      {
-        all: {
-          /** Number of times won outright */
-          totalOutright: number;
-          /** Average outright win rate (not including draws/tiebreaks) */
-          meanOutright: number;
-          /** Number of times won tiebreaks */
-          tiebreakWins: number;
-          /** Total number of tiebreaks played */
-          tiebreaksPlayed: number;
-          /** tiebreakWins / tiebreaksPlayed */
-          tiebreakWinRate: number;
-          /** Total wins (outright + tiebreak wins) */
-          total: number;
-          /** Average wins / game (outright + tiebreak wins) */
-          mean: number;
-        };
-        byOpponents: ArrayKeyedMap<
-          string,
-          {
-            /** Number of times won outright */
-            totalOutright: number;
-            /** Average outright win rate (not including draws/tiebreaks) */
-            meanOutright: number;
-            /** Number of times won tiebreaks */
-            tiebreakWins: number;
-            /** Total number of tiebreaks played */
-            tiebreaksPlayed: number;
-            /** tiebreakWins / tiebreaksPlayed */
-            tiebreakWinRate: number;
-            /** Total wins (outright + tiebreak wins) */
-            total: number;
-            /** Average wins / game (outright + tiebreak wins) */
-            mean: number;
-            /** Games played fitting the requirements */
-            gameCount: number;
-          }
-        >;
-      }
-    >;
+    score: ScoreAccumulatorPart<G>;
+    wins: WinsAccumulatorPart<G>;
   } & Omit<SummaryPartTypes, "score" | "wins">;
-  create: (gameResult: GameResult<PlayerDataForGame<G>>) => any;
+  create: () => SummaryAccumulator<G, SummaryPartTypes>;
 } => {
   type PlayerData = StatsTypeForGame<G>;
   type AccumulatorPart<T> = SummaryPartAccumulator<PlayerData, T>;
@@ -130,15 +78,7 @@ export const makeSummaryAccumulatorFactoryFor = <
     min: summaryParts.score?.minimum ?? Number.MIN_SAFE_INTEGER,
     max: summaryParts.score?.maximum ?? Number.MAX_SAFE_INTEGER,
   };
-  const scoreAccumulator: AccumulatorPart<{
-    /** The best score in a single game */
-    best: number;
-    /** The worst score in a single game */
-    worst: number;
-    /** Sum of all the values the stat reached */
-    total: number;
-    mean: number;
-  }> = (([best, worst, cmpB, cmpW]: [
+  const scoreAccumulator: ScoreAccumulatorPart<G> = (([best, worst, cmpB, cmpW]: [
     number,
     number,
     (a: number, b: number) => number,
@@ -165,45 +105,7 @@ export const makeSummaryAccumulatorFactoryFor = <
       : [scoreLimits.max, scoreLimits.min, Math.min, Math.max],
   );
 
-  const winsAccumulator: AccumulatorPart<{
-    all: {
-      /** Number of times won outright */
-      totalOutright: number;
-      /** Average outright win rate (not including draws/tiebreaks) */
-      meanOutright: number;
-      /** Number of times won tiebreaks */
-      tiebreakWins: number;
-      /** Total number of tiebreaks played */
-      tiebreaksPlayed: number;
-      /** tiebreakWins / tiebreaksPlayed */
-      tiebreakWinRate: number;
-      /** Total wins (outright + tiebreak wins) */
-      total: number;
-      /** Average wins / game (outright + tiebreak wins) */
-      mean: number;
-    };
-    byOpponents: ArrayKeyedMap<
-      string,
-      {
-        /** Number of times won outright */
-        totalOutright: number;
-        /** Average outright win rate (not including draws/tiebreaks) */
-        meanOutright: number;
-        /** Number of times won tiebreaks */
-        tiebreakWins: number;
-        /** Total number of tiebreaks played */
-        tiebreaksPlayed: number;
-        /** tiebreakWins / tiebreaksPlayed */
-        tiebreakWinRate: number;
-        /** Total wins (outright + tiebreak wins) */
-        total: number;
-        /** Average wins / game (outright + tiebreak wins) */
-        mean: number;
-        /** Games played fitting the requirements */
-        gameCount: number;
-      }
-    >;
-  }> = {
+  const winsAccumulator: WinsAccumulatorPart<G> = {
     empty: () => ({
       all: {
         totalOutright: 0,
@@ -273,32 +175,158 @@ export const makeSummaryAccumulatorFactoryFor = <
       };
     },
   };
-  console.log("TODO: implement summary accumulator"); //TODO:
 
   const parts = Object.assign({ score: scoreAccumulator, wins: winsAccumulator }, summaryParts);
   return {
     // @ts-expect-error
     parts,
-    create: (gameResult) =>
-      new Map(
-        Object.entries(gameResult.results).map(([pid, pData]) => [
-          pid,
-          Object.entries(parts).reduce((summary, [key, part]) => {
-            summary.numGames = 1;
-            summary[key] = part.push(
-              part.empty(),
-              // @ts-expect-error
-              pData,
-              1,
-              gameResult.playerOrder.filter((p) => p !== pid),
-              gameResult.tiebreak?.winner,
-            );
-            return summary;
-          }, {} as any),
-        ]),
-      ),
+    create: () => new SummaryAccumulator<G, SummaryPartTypes>(parts),
   };
 };
+
+export type PlayerSummaryValues<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+  SummaryPartTypes extends { [k: string]: any },
+> = {
+  numGames: number;
+  score: AccumulatorValuesLookup<ScoreAccumulatorPart<G>>;
+  wins: AccumulatorValuesLookup<WinsAccumulatorPart<G>>;
+} & Omit<SummaryPartTypes, "numGames" | "score" | "wins">;
+
+type ScoreAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
+  SummaryPartAccumulator<
+    StatsTypeForGame<G>,
+    {
+      /** The best score in a single game */
+      best: number;
+      /** The worst score in a single game */
+      worst: number;
+      /** Sum of all the values the stat reached */
+      total: number;
+      mean: number;
+    }
+  >;
+type WinsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
+  SummaryPartAccumulator<
+    StatsTypeForGame<G>,
+    {
+      all: {
+        /** Number of times won outright */
+        totalOutright: number;
+        /** Average outright win rate (not including draws/tiebreaks) */
+        meanOutright: number;
+        /** Number of times won tiebreaks */
+        tiebreakWins: number;
+        /** Total number of tiebreaks played */
+        tiebreaksPlayed: number;
+        /** tiebreakWins / tiebreaksPlayed */
+        tiebreakWinRate: number;
+        /** Total wins (outright + tiebreak wins) */
+        total: number;
+        /** Average wins / game (outright + tiebreak wins) */
+        mean: number;
+      };
+      byOpponents: ArrayKeyedMap<
+        string,
+        {
+          /** Number of times won outright */
+          totalOutright: number;
+          /** Average outright win rate (not including draws/tiebreaks) */
+          meanOutright: number;
+          /** Number of times won tiebreaks */
+          tiebreakWins: number;
+          /** Total number of tiebreaks played */
+          tiebreaksPlayed: number;
+          /** tiebreakWins / tiebreaksPlayed */
+          tiebreakWinRate: number;
+          /** Total wins (outright + tiebreak wins) */
+          total: number;
+          /** Average wins / game (outright + tiebreak wins) */
+          mean: number;
+          /** Games played fitting the requirements */
+          gameCount: number;
+        }
+      >;
+    }
+  >;
+type AccumulatorValuesLookup<Part extends SummaryPartAccumulator<any, any>> =
+  Part extends SummaryPartAccumulator<any, infer T> ? T : never;
+
+export class SummaryAccumulator<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+  SummaryPartTypes extends { [k: string]: any } & { score?: never; wins?: never; numGames?: never },
+> {
+  readonly playerSummaries = new Map<string, PlayerSummaryValues<G, SummaryPartTypes>>();
+  constructor(
+    private readonly parts: {
+      [K in keyof SummaryPartTypes]: SummaryPartAccumulator<
+        StatsTypeForGame<G>,
+        SummaryPartTypes[K]
+      >;
+    } & {
+      score: ScoreAccumulatorPart<G>;
+      wins: WinsAccumulatorPart<G>;
+    },
+  ) {}
+
+  makeEmptyPlayerSummary() {
+    return (
+      Object.entries(this.parts) as [
+        keyof PlayerSummaryValues<G, SummaryPartTypes>,
+        SummaryPartAccumulator<StatsTypeForGame<G>, any>,
+      ][]
+    ).reduce(
+      (summary, [key, part]) => {
+        summary.numGames = 0;
+        summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes>] = part.empty();
+        return summary;
+      },
+      {} as PlayerSummaryValues<G, SummaryPartTypes>,
+    );
+  }
+  pushGame(gameResult: GameResult<PlayerDataForGame<G>>): void {
+    for (const [pid, pData] of Object.entries(gameResult.results)) {
+      const prev = this.playerSummaries.get(pid) ?? this.makeEmptyPlayerSummary();
+      const numGames = prev.numGames + 1;
+      const opponents = gameResult.playerOrder.filter((p) => p !== pid);
+      const newSummary = (
+        Object.entries(this.parts) as [
+          keyof PlayerSummaryValues<G, SummaryPartTypes>,
+          SummaryPartAccumulator<StatsTypeForGame<G>, any>,
+        ][]
+      ).reduce(
+        (summary, [key, part]) => {
+          summary.numGames = numGames;
+          summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes>] = part.push(
+            prev[key],
+            playerStats(pData),
+            numGames,
+            opponents,
+            gameResult.tiebreak?.winner,
+          );
+          return summary;
+        },
+        {} as PlayerSummaryValues<G, SummaryPartTypes>,
+      );
+      this.playerSummaries.set(pid, newSummary);
+    }
+  }
+  getSummary(playerId: string): PlayerSummaryValues<G, SummaryPartTypes> {
+    return this.playerSummaries.get(playerId) ?? this.makeEmptyPlayerSummary();
+  }
+  getSummaries(...playerIds: string[]): Map<string, PlayerSummaryValues<G, SummaryPartTypes>>;
+  getSummaries(playerIds: string[]): Map<string, PlayerSummaryValues<G, SummaryPartTypes>>;
+  getSummaries(
+    arg0: string | string[],
+    ...rest: [...string[]]
+  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes>> {
+    const playerIds = typeof arg0 === "string" ? [arg0, ...rest] : arg0;
+    return new Map(playerIds.map((pid) => [pid, this.getSummary(pid)]));
+  }
+  getAllSummaries(): Map<string, PlayerSummaryValues<G, SummaryPartTypes>> {
+    return this.playerSummaries;
+  }
+}
 
 export type SummaryDefinitionFor<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
@@ -344,3 +372,45 @@ export type StatsTypeFor<
     ? TurnStatsType<TurnType>[K]
     : never;
 } & Omit<PlayerData, "playerId" | "completed" | "turns" | "displayName" | "handicap" | "position">;
+
+function playerStats<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+  PlayerData extends {
+    turns: G extends GameDefinition<any, any, any, any, any, infer TurnType, any, any, any>
+      ? PlayerTurnData<TurnType>
+      : never;
+  },
+>(pData: PlayerData): StatsTypeForGame<G>;
+function playerStats<
+  TurnType,
+  PlayerData extends {
+    playerId: PlayerId;
+    completed: boolean;
+    turns: PlayerTurnData<TurnType>;
+    score: number;
+    displayName?: string;
+    // handicap?: Handicap<Turns>
+    position: Position;
+  },
+  PlayerId extends string = string,
+>(pData: PlayerData): StatsTypeFor<TurnType, PlayerData, PlayerId>;
+function playerStats<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+  PlayerData extends {
+    turns: G extends GameDefinition<any, any, any, any, any, infer TurnType, any, any, any>
+      ? PlayerTurnData<TurnType>
+      : never;
+  },
+>({ turns, ...rest }: PlayerData) {
+  return {
+    ...rest,
+    ...(Array.isArray(turns)
+      ? turns.reduce((acc, { stats }, i) =>
+          Object.assign(acc, { [`round.${i}`]: stats }, {} as any),
+        )
+      : Object.entries(turns as { [k: string]: { stats: any } }).reduce(
+          (acc, [k, { stats }]) => Object.assign(acc, { [`round.${k}`]: stats }),
+          {} as any,
+        )),
+  };
+}

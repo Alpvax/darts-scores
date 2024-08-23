@@ -12,7 +12,12 @@ import type { SoloGameStatsFactory } from "./stats";
 import { makeGameInstanceFactoryFor } from "./gameDataInstance";
 import { GameDefinition, type PlayerDataForGame } from "./definition";
 import type { TurnKey } from "./types";
-import { makeSummaryAccumulatorFactoryFor, type StatsTypeForGame } from "./summary";
+import {
+  makeSummaryAccumulatorFactoryFor,
+  SummaryAccumulator,
+  type PlayerSummaryValues,
+  type StatsTypeForGame,
+} from "./summary";
 import type { GameResult } from "./gameResult";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
@@ -289,11 +294,15 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
       least: 20, // Is it really worth calculating?
       total: 0,
       available: 0,
-      mean: 0,
+      /** Average cliff per game */
+      perGameMean: 0,
+      /** Mean cliff rate of a single round */
+      rate: 0,
     }),
     push: (
-      { most, least, total: prev, available: prevA, mean },
+      { most, least, total: prev, available: prevA, perGameMean, rate },
       { roundStatsGameSummary: { cliff } },
+      numGames,
     ) => {
       const total = prev + cliff.total;
       const available = prevA + cliff.max;
@@ -302,7 +311,8 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
         least: Math.min(least, cliff.total),
         total,
         available,
-        mean: total / available,
+        perGameMean: total / numGames,
+        rate: total / available,
       };
     },
   },
@@ -312,11 +322,15 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
       least: 20, // Is it really worth calculating?
       total: 0,
       available: 0,
-      mean: 0,
+      /** Average dd per game */
+      perGameMean: 0,
+      /** Mean dd rate of a single round */
+      rate: 0,
     }),
     push: (
-      { most, least, total: prev, available: prevA, mean },
+      { most, least, total: prev, available: prevA, perGameMean, rate },
       { roundStatsGameSummary: { dd } },
+      numGames,
     ) => {
       const total = prev + dd.total;
       const available = prevA + dd.max;
@@ -325,7 +339,8 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
         least: Math.min(least, dd.total),
         total,
         available,
-        mean: total / available,
+        perGameMean: total / numGames,
+        rate: total / available,
       };
     },
   },
@@ -335,20 +350,25 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
       least: 60,
       total: 0,
       available: 0,
-      mean: 0,
+      /** Average hit per game */
+      perGameMean: 0,
+      /** Mean hit rate of a single dart */
+      rate: 0,
     }),
     push: (
-      { most, least, total: prev, available: prevA, mean },
+      { most, least, total: prev, available: prevA, perGameMean, rate },
       { roundStatsGameSummary: { hits } },
+      numGames,
     ) => {
       const total = prev + hits.total;
-      const available = prevA + hits.roundCounts.all;
+      const available = prevA + hits.roundCounts.all * 3;
       return {
         most: Math.max(most, hits.total),
         least: Math.min(least, hits.total),
         total,
         available,
-        mean: total / available,
+        perGameMean: total / numGames,
+        rate: total / available,
       };
     },
   },
@@ -423,7 +443,24 @@ const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
   },
 });
 console.log("Summary parts:", summaryAcc27.parts);
-const makeGameSummary27 = (playerOrder = ["player1", "player2"], forceTie = false) => {
+type TGameSummary27Parts = typeof summaryAcc27.parts;
+type TGameSummary27PValues =
+  PlayerSummaryValues<
+    typeof gameDef27Built,
+    {
+      [K in keyof TGameSummary27Parts]: K extends "score" | "wins"
+        ? never | undefined
+        : TGameSummary27Parts[K];
+    }
+  > extends infer _T
+    ? { [K in keyof _T]: _T[K] }
+    : never;
+
+const accGameSummary27 = (
+  accumulator: ReturnType<typeof summaryAcc27.create>,
+  playerOrder = ["player1", "player2"],
+  forceTie = false,
+) => {
   const game = gameDef27Built.calculateGameResult(
     forceTie
       ? (() => {
@@ -460,12 +497,46 @@ const makeGameSummary27 = (playerOrder = ["player1", "player2"], forceTie = fals
     };
   }
   console.log("Summary for single game:", result.results, result.tiebreak);
-  console.log("=>", summaryAcc27.create(result));
+  console.log(
+    "pre =>",
+    [...accumulator.getAllSummaries()].reduce(
+      (obj, [pid, s]) =>
+        Object.assign(obj, {
+          [pid]: Object.entries(s).reduce(
+            (acc, [k, v]) =>
+              Object.assign(acc, {
+                [k]:
+                  k === "wins"
+                    ? v
+                    : (() => {
+                        try {
+                          return structuredClone(v);
+                        } catch (e) {
+                          return e;
+                        }
+                      })(),
+              }),
+            {} as any,
+          ),
+        }),
+      {} as any,
+    ),
+  );
+  accumulator.pushGame(result);
+  console.log(
+    "post =>",
+    [...accumulator.getAllSummaries()].reduce(
+      (acc, [k, v]) => Object.assign(acc, { [k]: v }),
+      {} as any,
+    ),
+  );
 };
 
+const accumulator27 = summaryAcc27.create();
+
 console.log("Summary 1");
-makeGameSummary27();
+accGameSummary27(accumulator27);
 console.log("Summary 2");
-makeGameSummary27();
+accGameSummary27(accumulator27);
 console.log("Summary 3 (tie)");
-makeGameSummary27(undefined, true);
+accGameSummary27(accumulator27, undefined, true);
