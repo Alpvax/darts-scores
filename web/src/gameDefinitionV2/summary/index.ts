@@ -405,8 +405,9 @@ function playerStats<
   return {
     ...rest,
     ...(Array.isArray(turns)
-      ? turns.reduce((acc, { stats }, i) =>
-          Object.assign(acc, { [`round.${i}`]: stats }, {} as any),
+      ? turns.reduce(
+          (acc, { stats }, i) => Object.assign(acc, { [`round.${i}`]: stats }, {} as any),
+          {} as any,
         )
       : Object.entries(turns as { [k: string]: { stats: any } }).reduce(
           (acc, [k, { stats }]) => Object.assign(acc, { [`round.${k}`]: stats }),
