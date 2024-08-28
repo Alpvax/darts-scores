@@ -328,18 +328,7 @@ const initFavourite = <T>(value: number, roundKey: T): FavouriteData<T> => ({
   max: { rounds: new Set([roundKey]), value },
   min: { rounds: new Set([roundKey]), value },
 });
-const accumulateFavourite = <T>(
-  value: number,
-  favData: FavouriteData<T>,
-  roundKey: T,
-  stat?: string,
-) => {
-  if (stat)
-    console.log(
-      `Accumulating ${stat} favourites (round "${roundKey}"):`,
-      value,
-      structuredClone(favData),
-    ); //XXX
+const accumulateFavourite = <T>(value: number, favData: FavouriteData<T>, roundKey: T) => {
   if (value >= favData.max.value) {
     if (value > favData.max.value) {
       favData.max.value = value;
@@ -360,7 +349,6 @@ const accumulateFavourite = <T>(
       favData.max.rounds.delete(roundKey);
     }
   }
-  if (stat) console.log("=>", structuredClone(favData)); //XXX
 };
 
 export const roundStatsAccumulator = <
@@ -378,7 +366,7 @@ export const roundStatsAccumulator = <
     type TurnStats = GameTurnStatsType<G>;
     for (const [roundKey, roundStats] of Object.entries(pData).filter(([k]) =>
       k.startsWith("round."),
-    ) as [keyof TurnStats, TurnStats[keyof TurnStats]][]) {
+    ) as [keyof typeof values, TurnStats[keyof TurnStats]][]) {
       const roundStatAcc = values[roundKey] ?? ({} as any);
       for (const [statKey, val] of Object.entries(roundStats as object)) {
         const typ = typeof val;
@@ -405,7 +393,6 @@ export const roundStatsAccumulator = <
             | BoolFavorites<typeof roundKey>
             | undefined;
           if (favData === undefined) {
-            console.log(roundKey, statKey, statAcc); //XXX
             (favouritesAllFields as any)[statKey] = {
               total: initFavourite(statAcc!.total, roundKey),
               roundCount: initFavourite(statAcc!.roundsPlayed, roundKey),
@@ -413,10 +400,10 @@ export const roundStatsAccumulator = <
               rate: initFavourite(statAcc!.rate, roundKey),
             } satisfies BoolFavorites<typeof roundKey>;
           } else {
-            accumulateFavourite(statAcc.total, favData.total, roundKey); //, `${statKey}.total`);
-            accumulateFavourite(statAcc.roundsPlayed, favData.roundCount, roundKey); //, `${statKey}.max`);
-            accumulateFavourite(statAcc.perGameMean, favData.perGameMean, roundKey); //, `${statKey}.perGameMean`);
-            accumulateFavourite(statAcc.rate, favData.rate, roundKey); //, `${statKey}.rate`);
+            accumulateFavourite(statAcc.total, favData.total, roundKey);
+            accumulateFavourite(statAcc.roundsPlayed, favData.roundCount, roundKey);
+            accumulateFavourite(statAcc.perGameMean, favData.perGameMean, roundKey);
+            accumulateFavourite(statAcc.rate, favData.rate, roundKey);
           }
         } else if (typ === "number") {
           const statValue = val as number;
@@ -464,12 +451,12 @@ export const roundStatsAccumulator = <
               // ),
             } satisfies NumFavorites<typeof roundKey>;
           } else {
-            accumulateFavourite(statAcc!.highest, favData.highest, roundKey); //, statKey);
-            accumulateFavourite(statAcc!.lowest, favData.lowest, roundKey); //, statKey);
-            accumulateFavourite(statAcc!.total, favData.total, roundKey); //, statKey);
-            accumulateFavourite(statAcc!.perGameMean, favData.perGameMean, roundKey); //, statKey);
-            accumulateFavourite(statAcc!.total / statAcc!.roundsPlayed.all, favData.rate, roundKey); //, statKey);
-            accumulateFavourite(statAcc!.roundsPlayed.all, favData.roundsPlayed, roundKey); //, statKey);
+            accumulateFavourite(statAcc!.highest, favData.highest, roundKey);
+            accumulateFavourite(statAcc!.lowest, favData.lowest, roundKey);
+            accumulateFavourite(statAcc!.total, favData.total, roundKey);
+            accumulateFavourite(statAcc!.perGameMean, favData.perGameMean, roundKey);
+            accumulateFavourite(statAcc!.total / statAcc!.roundsPlayed.all, favData.rate, roundKey);
+            accumulateFavourite(statAcc!.roundsPlayed.all, favData.roundsPlayed, roundKey);
             // roundsPlayed?
           }
         } else {
@@ -485,12 +472,13 @@ export const roundStatsAccumulator = <
         FavSpecFieldDefFor<G>,
       ][]) {
         const favData = favouritesSpecified[favKey] as FavDataSingle<typeof roundKey> | undefined;
+        // @ts-expect-error
         const value = favSpec.get(values[roundKey], numGames, roundKey);
         if (favData === undefined) {
           favouritesSpecified[favKey] = {
-            rounds: new Set([roundKey]),
+            rounds: new Set([roundKey as keyof TurnStats]),
             value,
-          } satisfies FavDataSingle<typeof roundKey>;
+          } satisfies FavDataSingle<keyof TurnStats>;
         } else {
           let cmp: FavSpecCmpDefFunc;
           switch (typeof favSpec.cmp) {
@@ -545,25 +533,3 @@ export const roundStatsAccumulator = <
     return { values, favouritesAllFields, favouritesSpecified };
   },
 });
-
-// const roundStatsAccumulator = <Rounds extends Record<any, Record<any, number | boolean>> | Record<any, number | boolean>[]>(/*zero: () => {
-//   [K in keyof Rounds as Rounds[K] extends number ? K : never]: Rounds[K] extends number ? {} : {}
-// }*/): (playerRoundStats: Rounds) => {
-//   [K in keyof Rounds]: Rounds[K] extends boolean ? BoolRSVal : NumRSVal;
-// } & {
-//   favouriteRounds: {
-//     [K in keyof Rounds[keyof Rounds]]: {
-//       rounds: Set<keyof Rounds>;
-//       count: number;
-//     }
-//   }
-// } => {
-//   let gameCount = 0;
-//   let stats: {
-//     [K in keyof Rounds]: Rounds[K] extends boolean ? BoolRSVal : NumRSVal;
-//   };
-//   const favouriteRounds = {};
-//   return (playerRoundStats: Rounds) => {
-//     return { favouriteRounds, ...stats};
-//   };
-// };
