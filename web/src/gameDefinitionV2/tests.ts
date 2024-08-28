@@ -92,11 +92,11 @@ const gameType27v2 = gameDefBuilder("twentyseven")<{ startScore: number; jesus?:
     const farDream = turns.findIndex(({ stats: { hits } }) => hits < 1);
     const farPos = turns.findIndex(({ endingScore }) => endingScore < 0);
     return {
-      farFN,
+      farFN: farFN > 0 ? farFN : turns.length,
       fatNick: farFN < 0,
-      farDream,
+      farDream: farDream > 0 ? farDream : turns.length,
       dream: farDream < 0,
-      farPos,
+      farPos: farPos > 0 ? farPos : turns.length,
       allPos: farPos < 0,
       /** Losing the allPos on the final round by a single point (ending on -1) */
       banana: farPos === turns.length - 1 && score === -1,
@@ -562,3 +562,79 @@ console.log("Summary 2");
 accGameSummary27(accumulator27);
 console.log("Summary 3 (tie)");
 accGameSummary27(accumulator27, undefined, true);
+console.log("Summary 4 (banana, allPos)");
+(() => {
+  const game = gameDef27Built.calculateGameResult(
+    new Map([
+      [
+        "player1",
+        {
+          // score: 0,
+          startScore: 27,
+          completed: true,
+          turns: [1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0],
+        },
+      ],
+      [
+        "player2",
+        {
+          // score: 0,
+          startScore: 27,
+          completed: true,
+          turns: [1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1],
+        },
+      ],
+    ]),
+    {},
+  );
+  const result: GameResult<T27GDPDataFull> = {
+    date: new Date(),
+    playerOrder: ["player1", "player2"],
+    results: [...game.players].reduce(
+      (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
+      {},
+    ),
+  };
+  const winners = game.positionsOrdered[0].players;
+  if (winners.length > 1) {
+    result.tiebreak = {
+      players: winners,
+      type: "UNKNOWN",
+      winner: winners[Math.floor(Math.random() * winners.length)],
+    };
+  }
+  console.log("Summary for single game:", result.results, result.tiebreak);
+  console.log(
+    "pre =>",
+    [...accumulator27.getAllSummaries()].reduce(
+      (obj, [pid, s]) =>
+        Object.assign(obj, {
+          [pid]: Object.entries(s).reduce(
+            (acc, [k, v]) =>
+              Object.assign(acc, {
+                [k]:
+                  k === "wins"
+                    ? v
+                    : (() => {
+                        try {
+                          return structuredClone(v);
+                        } catch (e) {
+                          return e;
+                        }
+                      })(),
+              }),
+            {} as any,
+          ),
+        }),
+      {} as any,
+    ),
+  );
+  accumulator27.pushGame(result);
+  console.log(
+    "post =>",
+    [...accumulator27.getAllSummaries()].reduce(
+      (acc, [k, v]) => Object.assign(acc, { [k]: v }),
+      {} as any,
+    ),
+  );
+})();
