@@ -2,8 +2,13 @@ import type { VNodeChild } from "vue";
 import ArrayKeyedMap from "array-keyed-map";
 import type { Position } from "..";
 import type { PlayerDataFull, PlayerTurnData, TurnKey, TurnStatsType } from "../types";
-import type { GameDefinition, PlayerDataForGame } from "../definition";
+import type { GameDefinition, GameTurnStatsType, PlayerDataForGame } from "../definition";
 import type { GameResult } from "../gameResult";
+import {
+  roundStatsAccumulator,
+  type RoundsAccumulatorPart,
+  type RoundsFavouritesSpecDef,
+} from "./roundStats";
 
 export type SummaryFieldDef<T, PlayerGameStats extends {}> = {
   label: string;
@@ -54,10 +59,19 @@ export type SummaryAccumulatorForGameTyped<
 
 export const makeSummaryAccumulatorFactoryFor = <
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
-  SummaryPartTypes extends { [k: string]: any } & { score?: never; wins?: never; numGames?: never },
+  SummaryPartTypes extends { [k: string]: any } & {
+    score?: never;
+    wins?: never;
+    numGames?: never;
+    rounds?: never;
+  },
+  FavFields extends string,
 >(
   gameDef: G,
-  summaryParts: {
+  {
+    score: scoreDef,
+    ...summaryParts
+  }: {
     [K in keyof SummaryPartTypes]: SummaryPartAccumulator<StatsTypeForGame<G>, SummaryPartTypes[K]>;
   } & {
     score?: {
@@ -65,18 +79,20 @@ export const makeSummaryAccumulatorFactoryFor = <
       maximum?: number;
     };
   },
+  roundsFavourites?: RoundsFavouritesSpecDef<G, FavFields>,
 ): {
   parts: {
     score: ScoreAccumulatorPart<G>;
     wins: WinsAccumulatorPart<G>;
-  } & Omit<SummaryPartTypes, "score" | "wins">;
-  create: () => SummaryAccumulator<G, SummaryPartTypes>;
+    rounds: RoundsAccumulatorPart<G, FavFields>;
+  } & Omit<SummaryPartTypes, "score" | "wins" | "rounds">;
+  create: () => SummaryAccumulator<G, SummaryPartTypes, FavFields>;
 } => {
   type PlayerData = StatsTypeForGame<G>;
   type AccumulatorPart<T> = SummaryPartAccumulator<PlayerData, T>;
   const scoreLimits = {
-    min: summaryParts.score?.minimum ?? Number.MIN_SAFE_INTEGER,
-    max: summaryParts.score?.maximum ?? Number.MAX_SAFE_INTEGER,
+    min: scoreDef?.minimum ?? Number.MIN_SAFE_INTEGER,
+    max: scoreDef?.maximum ?? Number.MAX_SAFE_INTEGER,
   };
   const scoreAccumulator: ScoreAccumulatorPart<G> = (([best, worst, cmpB, cmpW]: [
     number,
@@ -176,11 +192,19 @@ export const makeSummaryAccumulatorFactoryFor = <
     },
   };
 
-  const parts = Object.assign({ score: scoreAccumulator, wins: winsAccumulator }, summaryParts);
+  const roundsAccumulator = roundStatsAccumulator<G, FavFields>(
+    roundsFavourites ?? ({} as RoundsFavouritesSpecDef<G, FavFields>),
+  );
+
+  const parts = Object.assign(
+    { score: scoreAccumulator, wins: winsAccumulator, rounds: roundsAccumulator },
+    summaryParts,
+  );
   return {
     // @ts-expect-error
     parts,
-    create: () => new SummaryAccumulator<G, SummaryPartTypes>(parts),
+    // @ts-expect-error
+    create: () => new SummaryAccumulator<G, SummaryPartTypes, FavFields>(parts),
   };
 };
 
@@ -249,12 +273,38 @@ type WinsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, 
       >;
     }
   >;
+
+// type RoundsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
+//   SummaryPartAccumulator<StatsTypeForGame<G>, GameTurnStatsType<G>>;
+// type RoundsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> = G extends GameDefinition<
+// any,
+// any,
+// any,
+// infer PlayerState,
+// any,
+// infer TurnType,
+// infer SoloStats,
+// infer FullPlayerStats,
+// infer PlayerId
+// >
+// ? SummaryPartAccumulator<StatsTypeFor<
+//     TurnType,
+//     PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+//   >, TurnStatsType<TurnType>>
+// : never;
+
 type AccumulatorValuesLookup<Part extends SummaryPartAccumulator<any, any>> =
   Part extends SummaryPartAccumulator<any, infer T> ? T : never;
 
 export class SummaryAccumulator<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
-  SummaryPartTypes extends { [k: string]: any } & { score?: never; wins?: never; numGames?: never },
+  SummaryPartTypes extends { [k: string]: any } & {
+    score?: never;
+    wins?: never;
+    numGames?: never;
+    rounds?: never;
+  },
+  FavFields extends string,
 > {
   readonly playerSummaries = new Map<string, PlayerSummaryValues<G, SummaryPartTypes>>();
   constructor(
@@ -266,6 +316,7 @@ export class SummaryAccumulator<
     } & {
       score: ScoreAccumulatorPart<G>;
       wins: WinsAccumulatorPart<G>;
+      rounds: RoundsAccumulatorPart<G, FavFields>;
     },
   ) {}
 

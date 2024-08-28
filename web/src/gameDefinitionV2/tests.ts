@@ -257,191 +257,213 @@ type T27StatsKeys = keyof StatsTypeForGame<typeof gameDef27Built>;
 
 // ] satisfies SummaryFieldDef<any, PlayerDataForGame<typeof gameDef27Built>>[];
 
-const summaryAcc27 = makeSummaryAccumulatorFactoryFor(gameDef27Built, {
-  fatNicks: {
-    empty: () => ({
-      furthest: 0,
-      count: 0,
-    }),
-    push: ({ furthest, count }, { farFN, fatNick }) => ({
-      furthest: Math.max(farFN, furthest),
-      count: count + +fatNick,
-    }),
-  },
-  dreams: {
-    empty: () => ({
-      furthest: 0,
-      count: 0,
-    }),
-    push: ({ furthest, count }, { farDream, dream }) => ({
-      furthest: Math.max(farDream, furthest),
-      count: count + +dream,
-    }),
-  },
-  allPos: {
-    empty: () => ({
-      furthest: 0,
-      count: 0,
-    }),
-    push: ({ furthest, count }, { farPos, allPos }) => ({
-      furthest: Math.max(farPos, furthest),
-      count: count + +allPos,
-    }),
-  },
-  cliffs: {
-    empty: () => ({
-      most: 0,
-      least: 20, // Is it really worth calculating?
-      total: 0,
-      available: 0,
-      /** Average cliff per game */
-      perGameMean: 0,
-      /** Mean cliff rate of a single round */
-      rate: 0,
-    }),
-    push: (
-      { most, least, total: prev, available: prevA, perGameMean, rate },
-      { roundStatsGameSummary: { cliff } },
-      numGames,
-    ) => {
-      const total = prev + cliff.total;
-      const available = prevA + cliff.max;
-      return {
-        most: Math.max(most, cliff.total),
-        least: Math.min(least, cliff.total),
-        total,
-        available,
-        perGameMean: total / numGames,
-        rate: total / available,
-      };
+const summaryAcc27 = makeSummaryAccumulatorFactoryFor(
+  gameDef27Built,
+  {
+    fatNicks: {
+      empty: () => ({
+        furthest: 0,
+        count: 0,
+      }),
+      push: ({ furthest, count }, { farFN, fatNick }) => ({
+        furthest: Math.max(farFN, furthest),
+        count: count + +fatNick,
+      }),
+    },
+    dreams: {
+      empty: () => ({
+        furthest: 0,
+        count: 0,
+      }),
+      push: ({ furthest, count }, { farDream, dream }) => ({
+        furthest: Math.max(farDream, furthest),
+        count: count + +dream,
+      }),
+    },
+    allPos: {
+      empty: () => ({
+        furthest: 0,
+        count: 0,
+      }),
+      push: ({ furthest, count }, { farPos, allPos }) => ({
+        furthest: Math.max(farPos, furthest),
+        count: count + +allPos,
+      }),
+    },
+    cliffs: {
+      empty: () => ({
+        most: 0,
+        least: 20, // Is it really worth calculating?
+        total: 0,
+        available: 0,
+        /** Average cliff per game */
+        perGameMean: 0,
+        /** Mean cliff rate of a single round */
+        rate: 0,
+      }),
+      push: (
+        { most, least, total: prev, available: prevA, perGameMean, rate },
+        { roundStatsGameSummary: { cliff } },
+        numGames,
+      ) => {
+        const total = prev + cliff.total;
+        const available = prevA + cliff.max;
+        return {
+          most: Math.max(most, cliff.total),
+          least: Math.min(least, cliff.total),
+          total,
+          available,
+          perGameMean: total / numGames,
+          rate: total / available,
+        };
+      },
+    },
+    doubleDoubles: {
+      empty: () => ({
+        most: 0,
+        least: 20, // Is it really worth calculating?
+        total: 0,
+        available: 0,
+        /** Average dd per game */
+        perGameMean: 0,
+        /** Mean dd rate of a single round */
+        rate: 0,
+      }),
+      push: (
+        { most, least, total: prev, available: prevA, perGameMean, rate },
+        { roundStatsGameSummary: { dd } },
+        numGames,
+      ) => {
+        const total = prev + dd.total;
+        const available = prevA + dd.max;
+        return {
+          most: Math.max(most, dd.total),
+          least: Math.min(least, dd.total),
+          total,
+          available,
+          perGameMean: total / numGames,
+          rate: total / available,
+        };
+      },
+    },
+    hits: {
+      empty: () => ({
+        most: 0,
+        least: 60,
+        total: 0,
+        available: 0,
+        /** Average hit per game */
+        perGameMean: 0,
+        /** Mean hit rate of a single dart */
+        rate: 0,
+      }),
+      push: (
+        { most, least, total: prev, available: prevA, perGameMean, rate },
+        { roundStatsGameSummary: { hits } },
+        numGames,
+      ) => {
+        const total = prev + hits.total;
+        const available = prevA + hits.roundsPlayed.all * 3;
+        return {
+          most: Math.max(most, hits.total),
+          least: Math.min(least, hits.total),
+          total,
+          available,
+          perGameMean: total / numGames,
+          rate: total / available,
+        };
+      },
+    },
+    hans: {
+      empty: () => ({
+        most: 0,
+        least: 20, // Is it really worth calculating?
+        total: 0,
+        mean: 0,
+      }),
+      push: ({ most, least, total: prev, mean }, { hans }, numGames) => {
+        const total = prev + hans;
+        return {
+          most: Math.max(most, hans),
+          least: Math.min(least, hans),
+          total,
+          mean: total / numGames,
+        };
+      },
+    },
+    goblins: {
+      empty: () => ({
+        count: 0,
+        mean: 0,
+      }),
+      push: ({ count, mean }, { goblin }, numGames) => {
+        const total = count + +goblin;
+        return {
+          count: total,
+          mean: total / numGames,
+        };
+      },
+    },
+    piranhas: {
+      empty: () => ({
+        count: 0,
+        mean: 0,
+      }),
+      push: ({ count, mean }, { piranha }, numGames) => {
+        const total = count + +piranha;
+        return {
+          count: total,
+          mean: total / numGames,
+        };
+      },
+    },
+    jesus: {
+      empty: () => ({
+        count: 0,
+        mean: 0,
+      }),
+      push: ({ count, mean }, { jesus }, numGames) => {
+        const total = count + (jesus ? 1 : 0);
+        return {
+          count: total,
+          mean: total / numGames,
+        };
+      },
+    },
+    banana: {
+      empty: () => ({
+        count: 0,
+        mean: 0,
+      }),
+      push: ({ count, mean }, { banana }, numGames) => {
+        const total = count + +banana;
+        return {
+          count: total,
+          mean: total / numGames,
+        };
+      },
     },
   },
-  doubleDoubles: {
-    empty: () => ({
-      most: 0,
-      least: 20, // Is it really worth calculating?
-      total: 0,
-      available: 0,
-      /** Average dd per game */
-      perGameMean: 0,
-      /** Mean dd rate of a single round */
-      rate: 0,
-    }),
-    push: (
-      { most, least, total: prev, available: prevA, perGameMean, rate },
-      { roundStatsGameSummary: { dd } },
-      numGames,
-    ) => {
-      const total = prev + dd.total;
-      const available = prevA + dd.max;
-      return {
-        most: Math.max(most, dd.total),
-        least: Math.min(least, dd.total),
-        total,
-        available,
-        perGameMean: total / numGames,
-        rate: total / available,
-      };
+  {
+    cliffs: {
+      get: ({ cliff }) => cliff.total,
+      cmp: "highest",
+    },
+    doubleDoubles: {
+      get: ({ dd }) => dd.total,
+      cmp: "highest",
+    },
+    total: {
+      get: ({ hits }) => hits.total,
+      cmp: "highest",
+    },
+    nonZero: {
+      get: ({ hits: { roundsPlayed } }, numGames) =>
+        roundsPlayed.all - (roundsPlayed.counts.get(0) ?? 0),
+      cmp: "highest",
     },
   },
-  hits: {
-    empty: () => ({
-      most: 0,
-      least: 60,
-      total: 0,
-      available: 0,
-      /** Average hit per game */
-      perGameMean: 0,
-      /** Mean hit rate of a single dart */
-      rate: 0,
-    }),
-    push: (
-      { most, least, total: prev, available: prevA, perGameMean, rate },
-      { roundStatsGameSummary: { hits } },
-      numGames,
-    ) => {
-      const total = prev + hits.total;
-      const available = prevA + hits.roundCounts.all * 3;
-      return {
-        most: Math.max(most, hits.total),
-        least: Math.min(least, hits.total),
-        total,
-        available,
-        perGameMean: total / numGames,
-        rate: total / available,
-      };
-    },
-  },
-  hans: {
-    empty: () => ({
-      most: 0,
-      least: 20, // Is it really worth calculating?
-      total: 0,
-      mean: 0,
-    }),
-    push: ({ most, least, total: prev, mean }, { hans }, numGames) => {
-      const total = prev + hans;
-      return {
-        most: Math.max(most, hans),
-        least: Math.min(least, hans),
-        total,
-        mean: total / numGames,
-      };
-    },
-  },
-  goblins: {
-    empty: () => ({
-      count: 0,
-      mean: 0,
-    }),
-    push: ({ count, mean }, { goblin }, numGames) => {
-      const total = count + +goblin;
-      return {
-        count: total,
-        mean: total / numGames,
-      };
-    },
-  },
-  piranhas: {
-    empty: () => ({
-      count: 0,
-      mean: 0,
-    }),
-    push: ({ count, mean }, { piranha }, numGames) => {
-      const total = count + +piranha;
-      return {
-        count: total,
-        mean: total / numGames,
-      };
-    },
-  },
-  jesus: {
-    empty: () => ({
-      count: 0,
-      mean: 0,
-    }),
-    push: ({ count, mean }, { jesus }, numGames) => {
-      const total = count + (jesus ? 1 : 0);
-      return {
-        count: total,
-        mean: total / numGames,
-      };
-    },
-  },
-  banana: {
-    empty: () => ({
-      count: 0,
-      mean: 0,
-    }),
-    push: ({ count, mean }, { banana }, numGames) => {
-      const total = count + +banana;
-      return {
-        count: total,
-        mean: total / numGames,
-      };
-    },
-  },
-});
+);
 console.log("Summary parts:", summaryAcc27.parts);
 type TGameSummary27Parts = typeof summaryAcc27.parts;
 type TGameSummary27PValues =

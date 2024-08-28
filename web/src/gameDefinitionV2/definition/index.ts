@@ -263,6 +263,33 @@ export type PlayerDataForGame<
     ? PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
     : never;
 
+export type GameTurnStatsType<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+> =
+  G extends GameDefinition<any, any, any, any, any, infer TurnType, any, any, any>
+    ? TurnStatsType<TurnType>
+    : never;
+export type GameTurnType<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
+  G extends GameDefinition<any, any, any, any, any, infer TurnType, any, any, any>
+    ? TurnType
+    : never;
+
+export type FullPlayerDataFor<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+> =
+  G extends GameDefinition<
+    any,
+    any,
+    any,
+    infer PlayerState,
+    infer SharedState,
+    infer TurnType,
+    infer SoloStats,
+    infer FullPlayerStats,
+    infer PlayerId
+  >
+    ? PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+    : never;
 // export class FixedGameDefinition<
 // GameType extends string,
 // DBConfig,
