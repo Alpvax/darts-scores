@@ -32,4 +32,5 @@ app.mount("#app");
 initialiseAPI();
 
 //Run GameDefV2 tests
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as _ from "@/gameDefinitionV2/tests"; //XXX

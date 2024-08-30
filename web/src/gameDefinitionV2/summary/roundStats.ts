@@ -523,6 +523,7 @@ export const roundStatsAccumulator = <
               favData!.value = value;
               favData!.rounds.clear();
             // No break, you still want to add the round to the set
+            // eslint-disable-next-line no-fallthrough
             case "additional":
               favData!.rounds.add(roundKey);
               break;
