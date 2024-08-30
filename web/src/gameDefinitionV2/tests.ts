@@ -14,7 +14,6 @@ import { GameDefinition, type PlayerDataForGame } from "./definition";
 import type { TurnKey } from "./types";
 import {
   makeSummaryAccumulatorFactoryFor,
-  SummaryAccumulator,
   type PlayerSummaryValues,
   type StatsTypeForGame,
 } from "./summary";
@@ -473,10 +472,13 @@ type TGameSummary27PValues =
       [K in keyof TGameSummary27Parts]: K extends "score" | "wins"
         ? never | undefined
         : TGameSummary27Parts[K];
-    }
+    },
+    "cliffs" | "dd" | "total" | "nonZero"
   > extends infer _T
     ? { [K in keyof _T]: _T[K] }
     : never;
+
+type TGS27PRounds = TGameSummary27PValues["rounds"]["favouritesSpecified"];
 
 const accGameSummary27 = (
   accumulator: ReturnType<typeof summaryAcc27.create>,

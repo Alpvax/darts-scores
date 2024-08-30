@@ -158,18 +158,20 @@ export type RoundStatsAccumulatedValues<
     | Record<any, number | boolean>[],
 ]
   ? {
-      [K in keyof StatValues<RoundStats>]?: StatValues<RoundStats>[K] extends infer StatType
-        ? [StatType] extends [boolean]
-          ? BoolStatAcc
-          : [StatType] extends [number]
-            ? NumStatAcc
-            : {
-                valid: never;
-                error: "Stat was valid on multiple rounds with multiple types. Should one of the stats be renamed?";
-                key: K;
-                type: StatType;
-              }
-        : never;
+      [K in keyof RoundStats & (string | number) as `round.${K}`]?: {
+        [SK in keyof RoundStats[K]]: RoundStats[K][SK] extends infer StatType
+          ? [StatType] extends [boolean]
+            ? BoolStatAcc
+            : [StatType] extends [number]
+              ? NumStatAcc
+              : {
+                  valid: never;
+                  error: "Stat was valid on multiple rounds with multiple types. Should one of the stats be renamed?";
+                  key: K;
+                  type: StatType;
+                }
+          : never;
+      };
     }
   : never;
 

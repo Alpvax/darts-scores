@@ -2,19 +2,22 @@ import type { VNodeChild } from "vue";
 import ArrayKeyedMap from "array-keyed-map";
 import type { Position } from "..";
 import type { PlayerDataFull, PlayerTurnData, TurnKey, TurnStatsType } from "../types";
-import type { GameDefinition, GameTurnStatsType, PlayerDataForGame } from "../definition";
+import type { GameDefinition, PlayerDataForGame } from "../definition";
 import type { GameResult } from "../gameResult";
 import {
   roundStatsAccumulator,
   type RoundsAccumulatorPart,
   type RoundsFavouritesSpecDef,
 } from "./roundStats";
+import type { ClassBindings } from "@/utils";
+import { createSummaryComponent } from "./summaryComponent";
 
 export type SummaryFieldDef<T, PlayerGameStats extends {}> = {
   label: string;
-  value: (playerData: PlayerGameStats) => T;
+  value: (playerData: PlayerGameStats, playerId: string) => T;
   cmp: (a: T, b: T) => number;
-  display: (value: T, playerData: PlayerGameStats) => VNodeChild;
+  highlight: (value: T, limits: { highest: T; lowest: T }) => ClassBindings;
+  display: (value: T, delta: T | undefined, playerData: PlayerGameStats) => VNodeChild;
   /** Tooltip / hover element */
   extended?: (value: T, playerData: PlayerGameStats) => VNodeChild;
   //TODO: implement click-filter
@@ -87,6 +90,7 @@ export const makeSummaryAccumulatorFactoryFor = <
     rounds: RoundsAccumulatorPart<G, FavFields>;
   } & Omit<SummaryPartTypes, "score" | "wins" | "rounds">;
   create: () => SummaryAccumulator<G, SummaryPartTypes, FavFields>;
+  createComponent: () => ReturnType<typeof createSummaryComponent<G, SummaryPartTypes, FavFields>>;
 } => {
   type PlayerData = StatsTypeForGame<G>;
   type AccumulatorPart<T> = SummaryPartAccumulator<PlayerData, T>;
@@ -205,17 +209,20 @@ export const makeSummaryAccumulatorFactoryFor = <
     parts,
     // @ts-expect-error
     create: () => new SummaryAccumulator<G, SummaryPartTypes, FavFields>(parts),
+    createComponent: () => createSummaryComponent<G, SummaryPartTypes, FavFields>(),
   };
 };
 
 export type PlayerSummaryValues<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   SummaryPartTypes extends { [k: string]: any },
+  FavFields extends string,
 > = {
   numGames: number;
   score: AccumulatorValuesLookup<ScoreAccumulatorPart<G>>;
   wins: AccumulatorValuesLookup<WinsAccumulatorPart<G>>;
-} & Omit<SummaryPartTypes, "numGames" | "score" | "wins">;
+  rounds: AccumulatorValuesLookup<RoundsAccumulatorPart<G, FavFields>>;
+} & Omit<SummaryPartTypes, "numGames" | "score" | "wins" | "rounds">;
 
 type ScoreAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
   SummaryPartAccumulator<
@@ -306,7 +313,7 @@ export class SummaryAccumulator<
   },
   FavFields extends string,
 > {
-  readonly playerSummaries = new Map<string, PlayerSummaryValues<G, SummaryPartTypes>>();
+  readonly playerSummaries = new Map<string, PlayerSummaryValues<G, SummaryPartTypes, FavFields>>();
   constructor(
     private readonly parts: {
       [K in keyof SummaryPartTypes]: SummaryPartAccumulator<
@@ -323,16 +330,16 @@ export class SummaryAccumulator<
   makeEmptyPlayerSummary() {
     return (
       Object.entries(this.parts) as [
-        keyof PlayerSummaryValues<G, SummaryPartTypes>,
+        keyof PlayerSummaryValues<G, SummaryPartTypes, FavFields>,
         SummaryPartAccumulator<StatsTypeForGame<G>, any>,
       ][]
     ).reduce(
       (summary, [key, part]) => {
         summary.numGames = 0;
-        summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes>] = part.empty();
+        summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes, FavFields>] = part.empty();
         return summary;
       },
-      {} as PlayerSummaryValues<G, SummaryPartTypes>,
+      {} as PlayerSummaryValues<G, SummaryPartTypes, FavFields>,
     );
   }
   pushGame(gameResult: GameResult<PlayerDataForGame<G>>): void {
@@ -342,13 +349,13 @@ export class SummaryAccumulator<
       const opponents = gameResult.playerOrder.filter((p) => p !== pid);
       const newSummary = (
         Object.entries(this.parts) as [
-          keyof PlayerSummaryValues<G, SummaryPartTypes>,
+          keyof PlayerSummaryValues<G, SummaryPartTypes, FavFields>,
           SummaryPartAccumulator<StatsTypeForGame<G>, any>,
         ][]
       ).reduce(
         (summary, [key, part]) => {
           summary.numGames = numGames;
-          summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes>] = part.push(
+          summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes, FavFields>] = part.push(
             prev[key],
             playerStats(pData),
             numGames,
@@ -357,24 +364,28 @@ export class SummaryAccumulator<
           );
           return summary;
         },
-        {} as PlayerSummaryValues<G, SummaryPartTypes>,
+        {} as PlayerSummaryValues<G, SummaryPartTypes, FavFields>,
       );
       this.playerSummaries.set(pid, newSummary);
     }
   }
-  getSummary(playerId: string): PlayerSummaryValues<G, SummaryPartTypes> {
+  getSummary(playerId: string): PlayerSummaryValues<G, SummaryPartTypes, FavFields> {
     return this.playerSummaries.get(playerId) ?? this.makeEmptyPlayerSummary();
   }
-  getSummaries(...playerIds: string[]): Map<string, PlayerSummaryValues<G, SummaryPartTypes>>;
-  getSummaries(playerIds: string[]): Map<string, PlayerSummaryValues<G, SummaryPartTypes>>;
+  getSummaries(
+    ...playerIds: string[]
+  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes, FavFields>>;
+  getSummaries(
+    playerIds: string[],
+  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes, FavFields>>;
   getSummaries(
     arg0: string | string[],
     ...rest: [...string[]]
-  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes>> {
+  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes, FavFields>> {
     const playerIds = typeof arg0 === "string" ? [arg0, ...rest] : arg0;
     return new Map(playerIds.map((pid) => [pid, this.getSummary(pid)]));
   }
-  getAllSummaries(): Map<string, PlayerSummaryValues<G, SummaryPartTypes>> {
+  getAllSummaries(): Map<string, PlayerSummaryValues<G, SummaryPartTypes, FavFields>> {
     return this.playerSummaries;
   }
 }
