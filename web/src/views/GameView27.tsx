@@ -157,6 +157,7 @@ export default defineComponent({
     const tiebreakDialogRef = ref<HTMLDialogElement | null>(null);
 
     const submitScores = async () => {
+      console.time("submit-game");
       if (winners.value && winners.value.length > 1) {
         if (tiebreakDialogRef.value) {
           tiebreakDialogRef.value.showModal();
@@ -227,15 +228,19 @@ export default defineComponent({
             tiebreakType: tiebreakResult.value?.type,
           },
         );
-        console.log("DBResultV2:", resultV2);
+        console.timeEnd("submit-game");
+        console.log("Saving DBResultV2:", resultV2);
+        console.time("save-game");
         await historyStore.saveGame(resultV2);
+        console.timeLog("save-game", "Saved");
         // if (preferences.saveGamesInProgress) {
         //   window.sessionStorage.clear(); //TODO: only clear relevant?
         // }
         submitted.value = true;
         if (showHistoryOnSubmit.value) {
-          console.debug("Changing to history view"); //XXX
+          console.timeLog("save-game", "Changing to history view");
           router.push({ name: "twentysevenHistory" });
+          console.timeEnd("save-game");
         }
       }
     };

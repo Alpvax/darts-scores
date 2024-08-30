@@ -360,7 +360,10 @@ export default defineComponent({
       roundsFields: {
         field: "total",
         display: rateFmt.format,
-        rows: Array.from({ length: 20 }, (_, i) => ({ key: `round.${i}`, label: i.toString() })),
+        rows: Array.from({ length: 20 }, (_, i) => ({
+          key: `round.${i}`,
+          label: (i + 1).toString(),
+        })),
       } satisfies RoundRowsMeta27,
     };
   },
