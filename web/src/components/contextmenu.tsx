@@ -20,7 +20,11 @@ import { injectClose, injectItems } from "@/contextMenu/inject";
 
 type ContextMenuOption = {
   label: string;
-  action: (args: { event: MouseEvent | TouchEvent; closeMenu: () => void }) => void;
+  action: (args: {
+    event: MouseEvent | TouchEvent;
+    closeMenu: () => void;
+    keepMenuOpen: () => void;
+  }) => void;
 };
 type ContextMenuSubmenu = {
   label: string;
@@ -56,6 +60,16 @@ const makeElement = (
   if (typeof menuItem === "object") {
     if (Object.hasOwn(menuItem, "action")) {
       const item = menuItem as ContextMenuOption;
+      const act = (event: MouseEvent | TouchEvent) => {
+        let closeOnClick = true;
+        const keepMenuOpen = () => {
+          closeOnClick = false;
+        };
+        item.action({ event, closeMenu, keepMenuOpen });
+        if (closeOnClick) {
+          closeMenu();
+        }
+      };
       return (
         <li
           class={selectedRef.value ? "selected" : ""}
@@ -65,8 +79,8 @@ const makeElement = (
           onMouseenter={() => {
             selectedRef.value = true;
           }}
-          onClick={(event) => item.action({ event, closeMenu })}
-          onTouchstart={(event) => item.action({ event, closeMenu })}
+          onClick={act}
+          onTouchstart={act}
         >
           {item.label}
         </li>
