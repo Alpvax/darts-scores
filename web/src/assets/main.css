@@ -42,3 +42,58 @@ a,
     padding: 0 2rem;
   }
 } */
+
+span.spinner {
+  display: inline-block;
+  margin: auto;
+  border-radius: 50%;
+  width: 1.5em;
+  height: 1.5em;
+  border: 0.215em solid transparent;
+  vertical-align: middle;
+  font-size: 16px;
+  /* border-top-color: white; */
+  animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes slide-in-down {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-down {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  40% {
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}

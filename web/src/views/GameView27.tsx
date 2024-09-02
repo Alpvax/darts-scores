@@ -20,6 +20,7 @@ import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 import { useRouter } from "vue-router";
 import SimpleTiebreakDialog from "@/components/game/SimpleTiebreakDialog.vue";
+import LoadingButton from "@/components/LoadingButton.vue";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -445,7 +446,9 @@ export default defineComponent({
               )}
               !
               {!submitted.value && props.gameId.length <= 0 ? (
-                <input id="submitGame" type="button" value="Submit Scores" onClick={submitScores} />
+                <LoadingButton id="submitGame" callback={submitScores}>
+                  Submit Scores
+                </LoadingButton>
               ) : undefined}
             </div>
           ) : undefined}
