@@ -249,7 +249,12 @@ export const use27History = defineStore("27History", () => {
 
   watch(
     [fromDate, toDate],
-    async ([fromDate, toDate]): Promise<void> => {
+    async ([fromDate, toDate], _, onCleanup): Promise<void> => {
+      onCleanup(() => {
+        subscriptions.forEach((unsub) => unsub());
+        subscriptions = [];
+        console.debug("[cleanup] Refreshed history subscriptions");
+      });
       games.clear();
       if (subscriptions.length > 0) {
         subscriptions.forEach((unsub) => unsub());

@@ -1,14 +1,14 @@
 <template>
-  <dialog>
+  <dialog ref="dialogEl">
     <h1>Tiebreak!</h1>
     <form method="dialog">
-      <label for="tieBreakType">Tiebreak type:</label>
-      <v-select name="tieBreakType" :options="tiebreakTypes" v-model="tiebreakType" />
-      <label for="winner">Tiebreak winner:</label>&nbsp;
-      <select name="winner" v-model="winner">
-        <PlayerName tag="option" v-for="pid in players" :key="pid" :player-id="pid" :value="pid" />
+      <label>Tiebreak type:</label>
+      <v-select v-model="tiebreakType" name="tieBreakType" :options="tiebreakTypes" />
+      <label for="tieBreakWinner">Tiebreak winner:</label>&nbsp;
+      <select id="tieBreakWinner" v-model="winner" name="tieBreakWinner" autofocus>
+        <PlayerName v-for="pid in players" :key="pid" tag="option" :player-id="pid" :value="pid" />
       </select>
-      <button @click="submit">Submit</button>
+      <button v-if="winner.length > 0" @click="submit">Submit</button>
     </form>
   </dialog>
 </template>
@@ -16,9 +16,9 @@
 <script setup lang="ts">
 import { useBasicConfig } from "@/config/baseConfig";
 import PlayerName from "../PlayerName";
-import { ref } from "vue";
+import { computed, nextTick, ref, useTemplateRef } from "vue";
 
-const props = defineProps<{
+/*const props = */ defineProps<{
   players: string[];
 }>();
 
@@ -34,6 +34,15 @@ const emit = defineEmits<{
 }>();
 
 const submit = () => emit("submit", { type: tiebreakType.value, winner: winner.value });
+
+const dialogEl = useTemplateRef<HTMLDialogElement>("dialogEl");
+const showModal = computed(() =>
+  dialogEl.value ? () => dialogEl.value!.showModal() : () => nextTick(showModal.value),
+);
+
+defineExpose({
+  showModal,
+});
 </script>
 
 <style scoped>

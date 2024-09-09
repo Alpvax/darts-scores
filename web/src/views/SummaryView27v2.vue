@@ -10,7 +10,7 @@ import {
 } from "@/game/27/gameDefv2";
 import type { SummaryFieldDef } from "@/gameDefinitionV2/summary";
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
-import { ref, defineComponent, watch, computed, h } from "vue";
+import { ref, defineComponent, watch, computed } from "vue";
 import SummaryV1 from "./SummaryView27.vue";
 import { gameMeta, type TurnData27 } from "@/game/27";
 import type { GameResult } from "@/gameUtils/summary";
@@ -34,6 +34,7 @@ export default defineComponent({
       "k7GNyCogBy79JE4qhvAj",
     ]);
     const makeGame = ({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       identifier,
       length = 20,
       all = false,

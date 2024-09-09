@@ -20,7 +20,7 @@ import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 import { useRouter } from "vue-router";
 import SimpleTiebreakDialog from "@/components/game/SimpleTiebreakDialog.vue";
-import LoadingButton from "@/components/LoadingButton.vue";
+import LoadingButton from "@/components/LoadingButton";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -143,6 +143,7 @@ export default defineComponent({
         : undefined,
     );
     const submitted = ref(false);
+    const submitting = ref<boolean>(false);
 
     const possibleJesus = computed(
       () =>
@@ -157,18 +158,58 @@ export default defineComponent({
     const tiebreakResult = ref<{ type: string; winner: string } | undefined>();
     const tiebreakDialogRef = ref<HTMLDialogElement | null>(null);
 
+    const doSubmit = async () => {
+      const resultV2 = intoDBResult(
+        {
+          date: gameDate.value,
+          results: partialGameResult.value,
+          players: players.value.map((pid) => ({
+            pid,
+            displayName: playerStore.playerName(pid),
+          })),
+          tiebreakWinner: tiebreakResult.value?.winner,
+        },
+        {
+          players: players.value.map((pid) => ({
+            pid,
+            displayName: playerStore.playerName(pid),
+            jesus: playerJesus.value.has(pid) && possibleJesus.value.has(pid) ? true : undefined,
+          })),
+          tiebreakType: tiebreakResult.value?.type,
+        },
+      );
+      console.timeEnd("submit-game");
+      console.log("Saving DBResultV2:", resultV2);
+      console.time("save-game");
+      await historyStore.saveGame(resultV2);
+      console.timeLog("save-game", "Saved");
+      // if (preferences.saveGamesInProgress) {
+      //   window.sessionStorage.clear(); //TODO: only clear relevant?
+      // }
+      submitted.value = true;
+      submitting.value = false;
+      if (showHistoryOnSubmit.value) {
+        console.timeLog("save-game", "Changing to history view");
+        router.push({ name: "twentysevenHistory" });
+        console.timeEnd("save-game");
+      }
+    };
+
     const submitScores = async () => {
+      submitting.value = true;
       console.time("submit-game");
       if (winners.value && winners.value.length > 1) {
-        if (tiebreakDialogRef.value) {
+        tiebreakResult.value = undefined;
+        if (tiebreakDialogRef.value !== null) {
           tiebreakDialogRef.value.showModal();
         } else {
           await nextTick();
           tiebreakDialogRef.value!.showModal();
         }
+      } else {
+        doSubmit();
       }
       // console.log("Submitting scores:", gameValues.value);
-      console.log("Game result:", gameResult.value);
       // if (gameValues.value !== undefined) {
       //   const game = [...gameValues.value.entries()].reduce(
       //     (obj, [pid, rounds]) => {
@@ -182,68 +223,6 @@ export default defineComponent({
       //   ); //Result27["game"])
       //   console.log(game); //XXX
       // }
-      if (winners.value !== undefined && gameResult.value !== null) {
-        const result: Result27 = {
-          date: gameDate.value.toISOString(),
-          winner:
-            winners.value.length === 1
-              ? winners.value[0]
-              : {
-                  tie: winners.value,
-                  tiebreak: tiebreakResult.value ?? {},
-                },
-          game: [...gameResult.value.entries()].reduce(
-            (game, [pid, data]) => {
-              game[pid] = {
-                rounds: [...data.allTurns.values()].map(({ value }) => value!),
-                score: data.score,
-                cliffs: data.stats.cliffCount,
-                allPositive: data.stats.allPositive,
-              };
-              return game;
-            },
-            {} as Record<string, PlayerGameResult27>,
-          ),
-        };
-        console.log("DBResult:", result);
-        console.log(
-          "Stats:",
-          new Map([...gameResult.value.entries()].map(([pid, { stats }]) => [pid, stats])),
-        );
-        const resultV2 = intoDBResult(
-          {
-            date: gameDate.value,
-            results: partialGameResult.value,
-            players: players.value.map((pid) => ({
-              pid,
-              displayName: playerStore.playerName(pid),
-            })),
-            tiebreakWinner: tiebreakResult.value?.winner,
-          },
-          {
-            players: players.value.map((pid) => ({
-              pid,
-              displayName: playerStore.playerName(pid),
-              jesus: playerJesus.value.has(pid) && possibleJesus.value.has(pid) ? true : undefined,
-            })),
-            tiebreakType: tiebreakResult.value?.type,
-          },
-        );
-        console.timeEnd("submit-game");
-        console.log("Saving DBResultV2:", resultV2);
-        console.time("save-game");
-        await historyStore.saveGame(resultV2);
-        console.timeLog("save-game", "Saved");
-        // if (preferences.saveGamesInProgress) {
-        //   window.sessionStorage.clear(); //TODO: only clear relevant?
-        // }
-        submitted.value = true;
-        if (showHistoryOnSubmit.value) {
-          console.timeLog("save-game", "Changing to history view");
-          router.push({ name: "twentysevenHistory" });
-          console.timeEnd("save-game");
-        }
-      }
     };
 
     // type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
@@ -446,7 +425,7 @@ export default defineComponent({
               )}
               !
               {!submitted.value && props.gameId.length <= 0 ? (
-                <LoadingButton id="submitGame" callback={submitScores}>
+                <LoadingButton id="submitGame" onClick={submitScores} loading={submitting.value}>
                   Submit Scores
                 </LoadingButton>
               ) : undefined}
@@ -456,7 +435,10 @@ export default defineComponent({
             <SimpleTiebreakDialog
               ref={tiebreakDialogRef}
               players={winners.value}
-              onSubmit={(res) => (tiebreakResult.value = res)}
+              onSubmit={async (res) => {
+                tiebreakResult.value = res;
+                await doSubmit();
+              }}
             />
           ) : undefined}
         </div>

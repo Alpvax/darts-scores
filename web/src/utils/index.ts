@@ -231,3 +231,12 @@ export const numberOrdinal = (num: number) => {
   }
   return "th";
 };
+
+export const mapObjectValues = <T, U, Keys extends string | number | symbol>(
+  obj: { [K in Keys]: T },
+  f: (value: T, key: Keys, index: number) => U,
+): { [K in Keys]: U } =>
+  (Object.entries(obj) as [Keys, T][]).reduce(
+    (acc, [key, value], index) => Object.assign(acc, { [key]: f(value, key, index) }),
+    {} as any,
+  );
