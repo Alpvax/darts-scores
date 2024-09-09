@@ -70,7 +70,7 @@ type CachedGameResult<
 export class GameDefinition<
   GameType extends string,
   DBConfig,
-  DBResult extends GameResult<any, PlayerId>,
+  DBResult extends GameResult<PlayerDataRaw<PlayerState, TurnType>, PlayerId>,
   PlayerState extends {},
   SharedState extends {},
   TurnType,
@@ -94,7 +94,7 @@ export class GameDefinition<
 
   constructor(
     readonly gameType: GameType,
-    readonly dbAdapter: DatabaseAdapter<DBConfig, DBResult> /*TODO:*/ | undefined,
+    readonly dbAdapter: DatabaseAdapter<DBConfig, DBResult>,
     readonly positionOrder: "highestFirst" | "lowestFirst",
     readonly initSharedState: (result?: DBResult) => SharedState,
     readonly initPlayerData: (
@@ -261,6 +261,21 @@ export type PlayerDataForGame<
     infer PlayerId
   >
     ? PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+    : never;
+
+export type DBGameResultFor<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
+  G extends GameDefinition<
+    any,
+    any,
+    any,
+    infer PlayerState,
+    any,
+    infer TurnType,
+    any,
+    any,
+    infer PlayerId
+  >
+    ? GameResult<PlayerDataRaw<PlayerState, TurnType>, PlayerId>
     : never;
 
 export type GameTurnStatsType<

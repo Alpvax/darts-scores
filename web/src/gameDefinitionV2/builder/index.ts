@@ -7,8 +7,8 @@ import {
   type TurnMetaDefFor,
   type TurnMetaDefLookup,
 } from "../rounds";
-import type { FullStatsFactory, SoloStatsFactory } from "../types";
-import { GameDefinition } from "../definition";
+import type { FullStatsFactory, PlayerDataRaw, SoloStatsFactory } from "../types";
+import { GameDefinition, type DatabaseAdapter } from "../definition";
 import type { GameResult } from "../gameResult";
 
 type GameDefBuilderBase<GameType extends string, PlayerState extends {}, SharedState extends {}> = {
@@ -539,10 +539,34 @@ export class ArrayGameDefBuilder<
     return m;
   }
 
-  build(positionOrder: "highestFirst" | "lowestFirst" /*TODO: dbAdapter:*/): GameDefinition<
+  build<
+    Config,
+    GResult extends GameResult<
+      PlayerDataRaw<
+        PlayerState,
+        {
+          valueType: UntakenVal;
+          statsType: RoundStats;
+          length: Len;
+        }
+      >
+    > = GameResult<
+      PlayerDataRaw<
+        PlayerState,
+        {
+          valueType: UntakenVal;
+          statsType: RoundStats;
+          length: Len;
+        }
+      >
+    >,
+  >(
+    positionOrder: "highestFirst" | "lowestFirst",
+    dbAdapter: DatabaseAdapter<Config, GResult>,
+  ): GameDefinition<
     GameType,
-    unknown,
-    GameResult<any>,
+    Config,
+    GResult,
     PlayerState,
     SharedState,
     {
@@ -555,7 +579,7 @@ export class ArrayGameDefBuilder<
   > {
     return new GameDefinition(
       this.gameType,
-      undefined,
+      dbAdapter,
       positionOrder,
       this.makeSharedState,
       this.makeInitialPlayerState,
@@ -564,55 +588,6 @@ export class ArrayGameDefBuilder<
       // @ts-expect-error
       this.turnFactory,
     );
-  }
-
-  withPositionCalc(
-    order: "highestFirst" | "lowestFirst",
-    scoreField: keyof ValuesSubset<number, PlayerState>,
-  ) {
-    return {
-      positions: (playerScores: Map<string, number>) => {
-        const orderedScores = [...playerScores.values()];
-        orderedScores.sort((a, b) => {
-          switch (order) {
-            case "highestFirst":
-              return b - a;
-            case "lowestFirst":
-              return a - b;
-          }
-        });
-        const scorePlayerLookup = [...playerScores.entries()].reduce((acc, [pid, score]) => {
-          if (acc.has(score)) {
-            acc.get(score)!.push(pid);
-          } else {
-            acc.set(score, [pid]);
-          }
-          return acc;
-        }, new Map<number, string[]>());
-
-        const { ordered, playerLookup } = orderedScores.reduce(
-          ({ scores, ordered, playerLookup }, score, idx) => {
-            const pos = idx + 1;
-            if (!scores.has(score)) {
-              scores.add(score);
-              const players = scorePlayerLookup.get(score)!;
-              ordered.push({ pos, players });
-              for (const p of players) {
-                playerLookup.set(p, { pos, players });
-              }
-            }
-            return { scores, ordered, playerLookup };
-          },
-          {
-            scores: new Set<number>(),
-            ordered: [] as Position[],
-            playerLookup: new Map<string, Position>(),
-          },
-        );
-
-        return { ordered, playerLookup };
-      },
-    };
   }
 }
 

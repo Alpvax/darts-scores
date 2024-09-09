@@ -8,6 +8,7 @@ import {
 } from "@/gameDefinitionV2/summary";
 import type { RoundRowsMeta } from "@/gameDefinitionV2/summary/summaryComponent";
 import type { NumericRange } from "@/utils/types";
+import dbAdapter27 from "./database";
 
 export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
   { startScore: number; jesus?: boolean },
@@ -83,7 +84,7 @@ export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
     // console.log("GameStats:", pdata, shared, pos);
     return {};
   })
-  .build("highestFirst");
+  .build("highestFirst", dbAdapter27());
 
 export const summaryAccumulator27 = makeSummaryAccumulatorFactoryFor(
   gameDefinition27,

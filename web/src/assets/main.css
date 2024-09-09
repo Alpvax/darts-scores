@@ -47,12 +47,12 @@ span.spinner {
   display: inline-block;
   margin: auto;
   border-radius: 50%;
-  width: 1.5em;
-  height: 1.5em;
+  width: 1em;
+  height: 1em;
   border: 0.215em solid transparent;
   vertical-align: middle;
   font-size: 16px;
-  /* border-top-color: white; */
+  border-top-color: var(--color-text);
   animation: spin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
 }
 
