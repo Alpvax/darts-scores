@@ -1,4 +1,13 @@
-import { defineComponent, ref, watch, type Ref, computed, type PropType, nextTick } from "vue";
+import {
+  defineComponent,
+  ref,
+  watch,
+  type Ref,
+  computed,
+  type PropType,
+  nextTick,
+  type VNodeRef,
+} from "vue";
 import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
@@ -145,6 +154,13 @@ export default defineComponent({
     const submitted = ref(false);
     const submitting = ref<boolean>(false);
 
+    const submitGameButton = ref<HTMLButtonElement>();
+    watch(submitGameButton, (cmp, old) => {
+      if (cmp && !old) {
+        cmp.focus();
+      }
+    });
+
     const possibleJesus = computed(
       () =>
         new Set(
@@ -158,7 +174,9 @@ export default defineComponent({
     const tiebreakResult = ref<{ type: string; winner: string } | undefined>();
     const tiebreakDialogRef = ref<HTMLDialogElement | null>(null);
 
+    /** Perform the actual submit,  */
     const doSubmit = async () => {
+      console.time("submit-game");
       const resultV2 = intoDBResult(
         {
           date: gameDate.value,
@@ -197,7 +215,6 @@ export default defineComponent({
 
     const submitScores = async () => {
       submitting.value = true;
-      console.time("submit-game");
       if (winners.value && winners.value.length > 1) {
         tiebreakResult.value = undefined;
         if (tiebreakDialogRef.value !== null) {
@@ -209,21 +226,9 @@ export default defineComponent({
       } else {
         doSubmit();
       }
-      // console.log("Submitting scores:", gameValues.value);
-      // if (gameValues.value !== undefined) {
-      //   const game = [...gameValues.value.entries()].reduce(
-      //     (obj, [pid, rounds]) => {
-      //       obj[pid] = {
-      //         rounds: rounds.map((r) => r ?? 0),
-      //         //TODO: rest of values
-      //       };
-      //       return obj;
-      //     },
-      //     {} as Record<string, { rounds: number[] }>,
-      //   ); //Result27["game"])
-      //   console.log(game); //XXX
-      // }
     };
+
+    const tiebreakDefaults = ref<{ tieType?: string; winner?: string }>({});
 
     // type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
     // type GameStats = {
@@ -289,8 +294,6 @@ export default defineComponent({
             onCompleted={(c) => {
               if (!c) {
                 gameResult.value = null;
-              } else {
-                nextTick(() => document.getElementById("submitGame")?.focus());
               }
             }}
             onUpdate:gameResult={({ data, positions: p }) => {
@@ -323,6 +326,7 @@ export default defineComponent({
                           <td class="jesusOptionCell">
                             <input
                               type="checkbox"
+                              disabled={props.gameId.length < 1 && !submitted.value}
                               checked={playerJesus.value.has(playerId)}
                               onChange={(e) => {
                                 if ((e.currentTarget as HTMLInputElement).checked) {
@@ -425,7 +429,11 @@ export default defineComponent({
               )}
               !
               {!submitted.value && props.gameId.length <= 0 ? (
-                <LoadingButton id="submitGame" onClick={submitScores} loading={submitting.value}>
+                <LoadingButton
+                  ref={submitGameButton}
+                  onClick={submitScores}
+                  loading={submitting.value}
+                >
                   Submit Scores
                 </LoadingButton>
               ) : undefined}
@@ -435,9 +443,15 @@ export default defineComponent({
             <SimpleTiebreakDialog
               ref={tiebreakDialogRef}
               players={winners.value}
+              defaultTieType={tiebreakDefaults.value.tieType}
+              defaultWinner={tiebreakDefaults.value.winner}
               onSubmit={async (res) => {
                 tiebreakResult.value = res;
                 await doSubmit();
+              }}
+              onCancel={(defaults) => {
+                submitting.value = false;
+                tiebreakDefaults.value = defaults;
               }}
             />
           ) : undefined}
