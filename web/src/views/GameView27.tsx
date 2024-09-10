@@ -20,6 +20,7 @@ import { usePlayerConfig } from "@/config/playerConfig";
 import PlayerName from "@/components/PlayerName";
 import { useRouter } from "vue-router";
 import SimpleTiebreakDialog from "@/components/game/SimpleTiebreakDialog.vue";
+import LoadingButton from "@/components/LoadingButton";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -142,6 +143,14 @@ export default defineComponent({
         : undefined,
     );
     const submitted = ref(false);
+    const submitting = ref<boolean>(false);
+
+    const submitGameButton = ref<HTMLButtonElement>();
+    watch(submitGameButton, (cmp, old) => {
+      if (cmp && !old) {
+        cmp.focus();
+      }
+    });
 
     const possibleJesus = computed(
       () =>
@@ -156,7 +165,47 @@ export default defineComponent({
     const tiebreakResult = ref<{ type: string; winner: string } | undefined>();
     const tiebreakDialogRef = ref<HTMLDialogElement | null>(null);
 
+    /** Perform the actual submit,  */
+    const doSubmit = async () => {
+      console.time("submit-game");
+      const resultV2 = intoDBResult(
+        {
+          date: gameDate.value,
+          results: partialGameResult.value,
+          players: players.value.map((pid) => ({
+            pid,
+            displayName: playerStore.playerName(pid),
+          })),
+          tiebreakWinner: tiebreakResult.value?.winner,
+        },
+        {
+          players: players.value.map((pid) => ({
+            pid,
+            displayName: playerStore.playerName(pid),
+            jesus: playerJesus.value.has(pid) && possibleJesus.value.has(pid) ? true : undefined,
+          })),
+          tiebreakType: tiebreakResult.value?.type,
+        },
+      );
+      console.timeEnd("submit-game");
+      console.log("Saving DBResultV2:", resultV2);
+      console.time("save-game");
+      await historyStore.saveGame(resultV2);
+      console.timeLog("save-game", "Saved");
+      // if (preferences.saveGamesInProgress) {
+      //   window.sessionStorage.clear(); //TODO: only clear relevant?
+      // }
+      submitted.value = true;
+      submitting.value = false;
+      if (showHistoryOnSubmit.value) {
+        console.timeLog("save-game", "Changing to history view");
+        router.push({ name: "twentysevenHistory" });
+        console.timeEnd("save-game");
+      }
+    };
+
     const submitScores = async () => {
+      submitting.value = true;
       if (winners.value && winners.value.length > 1) {
         if (tiebreakDialogRef.value) {
           tiebreakDialogRef.value.showModal();
@@ -164,79 +213,8 @@ export default defineComponent({
           await nextTick();
           tiebreakDialogRef.value!.showModal();
         }
-      }
-      // console.log("Submitting scores:", gameValues.value);
-      console.log("Game result:", gameResult.value);
-      // if (gameValues.value !== undefined) {
-      //   const game = [...gameValues.value.entries()].reduce(
-      //     (obj, [pid, rounds]) => {
-      //       obj[pid] = {
-      //         rounds: rounds.map((r) => r ?? 0),
-      //         //TODO: rest of values
-      //       };
-      //       return obj;
-      //     },
-      //     {} as Record<string, { rounds: number[] }>,
-      //   ); //Result27["game"])
-      //   console.log(game); //XXX
-      // }
-      if (winners.value !== undefined && gameResult.value !== null) {
-        const result: Result27 = {
-          date: gameDate.value.toISOString(),
-          winner:
-            winners.value.length === 1
-              ? winners.value[0]
-              : {
-                  tie: winners.value,
-                  tiebreak: tiebreakResult.value ?? {},
-                },
-          game: [...gameResult.value.entries()].reduce(
-            (game, [pid, data]) => {
-              game[pid] = {
-                rounds: [...data.allTurns.values()].map(({ value }) => value!),
-                score: data.score,
-                cliffs: data.stats.cliffCount,
-                allPositive: data.stats.allPositive,
-              };
-              return game;
-            },
-            {} as Record<string, PlayerGameResult27>,
-          ),
-        };
-        console.log("DBResult:", result);
-        console.log(
-          "Stats:",
-          new Map([...gameResult.value.entries()].map(([pid, { stats }]) => [pid, stats])),
-        );
-        const resultV2 = intoDBResult(
-          {
-            date: gameDate.value,
-            results: partialGameResult.value,
-            players: players.value.map((pid) => ({
-              pid,
-              displayName: playerStore.playerName(pid),
-            })),
-            tiebreakWinner: tiebreakResult.value?.winner,
-          },
-          {
-            players: players.value.map((pid) => ({
-              pid,
-              displayName: playerStore.playerName(pid),
-              jesus: playerJesus.value.has(pid) && possibleJesus.value.has(pid) ? true : undefined,
-            })),
-            tiebreakType: tiebreakResult.value?.type,
-          },
-        );
-        console.log("DBResultV2:", resultV2);
-        await historyStore.saveGame(resultV2);
-        // if (preferences.saveGamesInProgress) {
-        //   window.sessionStorage.clear(); //TODO: only clear relevant?
-        // }
-        submitted.value = true;
-        if (showHistoryOnSubmit.value) {
-          console.debug("Changing to history view"); //XXX
-          router.push({ name: "twentysevenHistory" });
-        }
+      } else {
+        doSubmit();
       }
     };
 
@@ -304,8 +282,6 @@ export default defineComponent({
             onCompleted={(c) => {
               if (!c) {
                 gameResult.value = null;
-              } else {
-                nextTick(() => document.getElementById("submitGame")?.focus());
               }
             }}
             onUpdate:gameResult={({ data, positions: p }) => {
@@ -338,6 +314,7 @@ export default defineComponent({
                           <td class="jesusOptionCell">
                             <input
                               type="checkbox"
+                              disabled={props.gameId.length > 0 || submitted.value}
                               checked={playerJesus.value.has(playerId)}
                               onChange={(e) => {
                                 if ((e.currentTarget as HTMLInputElement).checked) {
@@ -440,7 +417,13 @@ export default defineComponent({
               )}
               !
               {!submitted.value && props.gameId.length <= 0 ? (
-                <input id="submitGame" type="button" value="Submit Scores" onClick={submitScores} />
+                <LoadingButton
+                  ref={submitGameButton}
+                  onClick={submitScores}
+                  loading={submitting.value}
+                >
+                  Submit Scores
+                </LoadingButton>
               ) : undefined}
             </div>
           ) : undefined}
