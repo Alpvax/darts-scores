@@ -180,11 +180,13 @@ export default defineComponent({
               ).playerPositions.value.playerLookup;
               return (
                 <tr
+                  class={game.isDebugGame ? "debugGame" : ""}
                   onClick={(e) => {
                     setDisplayedGame(game, e.currentTarget as Element | null);
                     e.stopPropagation();
                     e.preventDefault();
                   }}
+                  data-game-id={game.gameId}
                 >
                   <td class="rowLabel">{game.date.toLocaleDateString()}</td>
                   {players.value.map((pid) => {

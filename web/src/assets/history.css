@@ -27,6 +27,10 @@ div.historyDiv {
     width: min-content;
     text-align: center;
 
+    & tr.debugGame > .rowLabel {
+      color: orange !important;
+    }
+
     & td {
       padding: 0 0.2em;
       white-space: nowrap;

@@ -39,6 +39,7 @@ export type GameResult<T extends TurnData<any, any, any>, P extends string = str
   players: { pid: P; displayName?: string; handicap?: number }[];
   results: Map<P, PlayerDataForStats<T>>;
   tiebreakWinner?: P;
+  isDebugGame?: boolean;
 };
 
 interface SummaryValueRecord {
