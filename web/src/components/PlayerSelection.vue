@@ -1,12 +1,12 @@
 <template>
-  <fieldset class="playerSelection" v-context-menu.end="generalPlayerContextMenu">
+  <fieldset v-context-menu.end="generalPlayerContextMenu" class="playerSelection">
     <legend>{{ legend }}</legend>
 
     <div
       v-for="{ name, id } in availablePlayers"
       :key="id"
-      class="playerCheckbox"
       v-context-menu="nameContextMenuItems(id).value"
+      class="playerCheckbox"
     >
       <input
         :id="'select_' + id"

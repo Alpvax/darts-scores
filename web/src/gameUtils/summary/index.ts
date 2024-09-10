@@ -391,7 +391,9 @@ export const summaryAccumulatorFactory = <
     {} as { [K in SummaryFieldKeys<S, T, P>]?: FieldDisplayMetadata },
   );
   const getDisplayMetadata = (key: SummaryFieldKeys<S, T, P>): FieldDisplayMetadata =>
-    key === "numGames" ? { best: "none", label: "Total Games Played" } : displayMetadata[key] ?? {};
+    key === "numGames"
+      ? { best: "none", label: "Total Games Played" }
+      : (displayMetadata[key] ?? {});
   console.log(
     "DEBUGGING FIELD DISPLAY:",
     new Map(Object.entries(fields).map(([k, { display }]) => [k, display])),

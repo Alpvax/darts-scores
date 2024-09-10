@@ -3,10 +3,10 @@
     <h1>Tiebreak!</h1>
     <form method="dialog">
       <label for="tieBreakType">Tiebreak type:</label>
-      <v-select name="tieBreakType" :options="tiebreakTypes" v-model="tiebreakType" />
+      <v-select v-model="tiebreakType" name="tieBreakType" :options="tiebreakTypes" />
       <label for="winner">Tiebreak winner:</label>&nbsp;
-      <select name="winner" v-model="winner">
-        <PlayerName tag="option" v-for="pid in players" :key="pid" :player-id="pid" :value="pid" />
+      <select v-model="winner" name="winner">
+        <PlayerName v-for="pid in players" :key="pid" tag="option" :player-id="pid" :value="pid" />
       </select>
       <button @click="submit">Submit</button>
     </form>
@@ -18,7 +18,7 @@ import { useBasicConfig } from "@/config/baseConfig";
 import PlayerName from "../PlayerName";
 import { ref } from "vue";
 
-const props = defineProps<{
+/*const props =*/ defineProps<{
   players: string[];
 }>();
 
