@@ -207,7 +207,8 @@ export default defineComponent({
     const submitScores = async () => {
       submitting.value = true;
       if (winners.value && winners.value.length > 1) {
-        if (tiebreakDialogRef.value) {
+        tiebreakResult.value = undefined;
+        if (tiebreakDialogRef.value !== null) {
           tiebreakDialogRef.value.showModal();
         } else {
           await nextTick();
@@ -217,6 +218,8 @@ export default defineComponent({
         doSubmit();
       }
     };
+
+    const tiebreakDefaults = ref<{ tieType?: string; winner?: string }>({});
 
     // type RoundStats = { cliff: boolean; dd: boolean; hit: boolean };
     // type GameStats = {
@@ -431,7 +434,16 @@ export default defineComponent({
             <SimpleTiebreakDialog
               ref={tiebreakDialogRef}
               players={winners.value}
-              onSubmit={(res) => (tiebreakResult.value = res)}
+              defaultTieType={tiebreakDefaults.value.tieType}
+              defaultWinner={tiebreakDefaults.value.winner}
+              onSubmit={async (res) => {
+                tiebreakResult.value = res;
+                await doSubmit();
+              }}
+              onCancel={(defaults) => {
+                submitting.value = false;
+                tiebreakDefaults.value = defaults;
+              }}
             />
           ) : undefined}
         </div>
