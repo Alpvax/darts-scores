@@ -139,7 +139,8 @@ export type AnyLayeredDef<
 
 type BaseLayer<V> = {
   setVolatile(value: V): void;
-  readonly value: V;
+  readonly value: V | undefined;
+  mutableRef?: WritableComputedRef<V>;
 };
 
 type BrowserLayer<V> = {
@@ -191,7 +192,7 @@ type StorageLayers<V> = {
 };
 
 type MergeFuncArgs<V, Layers extends StorageLayer> = {
-  current: V;
+  volatile?: V;
   fallback: V;
 } & {
   [K in Layers as K extends "volatile" | "remote" ? never : K]?: NestedPartial<V>;
@@ -257,7 +258,7 @@ export function makeLayeredConfigValue<
   definition: LayeredStorageDefinition2<V, BrowserLayers, DBKey>,
 ): LayeredConfigValue<V, "volatile" | OptionalLayers<BrowserLayers, DBKey>> {
   type OptLayers = OptionalLayers<BrowserLayers, DBKey>;
-  let volatileRef: Ref<V> | null = null;
+  const volatileRef = ref<V | undefined>();
   const fallback =
     typeof definition.fallback === "function"
       ? definition.recalculateFallback
@@ -272,28 +273,13 @@ export function makeLayeredConfigValue<
             };
           })()
       : () => structuredClone(definition.fallback as V);
-  const init = () => {
-    volatileRef = ref(fallback()) as Ref<V>;
-    // watch(
-    //   cachedValue!,
-    //   (val) => layers.set(StorageLocation.Volatile, val as NestedPartial<V>),
-    //   { immediate: true },
-    // );
-  };
-  const setVolatile = (value: V) => {
-    if (volatileRef === null) {
-      init();
-    }
-    volatileRef!.value = value;
-  };
   const layers: StorageLayers<V> = {
     volatile: {
-      setVolatile,
+      setVolatile: (value: V) => {
+        volatileRef.value = value;
+      },
       get value() {
-        if (volatileRef === null) {
-          init();
-        }
-        return volatileRef!.value;
+        return volatileRef.value;
       },
     },
   };
@@ -329,12 +315,16 @@ export function makeLayeredConfigValue<
     }
   }
 
+  let cachedValue: Ref<V> | null = null;
   const setValue = (storageLayer: "volatile" | OptLayers, value: V): void => {
-    if (volatileRef === null) {
-      init();
+    if (cachedValue === null) {
+      cachedValue = ref(value) as Ref<V>;
     }
-    volatileRef!.value = value;
     switch (storageLayer) {
+      case "volatile": {
+        volatileRef.value = value;
+        break;
+      }
       case "session": {
         if (layers.session) {
           browserStorage.setSessionStorage(
@@ -370,12 +360,9 @@ export function makeLayeredConfigValue<
       ? makeMergeFunc(definition.merge as MergeOption<V, OptLayers>)
       : ({ fallback }) => fallback;
   const merge = () => {
-    if (volatileRef === null) {
-      init();
-    }
     const args: MergeFuncArgs<V, StorageLayer> = Object.assign(
       {
-        current: toRaw(volatileRef!.value),
+        volatile: toRaw(volatileRef.value),
         fallback: fallback(),
       },
       "session" in layers
@@ -401,21 +388,25 @@ export function makeLayeredConfigValue<
     // return toRaw(val);
   };
   let readonlyRef: ComputedRef<V> | undefined;
+  const makeReadonlyRef = () => {
+    if (readonlyRef === undefined) {
+      readonlyRef = computed(merge);
+    }
+    return readonlyRef!;
+  };
   return Object.defineProperties(
     {
-      readonlyRef: () => {
-        if (readonlyRef === undefined) {
-          readonlyRef = computed(merge);
-        }
-        return readonlyRef!;
-      },
+      readonlyRef: makeReadonlyRef,
       mutableRef: (storageLayer: "volatile" | OptLayers): Ref<V> => {
         switch (storageLayer) {
           case "volatile": {
-            if (volatileRef === null) {
-              init();
+            if (!layers.volatile.mutableRef) {
+              layers.volatile.mutableRef = computed({
+                get: () => merge(),
+                set: (val) => setValue("volatile", val),
+              });
             }
-            return volatileRef as Ref<V>;
+            return layers.volatile.mutableRef;
           }
           case "session": {
             if (layers.session) {
@@ -470,12 +461,7 @@ export function makeLayeredConfigValue<
       value: {
         configurable: false,
         enumerable: true,
-        get: () => {
-          if (volatileRef === null) {
-            init();
-          }
-          return readonlyRef !== null ? readonlyRef!.value : merge();
-        },
+        get: () => makeReadonlyRef().value,
       },
       [STORAGE_REF_DEFINITION]: {
         configurable: false,
@@ -504,8 +490,34 @@ type LayeredConfigValues<Definitions extends { [k: string]: AnyLayeredDef<any, a
 type UseLayeredConfigs<Definitions extends { [k: string]: AnyLayeredDef<any, any> }> = {
   getValue: <K extends keyof Definitions>(
     key: K,
-  ) => Definitions[K] extends LayeredStorageDefinition<infer V, any> ? V : never;
+  ) => Definitions[K] extends AnyLayeredDef<infer V, any> ? V : never;
 } & (() => LayeredConfigValues<Definitions>);
+
+export type LayeredConfigAPIFor<T extends UseLayeredConfigs<any> | LayeredConfigValues<any>> =
+  T extends LayeredConfigValues<infer Definitions>
+    ? LayeredConfigAPI<Definitions>
+    : T extends () => LayeredConfigValues<infer Definitions>
+      ? LayeredConfigAPI<Definitions>
+      : never;
+
+export type LayeredConfigAPI<Definitions extends { [k: string]: AnyLayeredDef<any, any> }> = {
+  [K in keyof Definitions as LayeredConfigValues<Definitions>[K] extends LayeredConfigValue<
+    any,
+    any
+  >
+    ? K
+    : never]: LayeredConfigValues<Definitions>[K] extends LayeredConfigValue<infer V, infer Layers>
+    ? {
+        readonly value: V;
+        setValue(storageLayer: Layers, value: V): void;
+      }
+    : never;
+};
+export const makeConsoleApi = <Definitions extends { [k: string]: AnyLayeredDef<any, any> }>(
+  useConfig: UseLayeredConfigs<Definitions>,
+): LayeredConfigAPI<Definitions> => {
+  return useConfig() as unknown as LayeredConfigAPI<Definitions>;
+};
 
 export const makeLayeredConfigComposable = <
   Definitions extends { [k: string]: AnyLayeredDef<any, any> },

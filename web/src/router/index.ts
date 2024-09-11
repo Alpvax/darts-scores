@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useBasicConfig } from "@/config/baseConfig";
+import { useBasicConfig } from "@/config/baseConfigLayered";
 import { nextTick } from "vue";
 
 const router = createRouter({

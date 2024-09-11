@@ -1,5 +1,9 @@
 // import { writeLocalPrefs } from "@/stores/persistant/zodStore";
 
+import { useBasicConfig } from "@/config/baseConfigLayered";
+import { makeConsoleApi, type LayeredConfigAPIFor } from "@/config/layeredConfig";
+import { use27Config } from "@/game/27/config";
+
 declare global {
   interface Window {
     enablePrefs: boolean;
@@ -14,6 +18,8 @@ declare global {
           //   displaySummary: boolean;
           //   displaySelection: boolean;
           // };
+          baseConfig: LayeredConfigAPIFor<typeof useBasicConfig>;
+          config27: LayeredConfigAPIFor<typeof use27Config>;
         };
   }
 }
@@ -29,6 +35,8 @@ export const initialiseAPI = (): void => {
         // (window.writeLocalPrefs = writeLocalPrefs),
         window.preferences = Object.create(
           {
+            baseConfig: makeConsoleApi(useBasicConfig),
+            config27: makeConsoleApi(use27Config),
             // guests: Object.create({ flags: DisplayState }, {
             //   displayGames: displayFlagProp(DisplayState.GAMES),
             //   displaySummary: displayFlagProp(DisplayState.SUMMARY),
