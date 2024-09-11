@@ -93,6 +93,7 @@ ul.contextmenu {
   text-align: center;
   list-style: none;
   padding: 0.2em;
+  z-index: 20;
 
   > li {
     cursor: pointer;

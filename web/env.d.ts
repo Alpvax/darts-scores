@@ -1,11 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module "vue-select" {
-  import Vue from "vue";
-
-  export default class VSelect extends Vue {}
-}
-
 declare module "array-keyed-map" {
   declare class ArrayKeyedMap<K, V> {
     constructor(initialEntries = [] as [K[], V][]);
