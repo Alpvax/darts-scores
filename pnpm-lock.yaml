@@ -35,9 +35,6 @@ importers:
       '@eslint/js':
         specifier: ^9.10.0
         version: 9.10.0
-      '@rushstack/eslint-patch':
-        specifier: ^1.10.4
-        version: 1.10.4
       '@tsconfig/node20':
         specifier: ^20.1.4
         version: 20.1.4
@@ -796,9 +793,6 @@ packages:
     resolution: {integrity: sha512-6UUxd0+SKomjdzuAcp+HAmxw1FlGBnl1v2yEPSabtx4lBfdXHDVsW7+lQkgz9cNFJGY3AWR7+V8P5BqkD9L9nA==}
     cpu: [x64]
     os: [win32]
-
-  '@rushstack/eslint-patch@1.10.4':
-    resolution: {integrity: sha512-WJgX9nzTqknM393q1QJDJmoW28kUfEnybeTfVNcNAPnIx210RXm2DiXiHzfNPJNIUUb1tJnz/l4QGtJ30PgWmA==}
 
   '@tsconfig/node20@20.1.4':
     resolution: {integrity: sha512-sqgsT69YFeLWf5NtJ4Xq/xAF8p4ZQHlmGW74Nu2tD4+g5fAsposc4ZfaaPixVu4y01BEiDCWLRDCvDM5JOsRxg==}
@@ -3109,8 +3103,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.21.2':
     optional: true
-
-  '@rushstack/eslint-patch@1.10.4': {}
 
   '@tsconfig/node20@20.1.4': {}
 

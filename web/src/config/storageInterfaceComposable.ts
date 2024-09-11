@@ -167,7 +167,7 @@ const makeBrowserRef = <V>(storageKey: string, meta: BrowserStorageValue<V>): Co
         if (!refCache.has(null)) {
           refCache.set(
             null,
-            computed(() => merge(storageLayers.value, fallback())),
+            computed(() => merge(storageLayers.value, fallback())) as WritableComputedRef<V>,
           );
         }
         return refCache.get(null)! as ComputedRef<V>;

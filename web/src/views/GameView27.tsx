@@ -1,13 +1,4 @@
-import {
-  defineComponent,
-  ref,
-  watch,
-  type Ref,
-  computed,
-  type PropType,
-  nextTick,
-  type VNodeRef,
-} from "vue";
+import { defineComponent, ref, watch, type Ref, computed, type PropType, nextTick } from "vue";
 import { createComponent } from "@/components/game/fixed/common";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
@@ -326,7 +317,7 @@ export default defineComponent({
                           <td class="jesusOptionCell">
                             <input
                               type="checkbox"
-                              disabled={props.gameId.length < 1 && !submitted.value}
+                              disabled={props.gameId.length > 0 || submitted.value}
                               checked={playerJesus.value.has(playerId)}
                               onChange={(e) => {
                                 if ((e.currentTarget as HTMLInputElement).checked) {

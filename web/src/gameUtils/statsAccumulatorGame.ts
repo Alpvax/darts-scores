@@ -58,11 +58,11 @@ export class ArrayStatsAccumulatorGame<
     }
   }
   private addBoolRS(statKey: keyof BoolTS<T> & string, value: boolean) {
-    this.incrementBoolCount(`${statKey}Count`, value);
+    this.incrementBoolCount(`${statKey}Count` as keyof RoundStatsMapped<T>, value);
   }
   private addNumericRS(statKey: keyof NumericTS<T> & string, value: number) {
-    this.mapGameVal(`${statKey}Total`, (total) => total + value);
-    this.incrementBoolCount(`${statKey}CountNZ`, value !== 0);
+    this.mapGameVal(`${statKey}Total` as keyof RoundStatsMapped<T>, (total) => total + value);
+    this.incrementBoolCount(`${statKey}CountNZ` as keyof RoundStatsMapped<T>, value !== 0);
   }
 
   result(turns: {
