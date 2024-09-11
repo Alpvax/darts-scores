@@ -51,6 +51,7 @@ export const createSummaryComponent = <
     },
     setup: (props, { slots }) => {
       const playerStats = computed(() =>
+        // @ts-ignore
         props.games.reduce(
           (map, game, gameIndex) => {
             const allPlayers = [...game.results.keys()];
