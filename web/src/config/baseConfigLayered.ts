@@ -36,12 +36,12 @@ export const useBasicConfig = makeLayeredConfigComposable({
           }
           return res;
         },
-        toString: JSON.stringify,
+        toString: (v) => (typeof v === "string" ? v : JSON.stringify(v)),
       },
     },
-    merge: ({ fallback, current, session, local }) => {
+    merge: ({ fallback, volatile, session, local }) => {
       const res = fallback;
-      for (const part of [local, current, session]) {
+      for (const part of [local, session, volatile]) {
         if (part) {
           if (part.default) {
             res.default = part.default;
