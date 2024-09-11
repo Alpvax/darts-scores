@@ -2,23 +2,46 @@
   <dialog ref="dialogEl">
     <h1>Tiebreak!</h1>
     <form method="dialog">
-      <label>Tiebreak type:</label>
-      <v-select v-model="tiebreakType" name="tieBreakType" :options="tiebreakTypes" />
+      <label for="tiebreakTypes">Tiebreak type:</label>
+      <VueSelect
+        v-model="tiebreakType"
+        input-id="tiebreakTypes"
+        :options="tiebreakTypes"
+        @search="onSearchUpdate"
+      >
+        <template v-if="addable" #menu-header>
+          <button type="button" @click="addType">Add type: {{ searchTerm }}</button>
+        </template>
+      </VueSelect>
       <label for="tieBreakWinner">Tiebreak winner:</label>
-      <select id="tieBreakWinner" ref="winnerEl" v-model="winner" name="tieBreakWinner">
-        <option value="" disabled selected hidden>Select Winner...</option>
-        <PlayerName v-for="pid in players" :key="pid" tag="option" :player-id="pid" :value="pid" />
-      </select>
+      <VueSelect
+        id="playerWinnerSelect"
+        v-model="winner"
+        :options="players.map((pid) => ({ label: pid, value: pid }))"
+        input-id="tieBreakWinner"
+        placeholder="Select Winner..."
+      >
+        <template #value="{ option }">
+          <PlayerName class="playerName" :player-id="option.value" />
+        </template>
+        <template #option="{ option }">
+          <PlayerName class="playerName" :player-id="option.value" />
+        </template>
+      </VueSelect>
       <button id="tieBreakCancel" @click="cancel">Cancel</button>
-      <button id="tieBreakSubmit" :disabled="winner.length < 1" @click="submit">Submit</button>
+      <button id="tieBreakSubmit" :disabled="!winner || winner.length < 1" @click="submit">
+        Submit
+      </button>
     </form>
+    <ContextMenu />
   </dialog>
 </template>
 
 <script setup lang="ts">
-import { useBasicConfig } from "@/config/baseConfig";
+import { useBasicConfig } from "@/config/baseConfigLayered";
 import PlayerName from "../PlayerName";
-import { nextTick, ref, useTemplateRef, watch } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
+import VueSelect from "vue3-select-component";
 
 const props = withDefaults(
   defineProps<{
@@ -32,11 +55,27 @@ const props = withDefaults(
   },
 );
 
-const tiebreakTypes = useBasicConfig().tiebreakTypes.mutableRef();
+const tiebreakTypesSaved = useBasicConfig().tiebreakTypes.mutableRef("local");
+const tiebreakTypes = computed(() =>
+  tiebreakTypesSaved.value.map((label) => ({
+    label,
+    value: label /*.toLowerCase().replaceAll(/\s/, "_")*/,
+  })),
+);
+const searchTerm = ref("");
+const onSearchUpdate = (search: string) => (searchTerm.value = search);
+const addable = computed(
+  () => searchTerm.value.length > 0 && !tiebreakTypesSaved.value.includes(searchTerm.value),
+);
+const addType = () => {
+  tiebreakTypesSaved.value = [searchTerm.value, ...tiebreakTypesSaved.value];
+  tiebreakType.value = searchTerm.value;
+};
+
 const tiebreakType = ref(
   props.defaultTieType.length > 0
     ? props.defaultTieType
-    : (tiebreakTypes.value[Math.floor(Math.random() * tiebreakTypes.value.length)] ?? ""),
+    : (tiebreakTypes.value[Math.floor(Math.random() * tiebreakTypes.value.length)].value ?? ""),
 );
 
 const winner = ref(props.defaultWinner);
@@ -45,12 +84,12 @@ watch(
   () => [props.defaultTieType, props.defaultWinner],
   ([pTieType, pWinner]) => {
     if (pTieType.length > 0) {
-      if (!tiebreakTypes.value.includes(pTieType)) {
-        tiebreakTypes.value.push(pTieType);
+      if (!tiebreakTypesSaved.value.includes(pTieType)) {
+        tiebreakTypesSaved.value.push(pTieType);
       }
       tiebreakType.value = pTieType;
     }
-    if (pWinner.length > 0) {
+    if (pWinner.length > 0 && props.players.includes(pWinner)) {
       winner.value = pWinner;
     }
   },
@@ -92,14 +131,16 @@ watch(dialogEl, (el, old, onCleanup) => {
   });
 });
 
-const winnerEl = ref<HTMLSelectElement>();
-
 const showModal = async () => {
-  while (winnerEl.value === undefined) {
+  while (dialogEl.value === undefined) {
     await nextTick();
   }
   dialogEl.value!.showModal();
-  winnerEl.value.focus();
+  if (props.defaultWinner.length > 0) {
+    document.getElementById("tieBreakSubmit")!.focus();
+  } else {
+    document.getElementById("playerWinnerSelect")!.focus();
+  }
 };
 
 defineExpose({
@@ -109,13 +150,14 @@ defineExpose({
 
 <style scoped>
 dialog {
-  width: max-content;
+  width: 45%;
   translate: 50% 50%;
 
   & form {
     height: 48vh;
+    width: 100%;
     display: grid;
-    grid-template-columns: max-content max-content;
+    grid-template-columns: max-content minmax(max-content, auto);
     grid-template-rows: repeat(auto-fill, minmax(2em, 1fr));
     gap: 0.3em;
 
@@ -127,5 +169,9 @@ dialog {
       grid-row: -1;
     }
   }
+}
+
+:deep(#playerWinnerSelect .playerName) {
+  width: 100%;
 }
 </style>
