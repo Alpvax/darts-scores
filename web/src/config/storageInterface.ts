@@ -59,7 +59,10 @@ type SavedStorageValue<T> = BrowserStorageValue<T>;
 export type StorageValue<T> = RAMStorageValue<T> | SavedStorageValue<T>;
 
 class ConfigRef<T, Meta extends SavedStorageValue<T>> {
-  private readonly refCache = new Map<StorageLocation | null, WritableComputedRef<T>>();
+  private readonly refCache = new Map<
+    StorageLocation | null,
+    WritableComputedRef<T> | ComputedRef<T>
+  >();
   private cachedValue: Ref<T> | null;
   private readonly initDefault: () => void;
   private defaultValue: T | null = null;
@@ -156,7 +159,7 @@ class ConfigRef<T, Meta extends SavedStorageValue<T>> {
         }),
       );
     }
-    return this.refCache.get(storageLocation)!;
+    return this.refCache.get(storageLocation)! as WritableComputedRef<T>;
   }
 }
 

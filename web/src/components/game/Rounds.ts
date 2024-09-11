@@ -207,7 +207,7 @@ export function normaliseRounds<R extends readonly [...RoundShape[]]>(
   rounds: RoundBase<any, any>[],
 ): NormalisedTupleRounds<R>;
 export function normaliseRounds<R extends RoundShapes>(rounds: RoundsList<R>) {
-  if (isKeyedRound(rounds[0])) {
+  if (isKeyedRound(rounds[0] as Round<any, any>)) {
     return normaliseRecordRounds(rounds as KeyedRound<any, any, keyof R & string>[]);
   } else {
     return normaliseTupleRounds(rounds as RoundBase<any, any>[]);

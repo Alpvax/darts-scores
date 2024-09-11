@@ -56,7 +56,7 @@ export function sessionStorageRef(
 export function sessionStorageRef(
   key: string,
   writable: boolean,
-): WritableComputedRef<string | undefined> {
+): WritableComputedRef<string | undefined> | ComputedRef<string | undefined> {
   setSessionStorage(key, sessionStorage.getItem(key) ?? undefined);
   return writable
     ? computed({
@@ -77,7 +77,7 @@ export function localStorageRef(
 export function localStorageRef(
   key: string,
   writable: boolean,
-): WritableComputedRef<string | undefined> {
+): WritableComputedRef<string | undefined> | ComputedRef<string | undefined> {
   setLocalStorage(key, localStorage.getItem(key) ?? undefined);
   return writable
     ? computed({
