@@ -14,7 +14,7 @@ import { createSummaryComponent } from "./summaryComponent";
 
 type FloatingFieldDef<PlayerGameStats extends {}> = (Pick<
   SummaryFieldDef<number, PlayerGameStats>,
-  "label" | "value"
+  "label" | "value" | "description"
 > & {
   highlight?:
     | ((
@@ -46,6 +46,7 @@ export const floatField = <PlayerGameStats extends {}>({
   label,
   value,
   displayCompact,
+  description,
   extended,
   ...def
 }: FloatingFieldDef<PlayerGameStats>): SummaryFieldDef<number, PlayerGameStats> => {
@@ -99,6 +100,7 @@ export const floatField = <PlayerGameStats extends {}>({
     displayCompact: displayCompact
       ? (value, delta, playerData) => displayCompact(format.format(value), delta, playerData)
       : format.format,
+    description,
     extended: extended
       ? (value, playerData) => extended({ raw: value, formatted: format.format(value) }, playerData)
       : undefined,
@@ -112,6 +114,8 @@ export type SummaryFieldDef<T, PlayerGameStats extends {}> = {
   highlight: (value: T, limits: { highest: T; lowest: T }) => ClassBindings;
   /** The content of the <td> cell for a given player */
   displayCompact: (value: T, delta: T | undefined, playerData: PlayerGameStats) => VNodeChild;
+  /** Tooltip / hover over label */
+  description?: () => VNodeChild;
   /** Tooltip / hover element */
   extended?: (value: T, playerData: PlayerGameStats) => VNodeChild;
   //TODO: implement click-filter

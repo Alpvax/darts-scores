@@ -41,6 +41,15 @@ a,
   }
 } */
 
+.tooltip {
+  background-color: var(--color-background);
+  border: 2px var(--color-border-hover) solid;
+  text-align: center;
+  list-style: none;
+  padding: 0.2em;
+  z-index: 2;
+}
+
 span.spinner {
   display: inline-block;
   margin: auto;

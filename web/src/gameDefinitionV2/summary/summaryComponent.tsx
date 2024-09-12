@@ -1,8 +1,9 @@
-import { computed, defineComponent, type PropType, type VNodeChild } from "vue";
+import { computed, defineComponent, ref, type PropType, type VNodeChild, type VNodeRef } from "vue";
 import type { GameDefinition, GameTurnStatsType } from "../definition";
 import type { PlayerSummaryValues, SummaryFieldDef } from ".";
 import PlayerName from "@/components/PlayerName";
 import { extendClass } from "@/utils";
+import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 
 export type RoundRowsMeta<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
@@ -151,51 +152,112 @@ export const createSummaryComponent = <
             ),
       );
 
+      const hoveredEl = ref<HTMLElement>();
+      const tooltipEl = ref<VNodeRef | null>(null);
+
+      const { floatingStyles } = useFloating(hoveredEl, tooltipEl, {
+        placement: "bottom",
+        middleware: [
+          flip(),
+          // shift({
+          //   mainAxis: true,
+          //   crossAxis: true,
+          // }),
+        ],
+        whileElementsMounted: autoUpdate,
+      });
+      const tooltipContent = ref<VNodeChild>();
+
       return () => (
-        <table id="gameSummaryTable">
-          <thead>
-            <tr>
-              {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
-              {props.players.flatMap((pid) =>
-                /*props.includeAllPlayers ||*/ props.summaries.has(pid)
-                  ? [<PlayerName tag="th" playerId={pid} class="playerName" />]
-                  : [],
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {fieldData.value.map(
-              ({ label, highest, lowest, playerValues, highlight, displayCompact }) => (
-                <tr data-summary-row={label /*path*/}>
-                  <th class="rowLabel">{label}</th>
-                  {playerValues.map(({ pid, value, delta }) => {
-                    // const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
-                    return (
-                      <td
-                        class={extendClass(highlight(value, { highest, lowest }), "summaryValue")}
-                      >
-                        {displayCompact(value, delta, props.summaries.get(pid)!)}
-                        {/*TODO: extended click/hover display*/}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ),
-            )}
-            {roundsData.value === undefined
-              ? undefined
-              : roundsData.value.map(({ key, label, playerData }) => (
-                  <tr data-summary-row={`${key as string}.${props.roundsFields!.field}`}>
+        <>
+          <table id="gameSummaryTable">
+            <thead>
+              <tr>
+                {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
+                {props.players.flatMap((pid) =>
+                  /*props.includeAllPlayers ||*/ props.summaries.has(pid)
+                    ? [<PlayerName tag="th" playerId={pid} class="playerName" />]
+                    : [],
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {fieldData.value.map(
+                ({
+                  label,
+                  highest,
+                  lowest,
+                  playerValues,
+                  highlight,
+                  displayCompact,
+                  description,
+                  extended,
+                }) => (
+                  <tr
+                    data-summary-row={label /*path*/}
+                    onMouseover={(e) => {
+                      if (description) {
+                        tooltipContent.value = description();
+                        hoveredEl.value = e.currentTarget as HTMLElement;
+                      }
+                    }}
+                    onMouseleave={(e) => {
+                      tooltipContent.value = undefined;
+                      hoveredEl.value = undefined;
+                    }}
+                  >
                     <th class="rowLabel">{label}</th>
-                    {playerData.map(({ best, favourite, value }) => (
-                      <td class={extendClass({ favourite, best }, "summaryValue")}>
-                        {(props.roundsFields!.display ?? ((val) => val))(value)}
-                      </td>
-                    ))}
+                    {playerValues.map(({ pid, value, delta }) => {
+                      // const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
+                      return (
+                        <td
+                          class={extendClass(highlight(value, { highest, lowest }), "summaryValue")}
+                          onMouseover={(e) => {
+                            if (extended) {
+                              tooltipContent.value = extended(value, props.summaries.get(pid)!);
+                              hoveredEl.value = e.target as HTMLElement;
+                            }
+                          }}
+                          onMouseleave={(e) => {
+                            if (extended) {
+                              tooltipContent.value = undefined;
+                              hoveredEl.value = undefined;
+                            }
+                          }}
+                        >
+                          {displayCompact(value, delta, props.summaries.get(pid)!)}
+                          {/*TODO: extended click/hover display*/}
+                        </td>
+                      );
+                    })}
                   </tr>
-                ))}
-          </tbody>
-        </table>
+                ),
+              )}
+              {roundsData.value === undefined
+                ? undefined
+                : roundsData.value.map(({ key, label, playerData }) => (
+                    <tr data-summary-row={`${key as string}.${props.roundsFields!.field}`}>
+                      <th class="rowLabel">{label}</th>
+                      {playerData.map(({ best, favourite, value }) => (
+                        <td class={extendClass({ favourite, best }, "summaryValue")}>
+                          {(props.roundsFields!.display ?? ((val) => val))(value)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+          {tooltipContent.value ? (
+            <div
+              ref={tooltipEl}
+              id="gameSummaryTableTooltip"
+              class="tooltip"
+              style={floatingStyles.value}
+            >
+              {tooltipContent.value}
+            </div>
+          ) : undefined}
+        </>
       );
     },
   });

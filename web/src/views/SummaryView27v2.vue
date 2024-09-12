@@ -10,11 +10,12 @@ import {
 } from "@/game/27/gameDefv2";
 import { floatField, type SummaryFieldDef } from "@/gameDefinitionV2/summary";
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
-import { ref, defineComponent, watch, computed } from "vue";
+import { ref, defineComponent, watch, computed, h } from "vue";
 import SummaryV1 from "./SummaryView27.vue";
 import { gameMeta, type TurnData27 } from "@/game/27";
 import type { GameResult } from "@/gameUtils/summary";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
+import PlayerName from "@/components/PlayerName";
 
 export default defineComponent({
   components: {
@@ -198,6 +199,7 @@ export default defineComponent({
       maximumFractionDigits: 2,
       style: "percent",
     });
+    const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
 
     return {
       players,
@@ -238,6 +240,17 @@ export default defineComponent({
           displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
+          description: () => [
+            "Rounds where ",
+            ...listFormat
+              .format(realWinsPlayers.value.map((pid) => `{@{${pid}}@}`))
+              .split(/(\{@\{\w+\}@\})/)
+              .map((item) => {
+                const match = /\{@\{(\w+)\}@\}/.exec(item);
+                return match ? h(PlayerName, { playerId: match[1] }, () => item) : item;
+              }),
+            " all played",
+          ],
         },
         {
           label: "Outright Wins",
