@@ -8,7 +8,7 @@ import {
   type PlayerSummaryValues27,
   type RoundRowsMeta27,
 } from "@/game/27/gameDefv2";
-import type { SummaryFieldDef } from "@/gameDefinitionV2/summary";
+import { floatField, type SummaryFieldDef } from "@/gameDefinitionV2/summary";
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
 import { ref, defineComponent, watch, computed } from "vue";
 import SummaryV1 from "./SummaryView27.vue";
@@ -208,24 +208,23 @@ export default defineComponent({
         {
           label: "Personal Best",
           value: ({ score }) => score.best,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
         {
           label: "Personal Worst",
           value: ({ score }) => score.worst,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest, worst: val === -393 }),
         },
-        {
+        floatField({
           label: "Average Score",
           value: ({ score }) => score.mean,
-          display: meanFmt.format,
-          cmp: (a, b) => Math.round((a - b) * 100),
-          highlight: (val, { highest }) => ({ best: Math.abs((val - highest) * 100) < 1 }),
-        },
+          format: meanFmt,
+          highlight: { best: "highest" },
+        }),
         {
           label: "Real wins",
           value: ({ wins }, playerId) => {
@@ -236,67 +235,65 @@ export default defineComponent({
               0,
             );
           },
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Outright Wins",
           value: ({ wins }) => wins.all.totalOutright,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Tiebreak Wins",
           value: ({ wins }) => wins.all.tiebreakWins,
-          display: (val, _, { wins }) => `${val} / ${wins.all.tiebreaksPlayed}`,
+          displayCompact: (val, _, { wins }) => `${val} / ${wins.all.tiebreaksPlayed}`,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Total Games Played",
           value: ({ numGames }) => numGames,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: () => "",
         },
-        {
+        floatField({
           label: "Win Rate",
           value: ({ wins }) => wins.all.mean,
-          display: rateFmt.format,
-          cmp: (a, b) => Math.round((a - b) * 100),
-          highlight: (val, { highest }) => ({ best: Math.abs((val - highest) * 100) < 1 }),
-        },
+          format: rateFmt,
+          highlight: { best: "highest" },
+        }),
         {
           label: "Fat Nicks",
           value: ({ fatNicks }) => fatNicks.count,
-          display: (val, _, { fatNicks }) => (val > 0 ? val : `0 (furthest ${fatNicks.furthest})`),
+          displayCompact: (val, _, { fatNicks }) =>
+            val > 0 ? val : `0 (furthest ${fatNicks.furthest})`,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
         },
-        {
+        floatField({
           label: "Cliffs",
           value: ({ cliffs }) => cliffs.rate,
-          display: rateFmt.format,
-          cmp: (a, b) => Math.round((a - b) * 100),
-          highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
-          extended: (val, { cliffs: { available, perGameMean, rate, ...cliffs } }) =>
+          format: rateFmt,
+          highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
+          extended: (_, { cliffs: { available, perGameMean, rate, ...cliffs } }) =>
             JSON.stringify(cliffs),
-        },
-        {
+        }),
+        floatField({
           label: "Double Doubles",
           value: ({ doubleDoubles }) => doubleDoubles.rate,
-          display: rateFmt.format,
-          cmp: (a, b) => Math.round((a - b) * 100),
-          highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
-          extended: (val, { doubleDoubles: { available, perGameMean, rate, ...dd } }) =>
+          format: rateFmt,
+          highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
+          extended: (_, { doubleDoubles: { available, perGameMean, rate, ...dd } }) =>
             JSON.stringify(dd),
-        },
+        }),
         {
           label: "Hans",
           value: ({ hans }) => hans.total,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
           extended: (val, { hans }) => JSON.stringify(hans),
@@ -304,59 +301,60 @@ export default defineComponent({
         {
           label: "Goblins",
           value: ({ goblins }) => goblins.count,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Piranhas",
           value: ({ piranhas }) => piranhas.count,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Jesus",
           value: ({ jesus }) => jesus.count,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Dreams",
           value: ({ dreams }) => dreams.count,
-          display: (val, _, { dreams }) => (val > 0 ? val : `0 (furthest ${dreams.furthest})`),
+          displayCompact: (val, _, { dreams }) =>
+            val > 0 ? val : `0 (furthest ${dreams.furthest})`,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "All Positives",
           value: ({ allPos }) => allPos.count,
-          display: (val, _, { allPos }) => (val > 0 ? val : `0 (furthest ${allPos.furthest})`),
+          displayCompact: (val, _, { allPos }) =>
+            val > 0 ? val : `0 (furthest ${allPos.furthest})`,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Most Hits",
           value: ({ hits }) => hits.most,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
         {
           label: "Least Hits",
           value: ({ hits }) => hits.least,
-          display: (val) => val,
+          displayCompact: (val) => val,
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
-        {
+        floatField({
           label: "Average Hits",
           value: ({ hits }) => hits.perGameMean,
-          display: meanFmt.format,
-          cmp: (a, b) => Math.round((a - b) * 100),
-          highlight: (val, { highest }) => ({ best: Math.abs((val - highest) * 100) < 1 }),
-        },
+          format: meanFmt,
+          highlight: { best: "highest" },
+        }),
       ] satisfies SummaryFieldDef<number, PlayerSummaryValues27>[],
       roundsFields: {
         field: "total",

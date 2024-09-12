@@ -52,10 +52,10 @@ table#gameSummaryTable {
   & td.favourite:not(.best) {
     background-color: #ceff7e;
   }
-  & tr[data-summary-row^="rounds"] {
+  & tr[data-summary-row^="round"] {
     font-size: 0.9em;
   }
-  & tr:not([data-summary-row^="rounds"]) + tr[data-summary-row^="rounds"] {
+  & tr:not([data-summary-row^="round"]) + tr[data-summary-row^="round"] {
     & th,
     & td {
       border-top: grey 1px dashed;

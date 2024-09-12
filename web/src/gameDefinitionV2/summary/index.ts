@@ -9,15 +9,109 @@ import {
   type RoundsAccumulatorPart,
   type RoundsFavouritesSpecDef,
 } from "./roundStats";
-import type { ClassBindings } from "@/utils";
+import { floatCompareFunc, mapObjectValues, type ClassBindings } from "@/utils";
 import { createSummaryComponent } from "./summaryComponent";
+
+type FloatingFieldDef<PlayerGameStats extends {}> = (Pick<
+  SummaryFieldDef<number, PlayerGameStats>,
+  "label" | "value"
+> & {
+  highlight?:
+    | ((
+        cmpValue: (val: number) => number,
+        limits: { highest: number; lowest: number },
+      ) => ClassBindings)
+    | {
+        [clas: string]: "highest" | "lowest" | number;
+      };
+  displayCompact?: (
+    valueFormatted: string,
+    delta: number | undefined,
+    playerData: PlayerGameStats,
+  ) => VNodeChild;
+  extended?: (value: { raw: number; formatted: string }, playerData: PlayerGameStats) => VNodeChild;
+}) &
+  (
+    | {
+        maximumFractionDigits: number;
+        format?: Intl.NumberFormatOptions;
+      }
+    | {
+        maximumFractionDigits?: never;
+        format: Intl.NumberFormat;
+      }
+  );
+
+export const floatField = <PlayerGameStats extends {}>({
+  label,
+  value,
+  displayCompact,
+  extended,
+  ...def
+}: FloatingFieldDef<PlayerGameStats>): SummaryFieldDef<number, PlayerGameStats> => {
+  const format =
+    def.format instanceof Intl.NumberFormat
+      ? def.format
+      : new Intl.NumberFormat(undefined, {
+          maximumFractionDigits: def.maximumFractionDigits,
+          ...def.format,
+        });
+  const { maximumFractionDigits, style } = format.resolvedOptions();
+  const maxFD = style === "percent" ? (maximumFractionDigits ?? 0) + 2 : maximumFractionDigits;
+  const cmp = maxFD ? floatCompareFunc(maxFD) : (a: number, b: number) => a - b;
+  // const highlight: SummaryFieldDef<number, PlayerGameStats>["highlight"] = (() => {
+  //   switch (typeof def.highlight) {
+  //     case "undefined":
+  //       return () => undefined;
+  //     case "function":
+  //       return (value, limits) => (def.highlight as (cmpValue: (val: number) => number, limits: { highest: number; lowest: number }) => ClassBindings)((val) => cmp(value, val), limits);
+  //     case "object":
+  //       return (value, limits) => mapObjectValues(def.highlight, ())
+  //   }
+  // })();
+  const highlight: SummaryFieldDef<number, PlayerGameStats>["highlight"] =
+    def.highlight === undefined
+      ? () => undefined
+      : typeof def.highlight === "object"
+        ? (value, limits) =>
+            mapObjectValues(
+              def.highlight as {
+                [clas: string]: "highest" | "lowest" | number;
+              },
+              (val) =>
+                cmp(
+                  value,
+                  val === "highest" ? limits.highest : val === "lowest" ? limits.lowest : val,
+                ) === 0,
+            )
+        : (value, limits) =>
+            (
+              def.highlight as (
+                cmpValue: (val: number) => number,
+                limits: { highest: number; lowest: number },
+              ) => ClassBindings
+            )((val) => cmp(value, val), limits);
+  return {
+    label,
+    value,
+    cmp,
+    highlight,
+    displayCompact: displayCompact
+      ? (value, delta, playerData) => displayCompact(format.format(value), delta, playerData)
+      : format.format,
+    extended: extended
+      ? (value, playerData) => extended({ raw: value, formatted: format.format(value) }, playerData)
+      : undefined,
+  };
+};
 
 export type SummaryFieldDef<T, PlayerGameStats extends {}> = {
   label: string;
   value: (playerData: PlayerGameStats, playerId: string) => T;
   cmp: (a: T, b: T) => number;
   highlight: (value: T, limits: { highest: T; lowest: T }) => ClassBindings;
-  display: (value: T, delta: T | undefined, playerData: PlayerGameStats) => VNodeChild;
+  /** The content of the <td> cell for a given player */
+  displayCompact: (value: T, delta: T | undefined, playerData: PlayerGameStats) => VNodeChild;
   /** Tooltip / hover element */
   extended?: (value: T, playerData: PlayerGameStats) => VNodeChild;
   //TODO: implement click-filter

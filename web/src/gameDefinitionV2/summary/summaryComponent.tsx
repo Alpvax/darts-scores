@@ -164,20 +164,24 @@ export const createSummaryComponent = <
             </tr>
           </thead>
           <tbody>
-            {fieldData.value.map(({ label, highest, lowest, playerValues, highlight, display }) => (
-              <tr data-summary-row={label /*path*/}>
-                <th class="rowLabel">{label}</th>
-                {playerValues.map(({ pid, value, delta }) => {
-                  // const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
-                  return (
-                    <td class={extendClass(highlight(value, { highest, lowest }), "summaryValue")}>
-                      {display(value, delta, props.summaries.get(pid)!)}
-                      {/*TODO: extended click/hover display*/}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {fieldData.value.map(
+              ({ label, highest, lowest, playerValues, highlight, displayCompact }) => (
+                <tr data-summary-row={label /*path*/}>
+                  <th class="rowLabel">{label}</th>
+                  {playerValues.map(({ pid, value, delta }) => {
+                    // const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
+                    return (
+                      <td
+                        class={extendClass(highlight(value, { highest, lowest }), "summaryValue")}
+                      >
+                        {displayCompact(value, delta, props.summaries.get(pid)!)}
+                        {/*TODO: extended click/hover display*/}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ),
+            )}
             {roundsData.value === undefined
               ? undefined
               : roundsData.value.map(({ key, label, playerData }) => (
