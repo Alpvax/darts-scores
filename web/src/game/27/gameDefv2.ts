@@ -9,6 +9,10 @@ import {
 import type { RoundRowsMeta } from "@/gameDefinitionV2/summary/summaryComponent";
 import type { NumericRange } from "@/utils/types";
 import dbAdapter27 from "./database";
+import type {
+  RoundFieldGetterFor,
+  RoundsAccumulatorPart,
+} from "@/gameDefinitionV2/summary/roundStats";
 
 export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
   { startScore: number; jesus?: boolean },
@@ -282,20 +286,40 @@ export const summaryAccumulator27 = makeSummaryAccumulatorFactoryFor(
   },
   {
     cliffs: {
-      get: ({ cliff }) => cliff.total,
-      cmp: "highest",
+      label: "Cliffs",
+      get: ({ cliff }) => ({
+        total: cliff.total,
+        rateDivisor: cliff.roundsPlayed,
+      }),
+      cmp: { best: "highest", precision: 2 },
+      ignoreValue: 0,
     },
     doubleDoubles: {
-      get: ({ dd }) => dd.total,
-      cmp: "highest",
+      label: "Double Doubles",
+      get: ({ dd }) => ({
+        total: dd.total,
+        rateDivisor: dd.roundsPlayed,
+      }),
+      cmp: { best: "highest", precision: 2 },
+      ignoreValue: 0,
     },
     total: {
-      get: ({ hits }) => hits.total,
-      cmp: "highest",
+      label: "Total hits",
+      get: ({ hits }) => ({
+        total: hits.total,
+        rateDivisor: hits.roundsPlayed.all,
+      }),
+      cmp: { best: "highest", precision: 2 },
+      ignoreValue: 0,
     },
     nonZero: {
-      get: ({ hits: { roundsPlayed } }) => roundsPlayed.all - (roundsPlayed.counts.get(0) ?? 0),
-      cmp: "highest",
+      label: "Non-zero hits",
+      get: ({ hits: { roundsPlayed } }) => ({
+        total: roundsPlayed.all - (roundsPlayed.counts.get(0) ?? 0),
+        rateDivisor: roundsPlayed.all,
+      }),
+      cmp: { best: "highest", precision: 2 },
+      ignoreValue: 0,
     },
   },
 );
@@ -308,15 +332,23 @@ export type PlayerSummaryValues27 =
   ReturnType<typeof summaryAccumulator27.create> extends SummaryAccumulator<
     infer G,
     infer SummaryPartTypes,
-    infer FavFields
+    infer RoundsField
   >
-    ? PlayerSummaryValues<G, SummaryPartTypes, FavFields>
+    ? PlayerSummaryValues<G, SummaryPartTypes, RoundsField>
     : never;
 export type RoundRowsMeta27 =
   ReturnType<typeof summaryAccumulator27.create> extends SummaryAccumulator<
     infer G,
     any,
-    infer FavFields
+    infer RoundsField
   >
-    ? RoundRowsMeta<G, FavFields>
+    ? RoundRowsMeta<G, RoundsField>
+    : never;
+export type RoundsField27 =
+  ReturnType<typeof summaryAccumulator27.create> extends SummaryAccumulator<
+    any,
+    any,
+    infer RoundsField
+  >
+    ? RoundsField
     : never;

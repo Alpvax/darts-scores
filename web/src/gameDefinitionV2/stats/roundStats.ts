@@ -143,11 +143,11 @@ type TS = RoundStatDefinition<{ s1: boolean; s2: number }, boolean, undefined>;
 
 export const defineRoundStats = <
   Stats,
-  Fields extends Record<any, DefineRoundStatsDefFunc<Stats, any>>,
+  RoundsField extends Record<any, DefineRoundStatsDefFunc<Stats, any>>,
 >(
-  fields: Fields,
+  fields: RoundsField,
 ) => {
-  (Object.entries(fields) as [keyof Fields, DefineRoundStatsDefFunc<Stats, any>][]).reduce(
+  (Object.entries(fields) as [keyof RoundsField, DefineRoundStatsDefFunc<Stats, any>][]).reduce(
     (obj, [key, def]) => Object.assign(obj, { [key]: {} }),
   );
 };

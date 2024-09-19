@@ -181,6 +181,7 @@ export const makePlayerGameState: PlayerGameStateFactory = <
       return Object.defineProperty(
         {
           state,
+          // @ts-expect-error
           getRaw: (key) => values[key],
           getValue,
           // @ts-expect-error

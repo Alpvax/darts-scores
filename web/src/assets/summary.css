@@ -1,5 +1,6 @@
 table#gameSummaryTable {
   font-size: 1.8vh;
+  border-collapse: collapse;
   & tbody {
     font-size: 0.8em;
     line-height: 1.2;
@@ -7,10 +8,48 @@ table#gameSummaryTable {
   & tbody tr:hover {
     background-color: var(--colour-table-hover);
   }
+
   & .rowLabel {
     font-weight: bold;
     text-align: right;
     white-space: nowrap;
+  }
+
+  & tr.expandableRow > th::before {
+    position: absolute;
+    left: 5px;
+    content: "−";
+    font-weight: bold;
+    color: blue;
+  }
+  & tr.expandableRow:not(.parentRow) > th::before {
+    content: "+";
+  }
+  & tr.parentRow {
+    background-color: var(--colour-table-hover);
+  }
+  & tr.childRow {
+    font-size: 0.8em;
+    border-collapse: collapse;
+
+    & th,
+    tr {
+      border-width: 0px;
+    }
+
+    & .rowLabel {
+      font-weight: normal;
+      &::before {
+        position: absolute;
+        left: 0.3em;
+        font-size: small;
+        content: "├";
+        color: blue;
+      }
+    }
+  }
+  & tr.childRow:has(+ tr:not(.childRow)) .rowLabel::before {
+    content: "└";
   }
 
   & .playerName {
@@ -52,7 +91,7 @@ table#gameSummaryTable {
   & td.favourite:not(.best) {
     background-color: #ceff7e;
   }
-  & tr[data-summary-row^="round"] {
+  & tr[data-summary-row^="round"]:not(.childRow) {
     font-size: 0.9em;
   }
   & tr:not([data-summary-row^="round"]) + tr[data-summary-row^="round"] {

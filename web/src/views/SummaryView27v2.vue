@@ -24,6 +24,7 @@ export default defineComponent({
   },
   props: {},
   setup: (/*TODO: props*/) => {
+    const config = use27Config();
     const accumulator = ref(summaryAccumulator27.create());
     const players = ref([
       //TODO: proper players
@@ -169,7 +170,7 @@ export default defineComponent({
     games.value.push(makeGame({ identifier: "all tied", all: true, forceTie: true }));
     // games.value.push(makeGame({ identifier: "fatnicks", length: 0 }));
 
-    const realWinsPlayers = use27Config().realWinsPlayers.readonlyRef();
+    const realWinsPlayers = config.realWinsPlayers.readonlyRef();
     watch(
       [games, realWinsPlayers],
       ([newGames]) => {
@@ -200,6 +201,8 @@ export default defineComponent({
       style: "percent",
     });
     const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
+
+    const roundField = config.summaryRoundsField.mutableRef("local");
 
     return {
       players,
@@ -294,6 +297,21 @@ export default defineComponent({
           highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
           extended: (_, { cliffs: { available, perGameMean, rate, ...cliffs } }) =>
             JSON.stringify(cliffs),
+          displayExpanded: [
+            floatField({
+              label: "Rate",
+              value: ({ cliffs }) => cliffs.rate,
+              format: rateFmt,
+              highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
+            }),
+            {
+              label: "Total",
+              value: ({ cliffs }) => cliffs.total,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
+          ],
         }),
         floatField({
           label: "Double Doubles",
@@ -302,6 +320,30 @@ export default defineComponent({
           highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
           extended: (_, { doubleDoubles: { available, perGameMean, rate, ...dd } }) =>
             JSON.stringify(dd),
+          displayExpanded: [
+            "Rate",
+            {
+              label: "Total",
+              value: ({ doubleDoubles }) => doubleDoubles.total,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
+            {
+              label: "Most / game",
+              value: ({ doubleDoubles }) => doubleDoubles.most,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
+            {
+              label: "Fewest / game",
+              value: ({ doubleDoubles }) => doubleDoubles.least,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
+          ],
         }),
         {
           label: "Hans",
@@ -369,14 +411,24 @@ export default defineComponent({
           highlight: { best: "highest" },
         }),
       ] satisfies SummaryFieldDef<number, PlayerSummaryValues27>[],
-      roundsFields: {
-        field: "total",
-        display: rateFmt.format,
-        rows: Array.from({ length: 20 }, (_, i) => ({
-          key: `round.${i}`,
-          label: (i + 1).toString(),
-        })),
-      } satisfies RoundRowsMeta27,
+      roundField,
+      roundsFields: computed(
+        () =>
+          ({
+            field: roundField.value,
+            display: rateFmt,
+            labels: {
+              cliffs: "Cliff Rate",
+              doubleDoubles: "Double double rate",
+              total: "Total hit rate",
+              nonZero: "Nonzero hit rate",
+            },
+            rows: Array.from({ length: 20 }, (_, i) => ({
+              key: `round.${i}`,
+              label: (i + 1).toString(),
+            })),
+          }) satisfies RoundRowsMeta27,
+      ),
     };
   },
 });
@@ -388,6 +440,11 @@ export default defineComponent({
     :summaries="summaries"
     :field-data="fieldData"
     :rounds-fields="roundsFields"
+    @change-rounds-field="
+      (f) => {
+        roundField = f;
+      }
+    "
   />
   <!-- <Summary27
     :players="players"
