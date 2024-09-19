@@ -48,8 +48,14 @@ table#gameSummaryTable {
       }
     }
   }
-  & tr.childRow:has(+ tr:not(.childRow)) .rowLabel::before {
-    content: "└";
+  & tr.childRow:has(+ tr:not(.childRow)) {
+    & .rowLabel::before {
+      content: "└";
+    }
+    & th,
+    td {
+      border-bottom: grey 0.5px dotted;
+    }
   }
   & tr.primaryChildRow .rowLabel {
     text-decoration: underline;
@@ -101,7 +107,7 @@ table#gameSummaryTable {
   & tr:not([data-summary-row^="round"]) + tr[data-summary-row^="round"] {
     & th,
     & td {
-      border-top: grey 1px dashed;
+      border-top: darkgray 1px dashed;
     }
   }
 }
