@@ -4,6 +4,7 @@ import type { PlayerSummaryValues, SummaryAccumulatorParts, SummaryFieldDef } fr
 import PlayerName from "@/components/PlayerName";
 import { extendClass, mapObjectValues, type ClassBindings } from "@/utils";
 import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
+import type { ContextMenuItem } from "@/components/contextmenu";
 
 export type RoundRowsMeta<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
@@ -71,6 +72,17 @@ export const createSummaryComponent = <
       const expandedRows = ref({
         fields: new Set<number>(),
         rounds: new Set<any>(),
+      });
+
+      const roundsContextMenu = computed(() => {
+        const labels = props.roundsFields?.labels ?? ({} as Record<RoundsField, string>);
+        return ([...Object.keys(parts.rounds.meta)] as RoundsField[]).map(
+          (k) =>
+            ({
+              label: `Display ${labels[k] ?? k}`,
+              action: () => emit("changeRoundsField", k),
+            }) satisfies ContextMenuItem,
+        );
       });
 
       const fieldData = computed(() =>
@@ -396,6 +408,7 @@ export const createSummaryComponent = <
                 : roundsData.value.map(({ key, label, expanded, expandable, playerData }) => (
                     <>
                       <tr
+                        v-context-menu={roundsContextMenu.value}
                         class={extendClass({
                           parentRow: expanded,
                           expandableRow: expandable,
@@ -441,6 +454,7 @@ export const createSummaryComponent = <
                             ][]
                           ).map(([k, playerVals]) => (
                             <tr
+                              v-context-menu={roundsContextMenu.value}
                               class={extendClass(
                                 { primaryChildRow: k === props.roundsFields?.field },
                                 "childRow",
@@ -449,7 +463,6 @@ export const createSummaryComponent = <
                               onClick={() => {
                                 if (props.roundsFields?.field !== k) {
                                   emit("changeRoundsField", k);
-                                  expandedRows.value.rounds.delete(key);
                                 }
                               }}
                             >

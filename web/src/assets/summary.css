@@ -51,6 +51,10 @@ table#gameSummaryTable {
   & tr.childRow:has(+ tr:not(.childRow)) .rowLabel::before {
     content: "└";
   }
+  & tr.primaryChildRow .rowLabel {
+    text-decoration: underline;
+    font-weight: bold;
+  }
 
   & .playerName {
     white-space: normal;
