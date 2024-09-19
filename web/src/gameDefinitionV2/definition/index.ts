@@ -1,6 +1,4 @@
-import type { VNodeChild } from "vue";
-import type { GameInstance } from "../gameInstance";
-import type { GameResult, PlayerGameData } from "../gameResult";
+import type { GameResult } from "../gameResult";
 import { CollectionReference, DocumentReference } from "firebase/firestore";
 import type {
   PlayerDataRaw,
@@ -21,28 +19,6 @@ import type { TurnMeta } from "../rounds";
 import { expandRoundStats } from "../summary/roundStats";
 
 type PositionRowLocation = "head" | "body" | "foot" | "none";
-
-export type GameDefinitionT<
-  GameType extends string,
-  Instance extends GameInstance<any, any, any, any, PlayerId>,
-  DBTurns extends {} | [],
-  DBExtra extends {} = {},
-  PlayerId extends string = string,
-> = {
-  gameType: GameType;
-  createGame(players: PlayerId[]): Instance;
-  loadGame(gameResult: GameResult<PlayerGameData<DBTurns, DBExtra>>): Instance;
-  config?: any; //TODO: game config?
-  mutableGameComponent(
-    players: PlayerId[],
-    mutable: boolean,
-    posRowLocation: PositionRowLocation,
-  ): VNodeChild;
-  immutableGameComponent(
-    gameResult: GameResult<PlayerGameData<DBTurns, DBExtra>>,
-    posRowLocation: PositionRowLocation,
-  ): VNodeChild;
-};
 
 export type DatabaseAdapter<
   Config,

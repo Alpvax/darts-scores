@@ -311,6 +311,20 @@ export default defineComponent({
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
+            {
+              label: "Most / game",
+              value: ({ cliffs }) => cliffs.most,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
+            {
+              label: "Fewest / game",
+              value: ({ cliffs }) => cliffs.least,
+              displayCompact: (val) => val,
+              cmp: (a, b) => a - b,
+              highlight: (val, { highest }) => ({ best: val === highest }),
+            },
           ],
         }),
         floatField({
