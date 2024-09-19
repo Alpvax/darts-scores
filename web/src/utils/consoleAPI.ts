@@ -2,7 +2,7 @@
 
 import { useBasicConfig } from "@/config/baseConfigLayered";
 import { makeConsoleApi, type LayeredConfigAPIFor } from "@/config/layeredConfig";
-// import { use27Config } from "@/game/27/config";
+import { use27Config } from "@/game/27/config";
 
 declare global {
   interface Window {
@@ -19,7 +19,7 @@ declare global {
           //   displaySelection: boolean;
           // };
           baseConfig: LayeredConfigAPIFor<typeof useBasicConfig>;
-          // config27: LayeredConfigAPIFor<typeof use27Config>;
+          config27: LayeredConfigAPIFor<typeof use27Config>;
         };
   }
 }
@@ -36,7 +36,7 @@ export const initialiseAPI = (): void => {
         window.preferences = Object.create(
           {
             baseConfig: makeConsoleApi(useBasicConfig),
-            // config27: makeConsoleApi(use27Config),
+            config27: makeConsoleApi(use27Config),
             // guests: Object.create({ flags: DisplayState }, {
             //   displayGames: displayFlagProp(DisplayState.GAMES),
             //   displaySummary: displayFlagProp(DisplayState.SUMMARY),
