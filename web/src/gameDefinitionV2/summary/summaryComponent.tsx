@@ -432,7 +432,7 @@ export const createSummaryComponent = <
                           ></td>
                         ) : (
                           playerData[props.roundsFields!.field].map(
-                            ({ best, favourite, value }) => (
+                            ({ best, favourite, value, delta }) => (
                               <td
                                 class={extendClass(
                                   { favourite, best },
@@ -440,7 +440,11 @@ export const createSummaryComponent = <
                                   "roundSummaryValue",
                                 )}
                               >
-                                {roundValueDisplayFuncs.value(props.roundsFields!.field, value)}
+                                {roundValueDisplayFuncs.value(
+                                  props.roundsFields!.field,
+                                  value,
+                                  delta,
+                                )}
                               </td>
                             ),
                           )
@@ -469,7 +473,7 @@ export const createSummaryComponent = <
                               <th class="rowLabel">
                                 {props.roundsFields!.labels ? props.roundsFields!.labels[k] : k}
                               </th>
-                              {playerVals.map(({ best, favourite, value }) => (
+                              {playerVals.map(({ best, favourite, value, delta }) => (
                                 <td
                                   class={extendClass(
                                     { favourite, best },
@@ -477,7 +481,7 @@ export const createSummaryComponent = <
                                     "roundSummaryValue",
                                   )}
                                 >
-                                  {roundValueDisplayFuncs.value(k, value)}
+                                  {roundValueDisplayFuncs.value(k, value, delta)}
                                 </td>
                               ))}
                             </tr>
