@@ -423,16 +423,16 @@ export const roundStatsAccumulator = <
           if (typ === "boolean") {
             const statValue = +(val as boolean);
             let statAcc = prevRoundStats[statKey] as unknown as BoolStatAcc | undefined;
-            const total = (statAcc?.total ?? 0) + statValue;
+            const prevTotal = statAcc?.total ?? 0;
             const ret: BoolStatAcc = {
               total: statValue,
               roundsPlayed: 1,
-              perGameMean: total / numGames,
-              rate: statValue,
+              perGameMean: (prevTotal + statValue) / numGames,
+              rate: statValue / ((statAcc?.roundsPlayed ?? 0) + 1),
             };
             if (statAcc !== undefined) {
-              ret.perGameMean -= (total - statValue) / (numGames - 1);
-              ret.rate -= (total - statValue) / statAcc.roundsPlayed;
+              ret.perGameMean -= prevTotal / (numGames - 1);
+              ret.rate -= prevTotal / statAcc.roundsPlayed;
             }
             return ret;
           } else if (typ === "number") {
@@ -443,7 +443,7 @@ export const roundStatsAccumulator = <
                 highest: statValue,
                 lowest: statValue,
                 total: statValue,
-                perGameMean: statValue,
+                perGameMean: statValue / numGames,
                 roundsPlayed: {
                   all: 1,
                   counts: new Map([[statValue, 1]]),
@@ -457,9 +457,13 @@ export const roundStatsAccumulator = <
                 perGameMean:
                   (statAcc.total + statValue) / numGames - statAcc.total / (numGames - 1),
                 roundsPlayed: {
-                  all: 1,
+                  // DO NOT convert to deltas or else rate deltas will always be multiplied by 100%
+                  all: statAcc.roundsPlayed.all + 1,
                   counts: new Map(
-                    [...statAcc.roundsPlayed.counts].map(([k, v]) => [k, k === statValue ? 1 : 0]),
+                    [...statAcc.roundsPlayed.counts].map(([k, v]) => [
+                      k,
+                      k === statValue ? v + 1 : v,
+                    ]),
                   ),
                 },
               } satisfies NumStatAcc;

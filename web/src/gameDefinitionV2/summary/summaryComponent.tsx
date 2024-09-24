@@ -117,7 +117,7 @@ export const createSummaryComponent = <
                     pid,
                     value,
                     delta:
-                      deltaVal !== undefined && def.deltaDirection
+                      deltaVal !== undefined && def.deltaDirection && def.cmp(deltaVal, 0) !== 0
                         ? {
                             val: deltaVal,
                             direction:
@@ -191,7 +191,11 @@ export const createSummaryComponent = <
                                   summary.numGames,
                                   roundKey,
                                 )
-                              : get(pDelta.rounds.valuesRaw[roundKey], pDelta.numGames, roundKey)
+                              : get(
+                                  pDelta.rounds.valuesRaw[roundKey],
+                                  summary.numGames + pDelta.numGames,
+                                  roundKey,
+                                )
                             : undefined;
                         acc[k].push({
                           pid,
@@ -294,7 +298,13 @@ export const createSummaryComponent = <
 
       return () => (
         <>
-          <table id="gameSummaryTable">
+          <table
+            id="gameSummaryTable"
+            class={{
+              hasValues: [...props.summaries.values()].some(({ numGames }) => numGames > 0),
+              hasDeltas: props.deltaGame !== undefined,
+            }}
+          >
             <thead>
               <tr>
                 {slots.topLeftCell ? slots.topLeftCell() : <th>&nbsp;</th>}
@@ -413,7 +423,9 @@ export const createSummaryComponent = <
                                   pid,
                                   value: val,
                                   delta:
-                                    deltaVal !== undefined && child.deltaDirection
+                                    deltaVal !== undefined &&
+                                    child.deltaDirection &&
+                                    child.cmp(deltaVal, 0) !== 0
                                       ? {
                                           val: deltaVal,
                                           direction:

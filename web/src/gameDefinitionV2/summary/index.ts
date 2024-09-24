@@ -294,37 +294,32 @@ export const makeSummaryAccumulatorFactoryFor = <
         gameCount: 0,
       };
 
-      const bOtotalOutright = v.totalOutright + outrightDelta;
-      const bOtiebreakWins = v.tiebreakWins + tiebreakDelta;
-      const bOtiebreaksPlayed = v.tiebreaksPlayed + tieDelta;
-      const bOtotal = v.total + anyDelta;
-
-      const totalOutright = all.totalOutright + outrightDelta;
-      const tiebreakWins = all.tiebreakWins + tiebreakDelta;
-      const tiebreaksPlayed = all.tiebreaksPlayed + tieDelta;
-      const total = all.total + anyDelta;
       return {
         all: {
-          totalOutright,
-          meanOutright: totalOutright / numGames,
-          tiebreakWins,
-          tiebreaksPlayed,
-          tiebreakWinRate: tiebreakWins / tiebreaksPlayed,
-          total,
-          mean: total / numGames,
+          totalOutright: outrightDelta,
+          meanOutright: (all.totalOutright + outrightDelta) / numGames - all.meanOutright,
+          tiebreakWins: tiebreakDelta,
+          tiebreaksPlayed: tieDelta,
+          tiebreakWinRate:
+            (all.tiebreakWins + tiebreakDelta) / (all.tiebreaksPlayed + tieDelta) -
+            all.tiebreakWinRate,
+          total: anyDelta,
+          mean: (all.total + anyDelta) / numGames - all.mean,
         },
         byOpponents: new ArrayKeyedMap([
           [
             key,
             {
-              totalOutright: bOtotalOutright,
-              meanOutright: bOtotalOutright / numGames,
-              tiebreakWins: bOtiebreakWins,
-              tiebreaksPlayed: bOtiebreaksPlayed,
-              tiebreakWinRate: bOtiebreakWins / bOtiebreaksPlayed,
-              total: bOtotal,
-              mean: bOtotal / numGames,
-              gameCount: v.gameCount + 1,
+              totalOutright: outrightDelta,
+              meanOutright: (v.totalOutright + outrightDelta) / numGames - v.meanOutright,
+              tiebreakWins: tiebreakDelta,
+              tiebreaksPlayed: tieDelta,
+              tiebreakWinRate:
+                (v.tiebreakWins + tiebreakDelta) / (v.tiebreaksPlayed + tieDelta) -
+                v.tiebreakWinRate,
+              total: anyDelta,
+              mean: (v.total + anyDelta) / numGames - v.mean,
+              gameCount: 1,
             },
           ],
         ]),
@@ -605,7 +600,7 @@ export class SummaryAccumulator<
       const numGames = prev.numGames + 1;
       const opponents = gameResult.playerOrder.filter((p) => p !== pid);
       const pStats: StatsTypeForGame<G> = playerStats(pData);
-      const deltaSummary = { numGames } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>;
+      const deltaSummary = { numGames: 1 } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>;
       for (const [key, part] of Object.entries(this.parts) as [
         keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
         SummaryPartAccumulator<StatsTypeForGame<G>, any>,

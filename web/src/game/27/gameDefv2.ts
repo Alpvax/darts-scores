@@ -9,10 +9,6 @@ import {
 import type { RoundRowsMeta } from "@/gameDefinitionV2/summary/summaryComponent";
 import type { NumericRange } from "@/utils/types";
 import dbAdapter27 from "./database";
-import type {
-  RoundFieldGetterFor,
-  RoundsAccumulatorPart,
-} from "@/gameDefinitionV2/summary/roundStats";
 
 export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
   { startScore: number; jesus?: boolean },
