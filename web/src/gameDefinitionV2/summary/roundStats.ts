@@ -188,6 +188,7 @@ type FavSpecCmpDefObj = {
    */
   precision?: number;
 };
+export type ComparisonResult = "better" | "equal" | "worse";
 type FavSpecCmpDefFunc = {
   /**
    * Whether the stat is deemed a favourite
@@ -197,7 +198,7 @@ type FavSpecCmpDefFunc = {
    * `"equal"` if it is equal, so should be added to the set.
    * `"worse"` if the value is worse than the current favourite.
    */
-  (val: number, prev: number): "better" | "equal" | "worse";
+  (val: number, prev: number): ComparisonResult;
 };
 export const makeFavCmpFromDir = (dir: FavSpecCmpDefDir): FavSpecCmpDefFunc =>
   dir === "highest"
@@ -332,16 +333,6 @@ type RoundsFavourites<RoundsField extends string = never, RoundKeys = string> = 
   [K in RoundsField]?: FavDataSingle<RoundKeys>;
 };
 
-type T27Turns = {
-  valueType: NumericRange<4>;
-  statsType: { cliff: boolean; dd: boolean; hits: NumericRange<4> };
-  length: 20;
-};
-type T27GD = GameDefinition<any, any, any, any, any, T27Turns, any, any, any>;
-type TGT = GameTurnStatsType<T27GD>;
-type TAcc = RoundsAccumulatorPart<T27GD, "cliffs" | "total" | "dd" | "nonZero">;
-type TFav = RoundsFieldDef<T27GD, "cliffs" | "total" | "dd" | "nonZero">;
-
 export type RoundsAccumulatorPart<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   RoundsField extends string,
@@ -354,13 +345,10 @@ export type RoundsAccumulatorPart<
   {
     [K in RoundsField]: {
       get: RoundFieldGetterFor<G, number>;
+      delta?: RoundFieldGetterFor<G, number>;
       cmp: FavSpecCmpDefFunc;
     };
   }
->;
-type T = RoundsAccumulatorPart<
-  typeof gameDefinition27,
-  "cliff" | "doubleDouble" | "total" | "nonZero"
 >;
 
 export const roundStatsAccumulator = <
@@ -422,6 +410,122 @@ export const roundStatsAccumulator = <
       valuesRaw: {} as RoundStatsAccumulatedValues<G>,
       favourites: {} as RoundsFavourites<RoundsField, keyof RoundStatsAccumulatedValues<G>>,
     }),
+    delta: ({ valuesRaw }, pData, numGames) => {
+      type TurnStats = GameTurnStatsType<G>;
+      const roundDeltas = {} as typeof valuesRaw;
+      for (const [roundKey, roundStats] of Object.entries(pData).filter(([k]) =>
+        k.startsWith("round."),
+      ) as [keyof typeof valuesRaw, TurnStats[keyof TurnStats]][]) {
+        const prevRoundStats = valuesRaw[roundKey] ?? ({} as any);
+        // @ts-expect-error
+        roundDeltas[roundKey] = mapObjectValues(roundStats as any, (val, statKey) => {
+          const typ = typeof val;
+          if (typ === "boolean") {
+            const statValue = +(val as boolean);
+            let statAcc = prevRoundStats[statKey] as unknown as BoolStatAcc | undefined;
+            const total = (statAcc?.total ?? 0) + statValue;
+            const ret: BoolStatAcc = {
+              total: statValue,
+              roundsPlayed: 1,
+              perGameMean: total / numGames,
+              rate: statValue,
+            };
+            if (statAcc !== undefined) {
+              ret.perGameMean -= (total - statValue) / (numGames - 1);
+              ret.rate -= (total - statValue) / statAcc.roundsPlayed;
+            }
+            return ret;
+          } else if (typ === "number") {
+            const statValue = val as number;
+            let statAcc = prevRoundStats[statKey] as unknown as NumStatAcc | undefined;
+            if (statAcc === undefined) {
+              return {
+                highest: statValue,
+                lowest: statValue,
+                total: statValue,
+                perGameMean: statValue,
+                roundsPlayed: {
+                  all: 1,
+                  counts: new Map([[statValue, 1]]),
+                },
+              } satisfies NumStatAcc;
+            } else {
+              return {
+                highest: Math.max(0, statValue - statAcc.highest),
+                lowest: Math.min(0, statValue - statAcc.lowest),
+                total: statValue,
+                perGameMean:
+                  (statAcc.total + statValue) / numGames - statAcc.total / (numGames - 1),
+                roundsPlayed: {
+                  all: 1,
+                  counts: new Map(
+                    [...statAcc.roundsPlayed.counts].map(([k, v]) => [k, k === statValue ? 1 : 0]),
+                  ),
+                },
+              } satisfies NumStatAcc;
+            }
+          } else {
+            console.warn(
+              `Unrecognised stat type: "${typ}" for "${String(roundKey)}" stat:`,
+              statKey,
+              val,
+            );
+          }
+        });
+      }
+      const favourites = mapObjectValues(roundsFieldsDef, (fieldDef, fieldKey) =>
+        (
+          Object.entries(valuesRaw) as unknown as [
+            keyof typeof valuesRaw,
+            BoolStatAcc | NumStatAcc,
+          ][]
+        ).reduce(
+          (acc, [roundKey, values]) => {
+            const { total, rateDivisor } = fieldDef.get(values, numGames, roundKey);
+            const value = rateDivisor
+              ? rateDivisor >= 1
+                ? total / rateDivisor
+                : (console.warn(`[${String(roundKey)},${fieldKey}] rateDivisor < 1:`, rateDivisor),
+                  total)
+              : total;
+            if (acc === undefined) {
+              const valid =
+                fieldDef.ignoreValue !== undefined
+                  ? fieldDef.cmp(value, fieldDef.ignoreValue) === "better"
+                  : true;
+              return {
+                rounds: new Set(valid ? [roundKey] : []),
+                value,
+                valid,
+              };
+            } else {
+              // console.log("Comparing faves:", pData.playerId, roundKey, value, acc, fieldDef.cmp(value, acc.value), fieldDef);//XXX
+              switch (fieldDef.cmp(value, acc.value)) {
+                case "better":
+                  acc.valid = true;
+                  acc.value = value;
+                  acc.rounds.clear();
+                // No break, you still want to add the round to the set
+                // eslint-disable-next-line no-fallthrough
+                case "equal": {
+                  if (acc.valid) {
+                    acc.rounds.add(roundKey);
+                  }
+                  break;
+                }
+                case "worse":
+                  break;
+              }
+              return acc;
+            }
+          },
+          undefined as
+            | { rounds: Set<keyof typeof valuesRaw>; value: number; valid: boolean }
+            | undefined,
+        ),
+      );
+      return { valuesRaw: roundDeltas, favourites };
+    },
     push: ({ valuesRaw }, pData, numGames) => {
       type TurnStats = GameTurnStatsType<G>;
       for (const [roundKey, roundStats] of Object.entries(pData).filter(([k]) =>

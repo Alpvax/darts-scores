@@ -6,6 +6,7 @@ import type { GameDefinition, PlayerDataForGame } from "../definition";
 import type { GameResult } from "../gameResult";
 import {
   roundStatsAccumulator,
+  type ComparisonResult,
   type RoundsAccumulatorPart,
   type RoundsFieldDef,
 } from "./roundStats";
@@ -24,11 +25,7 @@ type FloatingFieldDef<PlayerGameStats extends {}> = (Omit<
     | {
         [clas: string]: "highest" | "lowest" | number;
       };
-  displayCompact?: (
-    valueFormatted: string,
-    delta: number | undefined,
-    playerData: PlayerGameStats,
-  ) => VNodeChild;
+  displayCompact?: (valueFormatted: string, playerData: PlayerGameStats) => VNodeChild;
   extended?: (value: { raw: number; formatted: string }, playerData: PlayerGameStats) => VNodeChild;
 }) &
   (
@@ -89,7 +86,7 @@ export const floatField = <PlayerGameStats extends {}>({
     cmp,
     highlight,
     displayCompact: displayCompact
-      ? (value, delta, playerData) => displayCompact(format.format(value), delta, playerData)
+      ? (value, playerData) => displayCompact(format.format(value), playerData)
       : format.format,
     description,
     extended: extended
@@ -103,9 +100,10 @@ export type SummaryFieldDef<T, PlayerGameStats extends {}> = {
   label: string;
   value: (playerData: PlayerGameStats, playerId: string) => T;
   cmp: (a: T, b: T) => number;
+  deltaDirection?: ((delta: T) => ComparisonResult) | "positive" | "negative" | "neutral";
   highlight: (value: T, limits: { highest: T; lowest: T }) => ClassBindings;
   /** The content of the <td> cell for a given player */
-  displayCompact: (value: T, delta: T | undefined, playerData: PlayerGameStats) => VNodeChild;
+  displayCompact: (value: T, playerData: PlayerGameStats) => VNodeChild;
   /** The rows when expanded.
    * If string, it is the label for the row which is a duplicate of the compact row.
    * Otherwise, it is a SummaryFieldDef, without allowing for further nested rows.
@@ -139,6 +137,13 @@ export type SummaryPartAccumulator<PlayerData extends StatsTypeFor<any, any, any
     opponents: string[],
     tiebreakWinner?: string,
   ): SummaryPart;
+  delta?: (
+    accumulated: SummaryPart,
+    playerData: PlayerData,
+    numGames: number,
+    opponents: string[],
+    tiebreakWinner?: string,
+  ) => SummaryPart;
 };
 /**
  * Metadata used to accumulate player stats into part of a summary.
@@ -266,6 +271,65 @@ export const makeSummaryAccumulatorFactoryFor = <
       },
       byOpponents: new ArrayKeyedMap(),
     }),
+    delta: ({ all, byOpponents }, pData, numGames, opponents, tiebreakWinner) => {
+      const win =
+        pData.position.pos === 1 && (tiebreakWinner ? tiebreakWinner === pData.playerId : true);
+      const tie = pData.position.players.filter((pid: string) => pid !== pData.playerId).length > 0;
+
+      const tieDelta = tie ? 1 : 0;
+      const outrightDelta = win && !tie ? 1 : 0;
+      const tiebreakDelta = win && tie ? 1 : 0;
+      const anyDelta = win ? 1 : 0;
+
+      // Always sort to prevent duplicate entries spread through map
+      const key = opponents.toSorted();
+      const v = byOpponents.get(key) ?? {
+        totalOutright: 0,
+        meanOutright: 0,
+        tiebreakWins: 0,
+        tiebreaksPlayed: 0,
+        tiebreakWinRate: 0,
+        total: 0,
+        mean: 0,
+        gameCount: 0,
+      };
+
+      const bOtotalOutright = v.totalOutright + outrightDelta;
+      const bOtiebreakWins = v.tiebreakWins + tiebreakDelta;
+      const bOtiebreaksPlayed = v.tiebreaksPlayed + tieDelta;
+      const bOtotal = v.total + anyDelta;
+
+      const totalOutright = all.totalOutright + outrightDelta;
+      const tiebreakWins = all.tiebreakWins + tiebreakDelta;
+      const tiebreaksPlayed = all.tiebreaksPlayed + tieDelta;
+      const total = all.total + anyDelta;
+      return {
+        all: {
+          totalOutright,
+          meanOutright: totalOutright / numGames,
+          tiebreakWins,
+          tiebreaksPlayed,
+          tiebreakWinRate: tiebreakWins / tiebreaksPlayed,
+          total,
+          mean: total / numGames,
+        },
+        byOpponents: new ArrayKeyedMap([
+          [
+            key,
+            {
+              totalOutright: bOtotalOutright,
+              meanOutright: bOtotalOutright / numGames,
+              tiebreakWins: bOtiebreakWins,
+              tiebreaksPlayed: bOtiebreaksPlayed,
+              tiebreakWinRate: bOtiebreakWins / bOtiebreaksPlayed,
+              total: bOtotal,
+              mean: bOtotal / numGames,
+              gameCount: v.gameCount + 1,
+            },
+          ],
+        ]),
+      };
+    },
     push: ({ all, byOpponents }, pData, numGames, opponents, tiebreakWinner) => {
       const win =
         pData.position.pos === 1 && (tiebreakWinner ? tiebreakWinner === pData.playerId : true);
@@ -471,6 +535,41 @@ type WinsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, 
 type AccumulatorValuesLookup<Part extends SummaryPartAccumulator<any, any>> =
   Part extends SummaryPartAccumulator<any, infer T> ? T : never;
 
+const calcDefaultDeltas = <T>(prevVals: T, newVals: T, key?: string): T => {
+  switch (typeof newVals) {
+    case "number":
+      return (newVals - (prevVals as number)) as T;
+    case "bigint":
+      return (newVals - (prevVals as bigint)) as T;
+    case "object":
+      if (newVals instanceof Set) {
+        console.warn("Unsupported default type for deltas:", key, typeof newVals, newVals);
+        return newVals;
+      } else {
+        if (newVals === null) {
+          console.warn("Unsupported default type for deltas:", key, null);
+          return newVals;
+        }
+        if (newVals instanceof Map) {
+          type K = T extends Map<infer K, any> ? K : never;
+          type V = T extends Map<any, infer V> ? V : never;
+          return new Map(
+            ([...newVals] as [K, V][]).map(([k, v]) => [
+              k,
+              calcDefaultDeltas((prevVals as Map<K, V>).get(k), v, key ? `${key}.${k}` : String(k)),
+            ]),
+          ) as T;
+        }
+        type K = keyof T;
+        type V = T[K];
+        return mapObjectValues<V, V, K>(newVals, (v, k) =>
+          calcDefaultDeltas(prevVals[k], v, key ? `${key}.${String(k)}` : String(k)),
+        ) as T;
+      }
+  }
+  console.warn("Unsupported default type for deltas:", key, typeof newVals, newVals);
+  return newVals;
+};
 export class SummaryAccumulator<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   SummaryPartTypes extends { [k: string]: [any] | [any, any] } & {
@@ -493,38 +592,56 @@ export class SummaryAccumulator<
         keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
         SummaryPartAccumulator<StatsTypeForGame<G>, any>,
       ][]
-    ).reduce(
-      (summary, [key, part]) => {
-        summary.numGames = 0;
-        summary[key as keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>] = part.empty();
-        return summary;
-      },
-      {} as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
-    );
+    ).reduce((summary, [key, part]) => Object.assign(summary, { [key]: part.empty() }), {
+      numGames: 0,
+    } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>);
+  }
+  makeGameDeltas(
+    gameResult: GameResult<PlayerDataForGame<G>>,
+  ): Map<string, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>> {
+    const tiebreakWinner = gameResult.tiebreak?.winner;
+    return Object.entries(gameResult.results).reduce((deltaSummaries, [pid, pData]) => {
+      const prev = this.playerSummaries.get(pid) ?? this.makeEmptyPlayerSummary();
+      const numGames = prev.numGames + 1;
+      const opponents = gameResult.playerOrder.filter((p) => p !== pid);
+      const pStats: StatsTypeForGame<G> = playerStats(pData);
+      const deltaSummary = { numGames } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>;
+      for (const [key, part] of Object.entries(this.parts) as [
+        keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
+        SummaryPartAccumulator<StatsTypeForGame<G>, any>,
+      ][]) {
+        if (part.delta) {
+          deltaSummary[key] = part.delta(prev[key], pStats, numGames, opponents, tiebreakWinner);
+        } else {
+          deltaSummary[key] = calcDefaultDeltas(
+            prev[key],
+            part.push(prev[key], pStats, numGames, opponents, tiebreakWinner),
+            String(key),
+          );
+        }
+        deltaSummary;
+      }
+      deltaSummaries.set(pid, deltaSummary);
+      return deltaSummaries;
+    }, new Map<string, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>());
   }
   pushGame(gameResult: GameResult<PlayerDataForGame<G>>): void {
     for (const [pid, pData] of Object.entries(gameResult.results)) {
       const prev = this.playerSummaries.get(pid) ?? this.makeEmptyPlayerSummary();
       const numGames = prev.numGames + 1;
       const opponents = gameResult.playerOrder.filter((p) => p !== pid);
+      const pStats: StatsTypeForGame<G> = playerStats(pData);
       const newSummary = (
         Object.entries(this.parts) as [
           keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
           SummaryPartAccumulator<StatsTypeForGame<G>, any>,
         ][]
       ).reduce(
-        (summary, [key, part]) => {
-          summary.numGames = numGames;
-          summary[key] = part.push(
-            prev[key],
-            playerStats(pData),
-            numGames,
-            opponents,
-            gameResult.tiebreak?.winner,
-          );
-          return summary;
-        },
-        {} as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
+        (summary, [key, part]) =>
+          Object.assign(summary, {
+            [key]: part.push(prev[key], pStats, numGames, opponents, gameResult.tiebreak?.winner),
+          }),
+        { numGames } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
       );
       this.playerSummaries.set(pid, newSummary);
     }

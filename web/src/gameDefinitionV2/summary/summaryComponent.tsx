@@ -2,9 +2,16 @@ import { computed, defineComponent, ref, type PropType, type VNodeChild, type VN
 import type { GameDefinition, GameTurnStatsType } from "../definition";
 import type { PlayerSummaryValues, SummaryAccumulatorParts, SummaryFieldDef } from ".";
 import PlayerName from "@/components/PlayerName";
-import { extendClass, mapObjectValues, type ClassBindings } from "@/utils";
+import { extendClass, mapObjectValues } from "@/utils";
 import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 import type { ContextMenuItem } from "@/components/contextmenu";
+import type { ComparisonResult } from "./roundStats";
+
+const deltaDirLookup = {
+  positive: (d: number) => (d > 0 ? "better" : d < 0 ? "worse" : "equal"),
+  negative: (d: number) => (d > 0 ? "worse" : d < 0 ? "better" : "equal"),
+  neutral: (_d: number) => "neutral",
+} satisfies Record<string, (d: number) => ComparisonResult | "neutral">;
 
 export type RoundRowsMeta<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
@@ -52,6 +59,11 @@ export const createSummaryComponent = <
         >,
         required: true,
       },
+      deltaGame: {
+        type: Object as PropType<
+          Map<string, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>
+        >,
+      },
       fieldData: {
         type: Array as PropType<
           SummaryFieldDef<number, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
@@ -93,20 +105,39 @@ export const createSummaryComponent = <
                 const summary = props.summaries.get(pid);
                 if (summary) {
                   const value = def.value(summary, pid);
+                  const pDelta = props.deltaGame?.get(pid);
+                  const deltaVal = pDelta !== undefined ? def.value(pDelta, pid) : undefined;
                   if (def.cmp(value, acc.highest) > 0) {
                     acc.highest = value;
                   }
                   if (def.cmp(value, acc.lowest) < 0) {
                     acc.lowest = value;
                   }
-                  acc.playerValues.push({ pid, value });
+                  acc.playerValues.push({
+                    pid,
+                    value,
+                    delta:
+                      deltaVal !== undefined && def.deltaDirection
+                        ? {
+                            val: deltaVal,
+                            direction:
+                              typeof def.deltaDirection === "function"
+                                ? def.deltaDirection(deltaVal)
+                                : deltaDirLookup[def.deltaDirection](deltaVal),
+                          }
+                        : undefined,
+                  });
                 }
                 return acc;
               },
               {
                 highest: Number.MIN_SAFE_INTEGER,
                 lowest: Number.MAX_SAFE_INTEGER,
-                playerValues: [] as { pid: string; value: number; delta?: number }[],
+                playerValues: [] as {
+                  pid: string;
+                  value: number;
+                  delta?: { val: number; direction: ComparisonResult | "neutral" };
+                }[],
               },
             ),
             ...def,
@@ -141,7 +172,8 @@ export const createSummaryComponent = <
                     const summary = props.summaries.get(pid);
                     if (summary) {
                       const roundKey = key as keyof typeof summary.rounds.valuesRaw;
-                      for (const [k, { get, cmp }] of Object.entries(parts.rounds.meta) as [
+                      const pDelta = props.deltaGame?.get(pid);
+                      for (const [k, { get, delta, cmp }] of Object.entries(parts.rounds.meta) as [
                         RoundsField,
                         (typeof parts.rounds.meta)[RoundsField],
                       ][]) {
@@ -151,9 +183,23 @@ export const createSummaryComponent = <
                           roundKey,
                         );
                         const fav = summary.rounds.favourites[props.roundsFields!.field];
+                        const deltaVal =
+                          pDelta !== undefined
+                            ? delta
+                              ? delta(
+                                  summary.rounds.valuesRaw[roundKey],
+                                  summary.numGames,
+                                  roundKey,
+                                )
+                              : get(pDelta.rounds.valuesRaw[roundKey], pDelta.numGames, roundKey)
+                            : undefined;
                         acc[k].push({
                           pid,
                           value,
+                          delta:
+                            deltaVal !== undefined
+                              ? { val: deltaVal, direction: cmp(deltaVal, 0) }
+                              : undefined,
                           favourite: fav !== undefined && fav.valid && fav.rounds.has(roundKey),
                           best:
                             !Number.isNaN(bestFav.value[k]) &&
@@ -169,7 +215,7 @@ export const createSummaryComponent = <
                       [] as {
                         pid: string;
                         value: number;
-                        delta?: number;
+                        delta?: { val: number; direction: ComparisonResult | "neutral" };
                         favourite: boolean;
                         best: boolean;
                       }[],
@@ -193,7 +239,7 @@ export const createSummaryComponent = <
                   [K in RoundsField]: {
                     pid: string;
                     value: number;
-                    delta?: number;
+                    delta?: { val: number; direction: ComparisonResult | "neutral" };
                     favourite: boolean;
                     best: boolean;
                   }[];
@@ -202,18 +248,31 @@ export const createSummaryComponent = <
             ),
       );
 
-      const roundValueDisplayFuncs = computed<
-        (field: RoundsField, value: number, delta?: number) => VNodeChild
-      >(() => {
+      const roundValueDisplayFuncs = computed<{
+        value: (field: RoundsField, value: number) => VNodeChild;
+        delta: (field: RoundsField, delta: number, value: number) => VNodeChild;
+      }>(() => {
         const display = props.roundsFields?.display;
         if (!display) {
-          return (_f, v) => v;
+          return {
+            value: (_f, v) => v,
+            delta: (_f, d) => d,
+          };
         } else if (typeof display === "function") {
-          return display;
+          return {
+            value: display,
+            delta: (f, d, v) => display(f, v, d),
+          };
         } else if (display instanceof Intl.NumberFormat) {
-          return (_f, v) => display.format(v);
+          return {
+            value: (_f, v) => display.format(v),
+            delta: (_f, d) => display.format(d),
+          };
         } else {
-          return (f, v, d) => (display[f] ? display[f](v, d) : v);
+          return {
+            value: (f, v) => (display[f] ? display[f](v) : v),
+            delta: (f, d, v) => (display[f] ? display[f](v, d) : v),
+          };
         }
       });
 
@@ -275,7 +334,7 @@ export const createSummaryComponent = <
                           hoveredEl.value = e.currentTarget as HTMLElement;
                         }
                       }}
-                      onMouseleave={(e) => {
+                      onMouseleave={() => {
                         tooltipContent.value = undefined;
                         hoveredEl.value = undefined;
                       }}
@@ -317,7 +376,17 @@ export const createSummaryComponent = <
                                 }
                               }}
                             >
-                              {displayCompact(value, delta, props.summaries.get(pid)!)}
+                              {displayCompact(value, props.summaries.get(pid)!)}
+                              {delta !== undefined ? (
+                                <span
+                                  class={[
+                                    "summaryDeltaValue",
+                                    delta.direction === "equal" ? "neutral" : delta.direction,
+                                  ]}
+                                >
+                                  {displayCompact(delta.val, props.deltaGame!.get(pid)!)}
+                                </span>
+                              ) : undefined}
                             </td>
                           );
                         })
@@ -331,20 +400,40 @@ export const createSummaryComponent = <
                               const summary = props.summaries.get(pid);
                               if (summary) {
                                 const val = child.value(summary, pid);
+                                const pDelta = props.deltaGame?.get(pid);
+                                const deltaVal =
+                                  pDelta !== undefined ? child.value(pDelta, pid) : undefined;
                                 if (child.cmp(val, acc.highest) > 0) {
                                   acc.highest = val;
                                 }
                                 if (child.cmp(val, acc.lowest) < 0) {
                                   acc.lowest = val;
                                 }
-                                acc.values.push({ pid, value: val });
+                                acc.values.push({
+                                  pid,
+                                  value: val,
+                                  delta:
+                                    deltaVal !== undefined && child.deltaDirection
+                                      ? {
+                                          val: deltaVal,
+                                          direction:
+                                            typeof child.deltaDirection === "function"
+                                              ? child.deltaDirection(deltaVal)
+                                              : deltaDirLookup[child.deltaDirection](deltaVal),
+                                        }
+                                      : undefined,
+                                });
                               }
                               return acc;
                             },
                             {
                               highest: Number.MIN_SAFE_INTEGER,
                               lowest: Number.MAX_SAFE_INTEGER,
-                              values: [] as { pid: string; value: number; delta?: number }[],
+                              values: [] as {
+                                pid: string;
+                                value: number;
+                                delta?: { val: number; direction: ComparisonResult | "neutral" };
+                              }[],
                             },
                           );
                           return (
@@ -392,7 +481,20 @@ export const createSummaryComponent = <
                                       }
                                     }}
                                   >
-                                    {child.displayCompact(value, delta, props.summaries.get(pid)!)}
+                                    {child.displayCompact(value, props.summaries.get(pid)!)}
+                                    {delta !== undefined ? (
+                                      <span
+                                        class={[
+                                          "summaryDeltaValue",
+                                          delta.direction === "equal" ? "neutral" : delta.direction,
+                                        ]}
+                                      >
+                                        {child.displayCompact(
+                                          delta.val,
+                                          props.deltaGame!.get(pid)!,
+                                        )}
+                                      </span>
+                                    ) : undefined}
                                   </td>
                                 );
                               })}
@@ -440,11 +542,19 @@ export const createSummaryComponent = <
                                   "roundSummaryValue",
                                 )}
                               >
-                                {roundValueDisplayFuncs.value(
+                                {roundValueDisplayFuncs.value.value(
                                   props.roundsFields!.field,
                                   value,
-                                  delta,
                                 )}
+                                {delta !== undefined && delta.direction !== "equal" ? (
+                                  <span class={["summaryDeltaValue", delta.direction]}>
+                                    {roundValueDisplayFuncs.value.delta(
+                                      props.roundsFields!.field,
+                                      delta.val,
+                                      value,
+                                    )}
+                                  </span>
+                                ) : undefined}
                               </td>
                             ),
                           )
@@ -481,7 +591,16 @@ export const createSummaryComponent = <
                                     "roundSummaryValue",
                                   )}
                                 >
-                                  {roundValueDisplayFuncs.value(k, value, delta)}
+                                  {roundValueDisplayFuncs.value.value(k, value)}
+                                  {delta !== undefined && delta.direction !== "equal" ? (
+                                    <span class={["summaryDeltaValue", delta.direction]}>
+                                      {roundValueDisplayFuncs.value.delta(
+                                        props.roundsFields!.field,
+                                        delta.val,
+                                        value,
+                                      )}
+                                    </span>
+                                  ) : undefined}
                                 </td>
                               ))}
                             </tr>

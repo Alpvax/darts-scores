@@ -11,16 +11,16 @@ import {
 import { floatField, type SummaryFieldDef } from "@/gameDefinitionV2/summary";
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
 import { ref, defineComponent, watch, computed, h } from "vue";
-import SummaryV1 from "./SummaryView27.vue";
-import { gameMeta, type TurnData27 } from "@/game/27";
+import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
 import type { GameResult } from "@/gameUtils/summary";
 import type { IntoTaken } from "@/gameUtils/roundDeclaration";
 import PlayerName from "@/components/PlayerName";
+import { createSummaryComponent } from "@/components/summary";
 
 export default defineComponent({
   components: {
     Summary27Component,
-    SummaryV1,
+    SummaryV1: createSummaryComponent(summaryFactory, defaultSummaryFields),
   },
   props: {},
   setup: (/*TODO: props*/) => {
@@ -171,6 +171,8 @@ export default defineComponent({
     // games.value.push(makeGame({ identifier: "fatnicks", length: 0 }));
 
     const realWinsPlayers = config.realWinsPlayers.readonlyRef();
+
+    const partialGame = ref(makeGame({ identifier: "partial" }));
     watch(
       [games, realWinsPlayers],
       ([newGames]) => {
@@ -208,12 +210,15 @@ export default defineComponent({
       players,
       games: computed(() => games.value.map(({ v1 }) => v1)),
       summaries: computed(() => accumulator.value.getAllSummaries()),
+      partialGame,
+      deltaGame: computed(() => accumulator.value.makeGameDeltas(partialGame.value.v2)),
       // inProgress: makeGame("partial", 8).results,
       fieldData: [
         {
           label: "Personal Best",
           value: ({ score }) => score.best,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
@@ -221,12 +226,14 @@ export default defineComponent({
           label: "Personal Worst",
           value: ({ score }) => score.worst,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest, worst: val === -393 }),
         },
         floatField({
           label: "Average Score",
           value: ({ score }) => score.mean,
+          deltaDirection: "positive",
           format: meanFmt,
           highlight: { best: "highest" },
         }),
@@ -241,6 +248,7 @@ export default defineComponent({
             );
           },
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
           description: () => [
@@ -259,13 +267,15 @@ export default defineComponent({
           label: "Outright Wins",
           value: ({ wins }) => wins.all.totalOutright,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Tiebreak Wins",
           value: ({ wins }) => wins.all.tiebreakWins,
-          displayCompact: (val, _, { wins }) => `${val} / ${wins.all.tiebreaksPlayed}`,
+          displayCompact: (val, { wins }) => `${val} / ${wins.all.tiebreaksPlayed}`,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
@@ -273,20 +283,23 @@ export default defineComponent({
           label: "Total Games Played",
           value: ({ numGames }) => numGames,
           displayCompact: (val) => val,
+          deltaDirection: "neutral",
           cmp: (a, b) => a - b,
           highlight: () => "",
         },
         floatField({
           label: "Win Rate",
           value: ({ wins }) => wins.all.mean,
+          deltaDirection: "positive",
           format: rateFmt,
           highlight: { best: "highest" },
         }),
         {
           label: "Fat Nicks",
           value: ({ fatNicks }) => fatNicks.count,
-          displayCompact: (val, _, { fatNicks }) =>
+          displayCompact: (val, { fatNicks }) =>
             val > 0 ? val : `0 (furthest ${fatNicks.furthest})`,
+          deltaDirection: "negative",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
         },
@@ -297,10 +310,12 @@ export default defineComponent({
           highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
           extended: (_, { cliffs: { available, perGameMean, rate, ...cliffs } }) =>
             JSON.stringify(cliffs),
+          deltaDirection: "positive",
           displayExpanded: [
             floatField({
               label: "Rate",
               value: ({ cliffs }) => cliffs.rate,
+              deltaDirection: "positive",
               format: rateFmt,
               highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
             }),
@@ -308,6 +323,7 @@ export default defineComponent({
               label: "Total",
               value: ({ cliffs }) => cliffs.total,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -315,6 +331,7 @@ export default defineComponent({
               label: "Most / game",
               value: ({ cliffs }) => cliffs.most,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -322,6 +339,7 @@ export default defineComponent({
               label: "Fewest / game",
               value: ({ cliffs }) => cliffs.least,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -330,6 +348,7 @@ export default defineComponent({
         floatField({
           label: "Double Doubles",
           value: ({ doubleDoubles }) => doubleDoubles.rate,
+          deltaDirection: "positive",
           format: rateFmt,
           highlight: (cmp, { highest }) => ({ best: cmp(0) > 0 && cmp(highest) === 0 }),
           extended: (_, { doubleDoubles: { available, perGameMean, rate, ...dd } }) =>
@@ -340,6 +359,7 @@ export default defineComponent({
               label: "Total",
               value: ({ doubleDoubles }) => doubleDoubles.total,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -347,6 +367,7 @@ export default defineComponent({
               label: "Most / game",
               value: ({ doubleDoubles }) => doubleDoubles.most,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -354,6 +375,7 @@ export default defineComponent({
               label: "Fewest / game",
               value: ({ doubleDoubles }) => doubleDoubles.least,
               displayCompact: (val) => val,
+              deltaDirection: "positive",
               cmp: (a, b) => a - b,
               highlight: (val, { highest }) => ({ best: val === highest }),
             },
@@ -363,6 +385,7 @@ export default defineComponent({
           label: "Hans",
           value: ({ hans }) => hans.total,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
           extended: (val, { hans }) => JSON.stringify(hans),
@@ -371,6 +394,7 @@ export default defineComponent({
           label: "Goblins",
           value: ({ goblins }) => goblins.count,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
@@ -378,6 +402,7 @@ export default defineComponent({
           label: "Piranhas",
           value: ({ piranhas }) => piranhas.count,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
@@ -385,22 +410,23 @@ export default defineComponent({
           label: "Jesus",
           value: ({ jesus }) => jesus.count,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "Dreams",
           value: ({ dreams }) => dreams.count,
-          displayCompact: (val, _, { dreams }) =>
-            val > 0 ? val : `0 (furthest ${dreams.furthest})`,
+          displayCompact: (val, { dreams }) => (val > 0 ? val : `0 (furthest ${dreams.furthest})`),
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
         {
           label: "All Positives",
           value: ({ allPos }) => allPos.count,
-          displayCompact: (val, _, { allPos }) =>
-            val > 0 ? val : `0 (furthest ${allPos.furthest})`,
+          displayCompact: (val, { allPos }) => (val > 0 ? val : `0 (furthest ${allPos.furthest})`),
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val > 0 && val === highest }),
         },
@@ -408,6 +434,7 @@ export default defineComponent({
           label: "Most Hits",
           value: ({ hits }) => hits.most,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
@@ -415,12 +442,14 @@ export default defineComponent({
           label: "Least Hits",
           value: ({ hits }) => hits.least,
           displayCompact: (val) => val,
+          deltaDirection: "positive",
           cmp: (a, b) => a - b,
           highlight: (val, { highest }) => ({ best: val === highest }),
         },
         floatField({
           label: "Average Hits",
           value: ({ hits }) => hits.perGameMean,
+          deltaDirection: "positive",
           format: meanFmt,
           highlight: { best: "highest" },
         }),
@@ -452,6 +481,7 @@ export default defineComponent({
   <Summary27Component
     :players="players"
     :summaries="summaries"
+    :delta-game="deltaGame"
     :field-data="fieldData"
     :rounds-fields="roundsFields"
     @change-rounds-field="
@@ -466,5 +496,5 @@ export default defineComponent({
     :in-progress-game="inProgress"
     :delta-format="null"
   /> -->
-  <SummaryV1 :players="players" :games="games" />
+  <SummaryV1 :players="players" :games="games" :in-progress-game="partialGame.v1.results" />
 </template>
