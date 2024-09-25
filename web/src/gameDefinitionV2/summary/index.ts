@@ -27,17 +27,10 @@ type FloatingFieldDef<PlayerGameStats extends {}> = (Omit<
       };
   displayCompact?: (valueFormatted: string, playerData: PlayerGameStats) => VNodeChild;
   extended?: (value: { raw: number; formatted: string }, playerData: PlayerGameStats) => VNodeChild;
-}) &
-  (
-    | {
-        maximumFractionDigits: number;
-        format?: Intl.NumberFormatOptions;
-      }
-    | {
-        maximumFractionDigits?: never;
-        format: Intl.NumberFormat;
-      }
-  );
+}) & {
+  maximumFractionDigits: number;
+  format?: Intl.NumberFormatOptions;
+};
 
 export const floatField = <PlayerGameStats extends {}>({
   label,
@@ -48,13 +41,10 @@ export const floatField = <PlayerGameStats extends {}>({
   highlight: defHighlight,
   ...def
 }: FloatingFieldDef<PlayerGameStats>): SummaryFieldDef<number, PlayerGameStats> => {
-  const format =
-    def.format instanceof Intl.NumberFormat
-      ? def.format
-      : new Intl.NumberFormat(undefined, {
-          maximumFractionDigits: def.maximumFractionDigits,
-          ...def.format,
-        });
+  const format = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: def.maximumFractionDigits,
+    ...def.format,
+  });
   const { maximumFractionDigits, style } = format.resolvedOptions();
   const maxFD = style === "percent" ? (maximumFractionDigits ?? 0) + 2 : maximumFractionDigits;
   const cmp = maxFD ? floatCompareFunc(maxFD) : (a: number, b: number) => a - b;

@@ -19,7 +19,7 @@ export type RoundRowsMeta<
 > = {
   field: RoundsField;
   display?:
-    | Intl.NumberFormat
+    | Intl.NumberFormatOptions
     | ((field: RoundsField, value: number, delta?: number) => VNodeChild)
     | Record<RoundsField, (value: number, delta?: number) => VNodeChild>;
   labels?: Record<RoundsField, string>;
