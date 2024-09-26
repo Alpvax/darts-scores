@@ -6,6 +6,7 @@ import { extendClass, mapObjectValues } from "@/utils";
 import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 import type { ContextMenuItem } from "@/components/contextmenu";
 import type { ComparisonResult } from "./roundStats";
+import type { NormalisedSummaryRowsDef } from "./display";
 
 const deltaDirLookup = {
   positive: (d: number) => (d > 0 ? "better" : d < 0 ? "worse" : "equal"),
@@ -66,7 +67,8 @@ export const createSummaryComponent = <
       },
       fieldData: {
         type: Array as PropType<
-          SummaryFieldDef<number, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
+          NormalisedSummaryRowsDef<any, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
+          // SummaryFieldDef<number, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
         >,
         required: true,
       },
