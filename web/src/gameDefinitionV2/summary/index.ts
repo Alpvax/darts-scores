@@ -28,7 +28,7 @@ type FloatingFieldDef<PlayerGameStats extends {}> = (Omit<
   displayCompact?: (valueFormatted: string, playerData: PlayerGameStats) => VNodeChild;
   extended?: (value: { raw: number; formatted: string }, playerData: PlayerGameStats) => VNodeChild;
 }) & {
-  maximumFractionDigits: number;
+  maximumFractionDigits?: number;
   format?: Intl.NumberFormatOptions;
 };
 

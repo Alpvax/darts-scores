@@ -93,10 +93,12 @@ export const summaryAccumulator27 = makeSummaryAccumulatorFactoryFor(
       empty: () => ({
         furthest: 0,
         count: 0,
+        rate: 0,
       }),
-      push: ({ furthest, count }, { farFN, fatNick }) => ({
+      push: ({ furthest, count }, { farFN, fatNick }, numGames) => ({
         furthest: Math.max(farFN, furthest),
         count: count + +fatNick,
+        rate: (count + +fatNick) / numGames,
       }),
       // push: ({ furthest, count }, { farFN, fatNick }) => {
       //   console.log("FatNick.push", { fatNick, farFN, furthest, count });

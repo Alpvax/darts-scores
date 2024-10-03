@@ -251,3 +251,9 @@ export const mapObjectValues = <T, U, Keys extends string | number | symbol>(
     (acc, [key, value], index) => Object.assign(acc, { [key]: f(value, key, index) }),
     {} as any,
   );
+
+export const createRecord = <T, Keys extends string | number | symbol>(
+  keys: Iterable<Keys>,
+  f: (key: Keys, index: number) => T,
+): { [K in Keys]: T } =>
+  [...keys].reduce((acc, key, index) => Object.assign(acc, { [key]: f(key, index) }), {} as any);

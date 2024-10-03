@@ -80,8 +80,10 @@ table#gameSummaryTable {
     font-size: 0.8em;
     /* vertical-align: calc(1em / 20); */
     padding-left: 0.5ch;
-    position: absolute;
     top: 15%;
+  }
+  & .summaryDeltaValue:not(.nonAbsSummaryDelta) {
+    position: absolute;
   }
   & .summaryDeltaValue.better {
     color: green;
