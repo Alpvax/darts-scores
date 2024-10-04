@@ -9,7 +9,7 @@ import {
   type HighlightFn,
 } from ".";
 
-type RowLabelDef = VNodeChild | (() => VNodeChild);
+type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
 
 type SimpleSummaryRow<PData> = {
   /** added to row as data-summary-row, if undefined then label(.innerText if element) is used instead */

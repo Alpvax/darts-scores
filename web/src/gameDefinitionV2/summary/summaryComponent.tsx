@@ -189,7 +189,7 @@ export const createSummaryComponent = <
 
       const fieldDataV2 = computed(() =>
         props.fieldDataV2.map((def, gpIdx) => {
-          const label = typeof def.label === "function" ? def.label() : def.label;
+          const label = typeof def.label === "function" ? def.label(false) : def.label;
           if (def.group) {
             const expanded = expandedRows.value.fieldsV2.has(def.group);
             return {
@@ -243,7 +243,7 @@ export const createSummaryComponent = <
                   if (expanded ? !showExtended : !showDefault) {
                     return [];
                   }
-                  const label = typeof row.label === "function" ? row.label() : row.label;
+                  const label = typeof row.label === "function" ? row.label(expanded) : row.label;
                   const cmp: CmpFn<number> | undefined = row.highlight
                     ? typeof row.highlight.cmp === "function"
                       ? row.highlight.cmp
