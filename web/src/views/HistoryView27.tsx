@@ -6,15 +6,22 @@ import {
   watch,
   watchEffect,
   type VNodeRef,
+  type Ref,
 } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { usePlayerStore } from "@/stores/player";
 import type { GameResult } from "@/gameUtils/summary";
-import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
+import {
+  DATE_DM_FORMAT,
+  defaultSummaryFields,
+  gameMeta,
+  summaryFactory,
+  type TurnData27,
+} from "@/game/27";
 import { createSummaryComponent } from "@/components/summary";
 import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
-import { makePlayerPositions } from "@/gameUtils/playerData";
+import { makePlayerPositions, type PlayerDataFor } from "@/gameUtils/playerData";
 import { extendClass } from "@/utils";
 import { autoUpdate, shift, useFloating } from "@floating-ui/vue";
 import { createImmutableComponent } from "@/components/gameV2/immutableGame";
@@ -180,7 +187,10 @@ export default defineComponent({
               ).playerPositions.value.playerLookup;
               return (
                 <tr
-                  class={game.isDebugGame ? "debugGame" : ""}
+                  class={{
+                    debugGame: game.isDebugGame,
+                    selectedGame: game.gameId === displayedGameId.value,
+                  }}
                   onClick={(e) => {
                     setDisplayedGame(game, e.currentTarget as Element | null);
                     e.stopPropagation();
@@ -248,7 +258,35 @@ export default defineComponent({
             id="pastGameOverlay"
             v-click-outside={() => setDisplayedGame(undefined)}
           >
-            <Game27 class="game twentyseven" gameResult={displayedGame.value} />
+            <Game27 class="game twentyseven" gameResult={displayedGame.value}>
+              {{
+                topLeftCell: () => (
+                  <th class="gameDate">
+                    <span>{DATE_DM_FORMAT.format(displayedGame.value?.date)}</span>
+                    <br />
+                    <span>{displayedGame.value?.date.getFullYear()}</span>
+                  </th>
+                ),
+                footer: (playerScores: PlayerDataFor<typeof gameMeta>[]) => (
+                  <tr class="totalHitsRow">
+                    <th class="rowLabel">Hits</th>
+                    {playerScores.map(({ turns, stats: { hitsCountNZ, hitsTotal } }) => {
+                      const l = turns.size;
+                      return (
+                        <td>
+                          <span>
+                            {hitsCountNZ}/{l}
+                          </span>{" "}
+                          <span>
+                            ({hitsTotal}/{l * 3})
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ),
+              }}
+            </Game27>
             <input type="button" value="Share" onClick={copyPastGameToClipboard} />
           </div>
         )}

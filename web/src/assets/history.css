@@ -30,6 +30,9 @@ div.historyDiv {
     & tr.debugGame > .rowLabel {
       color: orange !important;
     }
+    & tr.selectedGame {
+      background-color: var(--colour-table-hover);
+    }
 
     & td {
       padding: 0 0.2em;
