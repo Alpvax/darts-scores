@@ -90,12 +90,16 @@ type FieldDisplayPart<PData> = {
     f: HighlightFn;
   };
 };
-type NestedDisplayPart<PData> = {
+type NestedDisplayPart<PData extends { numGames: number }> = {
   type: "nested";
-  func: (values: PData, deltas: Partial<PData>, playerId: string) => RowDisplayPart<PData>[];
+  func: (
+    values: PData,
+    deltas: Partial<PData>,
+    playerId: string,
+  ) => RowDisplayPart<PData>[] | RowFormat<PData>;
 };
 
-type RowDisplayPart<PData> =
+type RowDisplayPart<PData extends { numGames: number }> =
   | LiteralDisplayPart
   | FieldDisplayPart<PData>
   | NestedDisplayPart<PData>;
@@ -343,7 +347,10 @@ export class RowFormat<PData extends { numGames: number }> {
         case "literal":
           return [part.value as VNodeChild];
         case "nested":
-          return part.func(values, deltas, playerId).flatMap(display_part);
+          const child = part.func(values, deltas, playerId);
+          return child instanceof RowFormat
+            ? (child.display(values, deltas, playerId) as VNodeChild[])
+            : child.flatMap(display_part);
       }
     };
     return this.parts.flatMap(display_part);
