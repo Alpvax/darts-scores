@@ -168,17 +168,31 @@ export class LoadedPlayer {
   }
 }
 
-type PartialPlayer = {
-  name: string;
-  id: string;
-  loaded: false;
-};
+class PartialPlayer {
+  readonly loaded = false;
+  private names?: PlayerNames;
+  constructor(readonly id: string) {}
+  get name() {
+    return this.names?.name ?? this.id;
+  }
+  addPastNames(...names: string[]) {
+    if (this.names === undefined) {
+      this.names = new PlayerNames(this.id, names);
+    } else {
+      for (const name of names) {
+        this.names.addName(name);
+      }
+      this.names.refreshName();
+    }
+  }
+}
 export type Player = LoadedPlayer | PartialPlayer;
 
 export const usePlayerStore = defineStore("player", () => {
   const db = getFirestore();
 
   const loadedPlayers = ref(new Map<string, LoadedPlayer>());
+  const cachedPartialPlayers = ref(new Map<string, PartialPlayer>());
   const subscriptions: Map<string, Unsubscribe> | null = new Map<string, Unsubscribe>();
   let globalSubscription: Unsubscribe | null = null;
   const loadPlayer = (playerId: string) => {
@@ -206,7 +220,7 @@ export const usePlayerStore = defineStore("player", () => {
     if (globalSubscription === null) {
       loadPlayer(playerId);
     }
-    const p = loadedPlayers.value.get(playerId);
+    const p = cachedPartialPlayers.value.get(playerId);
     if (p) {
       return p.name;
     }
@@ -226,13 +240,19 @@ export const usePlayerStore = defineStore("player", () => {
     if (globalSubscription === null) {
       loadPlayer(playerId);
     }
-    return (
-      (loadedPlayers.value.get(playerId) as LoadedPlayer | undefined) ?? {
-        id: playerId,
-        loaded: false,
-        name: playerId,
+    const loaded = loadedPlayers.value.get(playerId);
+    if (loaded) {
+      return loaded as Player;
+    } else {
+      const partial = cachedPartialPlayers.value.get(playerId);
+      if (partial) {
+        return partial;
+      } else {
+        const p = new PartialPlayer(playerId);
+        cachedPartialPlayers.value.set(playerId, p);
+        return p;
       }
-    );
+    }
   };
 
   return {

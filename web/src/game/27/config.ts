@@ -89,4 +89,20 @@ export const use27Config = makeLayeredConfigComposable({
     },
     merge: "replace",
   },
+  displayGuestGames: {
+    fallback: false as boolean,
+    browser: {
+      key: "twentyseven:showGuestGames",
+      convert: "json",
+    },
+    merge: "replace",
+  },
+  displayGuestSummaries: {
+    fallback: [] as boolean | string[],
+    browser: {
+      key: "twentyseven:guestSummaries",
+      convert: "json",
+    },
+    merge: "replace",
+  },
 } as const);

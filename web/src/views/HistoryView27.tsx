@@ -66,19 +66,51 @@ export default defineComponent({
 
     const players = computed(() =>
       [...historyStore.allPlayers]
-        .filter((pid) => {
+        .flatMap(([pid, names]) => {
           const p = playerStore.getPlayer(pid);
           if (p.loaded) {
-            return !(p.disabled || p.guest);
+            if (p.disabled) {
+              return [];
+            }
+          } else {
+            p.addPastNames(...names);
           }
-          return true;
+          return [p];
         })
-        .toSorted((a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b)),
+        .toSorted(
+          ({ id: a }, { id: b }) => playerStore.playerOrder(a) - playerStore.playerOrder(b),
+        ),
     );
+
+    const showGuestGames = config.displayGuestGames.mutableRef("local");
+    const displayGuestSummaries = config.displayGuestSummaries.mutableRef("local");
 
     type PastGameResult = GameResult<TurnData27> & { gameId: string };
 
     const games = computed(() => historyStore.games as unknown as PastGameResult[]);
+    const lastGamePlayers = computed(
+      () =>
+        new Set(games.value.length > 0 ? games.value[0].players.map(({ pid }) => pid) : undefined),
+    );
+
+    const gameViewPlayers = computed(() =>
+      players.value.flatMap((p) =>
+        (p.loaded && !p.guest) || showGuestGames.value || lastGamePlayers.value.has(p.id)
+          ? [p.id]
+          : [],
+      ),
+    );
+    const summaryPlayers = computed(() =>
+      players.value.flatMap((p) =>
+        (p.loaded && !p.guest) ||
+        lastGamePlayers.value.has(p.id) ||
+        (typeof displayGuestSummaries.value === "boolean"
+          ? displayGuestSummaries.value
+          : displayGuestSummaries.value.includes(p.id))
+          ? [p.id]
+          : [],
+      ),
+    );
 
     const displayedGameId = ref<string | undefined>();
     const displayedGame = ref<PastGameResult | undefined>();
@@ -160,10 +192,9 @@ export default defineComponent({
           </div>
           <PlayerSelection
             legend='Select players to filter "Real Wins"'
-            available={[...historyStore.allPlayers]
-              .filter((pid) => {
-                const p = playerStore.getPlayer(pid);
-                return p.loaded && !p.disabled;
+            available={players.value
+              .flatMap((p) => {
+                return p.loaded && !p.guest ? [p.id] : [];
               })
               .toSorted((a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b))}
             modelValue={playersFilter.value}
@@ -174,7 +205,7 @@ export default defineComponent({
           <thead>
             <tr>
               <td class="tableHeader">Date</td>
-              {players.value.map((pid) => (
+              {gameViewPlayers.value.map((pid) => (
                 <td class="playerName">{playerStore.playerName(pid)}</td>
               ))}
             </tr>
@@ -199,7 +230,7 @@ export default defineComponent({
                   data-game-id={game.gameId}
                 >
                   <td class="rowLabel">{game.date.toLocaleDateString()}</td>
-                  {players.value.map((pid) => {
+                  {gameViewPlayers.value.map((pid) => {
                     const result = game.results.get(pid);
                     const pos = positions.get(pid);
                     const notables = [...(result?.allTurns?.values() ?? [])].reduce(
@@ -250,7 +281,7 @@ export default defineComponent({
             })}
           </tbody>
         </table>
-        <Summary27 players={players.value} games={historyStore.games} />
+        <Summary27 players={summaryPlayers.value} games={historyStore.games} />
         {displayedGame.value === undefined ? undefined : (
           <div
             style={floatingStyles.value}
