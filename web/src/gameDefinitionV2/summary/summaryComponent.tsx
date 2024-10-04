@@ -288,6 +288,16 @@ export const createSummaryComponent = <
                                 hoveredEl.value = undefined;
                               }
                             }}
+                            onClick={(e) => {
+                              if (import.meta.env.DEV && e.ctrlKey) {
+                                console.log("[SUMMARY VALUE CLICK]", {
+                                  row: `${def.group}:${key ?? idx}`,
+                                  player: pid,
+                                  summary,
+                                  pDelta,
+                                });
+                              }
+                            }}
                           >
                             {display.display(summary, pDelta, pid)}
                           </td>
@@ -360,6 +370,16 @@ export const createSummaryComponent = <
                         if (row.valueTooltip) {
                           tooltipContent.value = undefined;
                           hoveredEl.value = undefined;
+                        }
+                      }}
+                      onClick={(e) => {
+                        if (import.meta.env.DEV && e.ctrlKey) {
+                          console.log("[SUMMARY VALUE CLICK]", {
+                            row: row.key ?? gpIdx,
+                            player: pid,
+                            summary,
+                            pDelta,
+                          });
                         }
                       }}
                     >
@@ -724,13 +744,25 @@ export const createSummaryComponent = <
                           ></td>
                         ) : (
                           playerData[props.roundsFields!.field].map(
-                            ({ best, favourite, value, delta }) => (
+                            ({ best, favourite, value, delta, pid }) => (
                               <td
                                 class={extendClass(
                                   { favourite, best },
                                   "summaryValue",
                                   "roundSummaryValue",
                                 )}
+                                onClick={(e) => {
+                                  if (import.meta.env.DEV && e.ctrlKey) {
+                                    console.log("[SUMMARY ROUND VALUE CLICK]", {
+                                      row: key,
+                                      player: pid,
+                                      value,
+                                      delta,
+                                      best,
+                                      favourite,
+                                    });
+                                  }
+                                }}
                               >
                                 {roundValueDisplayFuncs.value.value(
                                   props.roundsFields!.field,
@@ -773,13 +805,25 @@ export const createSummaryComponent = <
                               <th class="rowLabel">
                                 {props.roundsFields!.labels ? props.roundsFields!.labels[k] : k}
                               </th>
-                              {playerVals.map(({ best, favourite, value, delta }) => (
+                              {playerVals.map(({ best, favourite, value, delta, pid }) => (
                                 <td
                                   class={extendClass(
                                     { favourite, best },
                                     "summaryValue",
                                     "roundSummaryValue",
                                   )}
+                                  onClick={(e) => {
+                                    if (import.meta.env.DEV && e.ctrlKey) {
+                                      console.log("[SUMMARY ROUND VALUE CLICK]", {
+                                        row: key,
+                                        player: pid,
+                                        value,
+                                        delta,
+                                        best,
+                                        favourite,
+                                      });
+                                    }
+                                  }}
                                 >
                                   {roundValueDisplayFuncs.value.value(k, value)}
                                   {delta !== undefined && delta.direction !== "equal" ? (
