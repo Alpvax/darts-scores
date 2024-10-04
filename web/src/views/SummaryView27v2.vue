@@ -25,6 +25,7 @@ import {
 } from "@/gameDefinitionV2/summary/display/v1";
 import { createRecord, floatCompareFunc } from "@/utils";
 import { row, RowFormat, type SummaryFieldRow } from "@/gameDefinitionV2/summary/display/v2";
+import { getVDNumFormat } from "@/gameDefinitionV2/summary/display";
 
 export default defineComponent({
   components: {
@@ -1006,71 +1007,245 @@ export default defineComponent({
             },
           ],
         },
-        /*// Should this be part of the wins rows?
-        normaliseFieldRows({
+        // Should this be part of the wins rows?
+        {
+          key: "numGames",
           label: "Total Games Played",
-          value: ({ numGames }) => numGames,
-          deltaDirection: "neutral",
-          cmp: (a, b) => a - b,
-          highlight: {},
-        }),
-        normaliseFieldRows({
-          fields: {
-            getValues: ({ fatNicks }) => ({
-              count: fatNicks.count,
-              furthest: fatNicks.furthest,
-              rate: fatNicks.rate,
-            }),
-            cmp: {
-              count: (a, b) => a - b,
-              furthest: (a, b) => a - b,
-              rate: floatCompareFunc(rateFmt.maximumFractionDigits ?? 2),
-            },
-            format: {
-              rate: rateFmt,
-            },
-            deltaDirection: "negative",
-          },
+          display: RowFormat.field(({ numGames }) => numGames, { deltaSpec: "neutral" }),
+        },
+        {
+          group: "fatNick",
+          label: "Fat Nicks",
           rows: [
             {
+              key: "combined",
               label: "Fat Nicks",
-              // display: ({ count, furthest }, deltas) => [
-              //   count,
-              //   deltas.count ?? 0,
-              //   ...(count < 1 ? [" (furthest ", furthest, deltas.furthest, ")"] : []),
-              // ],
-              display: "${count} (furthest ${furthest})",
-              cmpField: ({ count }) => (count > 0 ? "count" : "furthest"),
-              highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
+              display: row`${{
+                value: ({ fatNicks }) => fatNicks.count,
+                deltaSpec: "negative",
+              }}${({ fatNicks }) =>
+                fatNicks.count > 0
+                  ? []
+                  : row` (furthest ${{
+                      value: ({ fatNicks }) => fatNicks.furthest,
+                      deltaSpec: "negative",
+                    }})`}`,
+              showDefault: true,
+              showExtended: false,
+              highlight: {
+                getVal: ({ fatNicks }) => parseFloat(`${fatNicks.count}.${fatNicks.furthest}`),
+                cmp: "lower",
+                classes: ["worst"],
+              },
+              valueTooltip: ({ fatNicks }) => getVDNumFormat(rateFmt).value.format(fatNicks.rate),
+            },
+            {
+              key: "count",
+              label: "Total",
+              display: RowFormat.field(({ fatNicks }) => fatNicks.count, { deltaSpec: "negative" }),
+              showDefault: false,
+              showExtended: true,
+              highlight: {
+                getVal: ({ fatNicks }) => fatNicks.count,
+                cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
+                classes: ["worst"],
+              },
+            },
+            {
+              key: "furthest",
+              label: "Furthest without hitting",
+              display: RowFormat.field(({ fatNicks }) => fatNicks.furthest, {
+                deltaSpec: "negative",
+              }),
+              showDefault: false,
+              showExtended: true,
+              highlight: {
+                getVal: ({ fatNicks }) => fatNicks.furthest,
+                cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
+                classes: ["worst"],
+              },
+            },
+            {
+              key: "rate",
+              label: "Rate",
+              display: RowFormat.field(({ fatNicks }) => fatNicks.rate, {
+                format: rateFmt,
+                deltaSpec: "negative",
+              }),
+              showDefault: false,
+              showExtended: true,
+              highlight: {
+                getVal: ({ fatNicks }) => fatNicks.rate,
+                cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
+                classes: ["worst"],
+              },
             },
           ],
-          extended: {
-            label: "Fat Nicks",
-            rows: [
-              {
-                label: "Count",
-                display: "count",
-                cmpField: "count",
-                highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
+        },
+        {
+          group: "cliffs",
+          label: "Cliffs",
+          rows: [
+            {
+              key: "combined",
+              label: "Cliff Rate",
+              display: row`${{ value: ({ cliffs }) => cliffs.rate, format: rateFmt, deltaSpec: "positive" }}${({ cliffs }) => (cliffs.total > 0 ? row` (${{ value: ({ cliffs }) => cliffs.total, deltaSpec: "positive" }})` : [])}`,
+              highlight: {
+                getVal: ({ cliffs }) => cliffs.rate,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
               },
-              {
-                label: "Furthest without hitting",
-                display: "furthest",
-                cmpField: "furthest",
-                highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
+              showDefault: true,
+              showExtended: false,
+            },
+            {
+              key: "rate",
+              label: "Rate",
+              display: RowFormat.field(({ cliffs }) => cliffs.rate, {
+                format: rateFmt,
+                deltaSpec: "positive",
+              }),
+              highlight: {
+                getVal: ({ cliffs }) => cliffs.rate,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
               },
-              {
-                label: "Rate",
-                display: "rate",
-                cmpField: "rate",
-                highlight: (val, { highest }) => ({ worst: val > 0 && val === highest }),
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "total",
+              label: "Total",
+              display: RowFormat.field(({ cliffs }) => cliffs.total, { deltaSpec: "positive" }),
+              highlight: {
+                getVal: ({ cliffs }) => cliffs.total,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
               },
-            ],
-          },
-        } satisfies MultiFieldDef<
-          { [K in "count" | "furthest" | "rate"]: number },
-          PlayerSummaryValues27
-        >),*/
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "most",
+              label: "Most / game",
+              display: RowFormat.field(({ cliffs }) => cliffs.most, { deltaSpec: "positive" }),
+              highlight: {
+                getVal: ({ cliffs }) => cliffs.most,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "least",
+              label: "Fewest / game",
+              display: RowFormat.field(({ cliffs }) => cliffs.least, { deltaSpec: "positive" }),
+              highlight: {
+                getVal: ({ cliffs }) => cliffs.least,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+          ],
+        },
+        {
+          group: "doubledoubles",
+          label: "Double Doubles",
+          rows: [
+            {
+              key: "combined",
+              label: "Double Double Rate",
+              display: row`${{ value: ({ doubleDoubles }) => doubleDoubles.rate, format: rateFmt, deltaSpec: "positive" }}${({ doubleDoubles }) => (doubleDoubles.total > 0 ? row` (${{ value: ({ doubleDoubles }) => doubleDoubles.total, deltaSpec: "positive" }})` : [])}`,
+              highlight: {
+                getVal: ({ doubleDoubles }) => doubleDoubles.rate,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: true,
+              showExtended: false,
+            },
+            {
+              key: "rate",
+              label: "Rate",
+              display: RowFormat.field(({ doubleDoubles }) => doubleDoubles.rate, {
+                format: rateFmt,
+                deltaSpec: "positive",
+              }),
+              highlight: {
+                getVal: ({ doubleDoubles }) => doubleDoubles.rate,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "total",
+              label: "Total",
+              display: RowFormat.field(({ doubleDoubles }) => doubleDoubles.total, {
+                deltaSpec: "positive",
+              }),
+              highlight: {
+                getVal: ({ doubleDoubles }) => doubleDoubles.total,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "most",
+              label: "Most / game",
+              display: RowFormat.field(({ doubleDoubles }) => doubleDoubles.most, {
+                deltaSpec: "positive",
+              }),
+              highlight: {
+                getVal: ({ doubleDoubles }) => doubleDoubles.most,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "least",
+              label: "Fewest / game",
+              display: RowFormat.field(({ doubleDoubles }) => doubleDoubles.least, {
+                deltaSpec: "positive",
+              }),
+              highlight: {
+                getVal: ({ doubleDoubles }) => doubleDoubles.least,
+                cmp: "higher",
+                classes: (cmp, { best }) => ({
+                  best: cmp(0) === "better" && cmp(best) === "equal",
+                }),
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+          ],
+        },
       ] satisfies SummaryFieldRow<PlayerSummaryValues27>[],
       roundField,
       roundsFields: computed(
