@@ -285,36 +285,36 @@ export const summaryAccumulator27 = makeSummaryAccumulatorFactoryFor(
   {
     cliffs: {
       label: "Cliffs",
-      get: ({ cliff }) => ({
+      get: ({ cliff }, { fullValues }) => ({
         total: cliff.total,
-        rateDivisor: cliff.roundsPlayed,
+        rateDivisor: fullValues?.cliff.roundsPlayed ?? cliff.roundsPlayed,
       }),
       cmp: { best: "highest", precision: 2 },
       ignoreValue: 0,
     },
     doubleDoubles: {
       label: "Double Doubles",
-      get: ({ dd }) => ({
+      get: ({ dd }, { fullValues }) => ({
         total: dd.total,
-        rateDivisor: dd.roundsPlayed,
+        rateDivisor: fullValues?.dd.roundsPlayed ?? dd.roundsPlayed,
       }),
       cmp: { best: "highest", precision: 2 },
       ignoreValue: 0,
     },
     total: {
       label: "Total hits",
-      get: ({ hits }) => ({
+      get: ({ hits }, { fullValues }) => ({
         total: hits.total,
-        rateDivisor: hits.roundsPlayed.all,
+        rateDivisor: fullValues?.hits.roundsPlayed.all ?? hits.roundsPlayed.all,
       }),
       cmp: { best: "highest", precision: 2 },
       ignoreValue: 0,
     },
     nonZero: {
       label: "Non-zero hits",
-      get: ({ hits: { roundsPlayed } }) => ({
+      get: ({ hits: { roundsPlayed } }, { fullValues }) => ({
         total: roundsPlayed.all - (roundsPlayed.counts.get(0) ?? 0),
-        rateDivisor: roundsPlayed.all,
+        rateDivisor: fullValues?.hits.roundsPlayed.all ?? roundsPlayed.all,
       }),
       cmp: { best: "highest", precision: 2 },
       ignoreValue: 0,

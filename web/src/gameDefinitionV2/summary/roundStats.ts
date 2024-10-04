@@ -236,12 +236,29 @@ export type RoundFieldGetterFor<
                 : never
             : never;
         },
-        numGames: number,
-        roundKey: RoundKey,
+        extra: {
+          numGames: number;
+          /**
+           * Only passed when getting delta values.
+           * Contains the full values, not just the delta values, useful for calculating rates.
+           */
+          fullValues?: {
+            [SK in keyof RoundStats as RoundStats[SK] extends boolean | number ? SK : never]: [
+              RoundStats[SK],
+            ] extends [infer StatType]
+              ? [StatType] extends [boolean]
+                ? BoolStatAcc
+                : [StatType] extends [number]
+                  ? NumStatAcc
+                  : never
+              : never;
+          };
+          roundKey: RoundKey;
+        },
       ) => Return
     : never,
-] extends [(v: infer V, n: infer N, k: infer K) => Return]
-  ? (roundValues: V, numGames: N, roundKey: K) => Return
+] extends [(v: infer V, extra: infer E) => Return]
+  ? (roundValues: V, extra: E) => Return
   : never;
 export type RoundFieldGetter<
   RoundStats extends Record<any, Record<any, number | boolean>> | Record<any, number | boolean>[],
@@ -273,8 +290,25 @@ export type RoundFieldGetter<
               : never
           : never;
       },
-      numGames: number,
-      roundKey: RoundKey,
+      extra: {
+        numGames: number;
+        /**
+         * Only passed when getting delta values.
+         * Contains the full values, not just the delta values, useful for calculating rates.
+         */
+        fullValues?: {
+          [SK in keyof RoundStats as RoundStats[SK] extends boolean | number ? SK : never]: [
+            RoundStats[SK],
+          ] extends [infer StatType]
+            ? [StatType] extends [boolean]
+              ? BoolStatAcc
+              : [StatType] extends [number]
+                ? NumStatAcc
+                : never
+            : never;
+        };
+        roundKey: RoundKey;
+      },
     ) => Return
   : never;
 
@@ -400,8 +434,8 @@ export const roundStatsAccumulator = <
   });
   return {
     meta: mapObjectValues(roundsFieldsDef, ({ get, cmp }) => ({
-      get: ((roundValues, numGames, roundKey) => {
-        const { total, rateDivisor } = get(roundValues, numGames, roundKey);
+      get: ((roundValues, extra) => {
+        const { total, rateDivisor } = get(roundValues, extra);
         return total / (rateDivisor ?? 1);
       }) as RoundFieldGetterFor<G, number>,
       cmp,
@@ -457,13 +491,9 @@ export const roundStatsAccumulator = <
                 perGameMean:
                   (statAcc.total + statValue) / numGames - statAcc.total / (numGames - 1),
                 roundsPlayed: {
-                  // DO NOT convert to deltas or else rate deltas will always be multiplied by 100%
-                  all: statAcc.roundsPlayed.all + 1,
+                  all: 1,
                   counts: new Map(
-                    [...statAcc.roundsPlayed.counts].map(([k, v]) => [
-                      k,
-                      k === statValue ? v + 1 : v,
-                    ]),
+                    [...statAcc.roundsPlayed.counts].map(([k, v]) => [k, k === statValue ? 1 : 0]),
                   ),
                 },
               } satisfies NumStatAcc;
@@ -485,7 +515,7 @@ export const roundStatsAccumulator = <
           ][]
         ).reduce(
           (acc, [roundKey, values]) => {
-            const { total, rateDivisor } = fieldDef.get(values, numGames, roundKey);
+            const { total, rateDivisor } = fieldDef.get(values, { numGames, roundKey });
             const value = rateDivisor
               ? rateDivisor >= 1
                 ? total / rateDivisor
@@ -601,7 +631,7 @@ export const roundStatsAccumulator = <
           ][]
         ).reduce(
           (acc, [roundKey, values]) => {
-            const { total, rateDivisor } = fieldDef.get(values, numGames, roundKey);
+            const { total, rateDivisor } = fieldDef.get(values, { numGames, roundKey });
             const value = rateDivisor
               ? rateDivisor >= 1
                 ? total / rateDivisor

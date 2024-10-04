@@ -425,25 +425,23 @@ export const createSummaryComponent = <
                         RoundsField,
                         (typeof parts.rounds.meta)[RoundsField],
                       ][]) {
-                        const value = get(
-                          summary.rounds.valuesRaw[roundKey],
-                          summary.numGames,
+                        const value = get(summary.rounds.valuesRaw[roundKey], {
+                          numGames: summary.numGames,
                           roundKey,
-                        );
+                        });
                         const fav = summary.rounds.favourites[props.roundsFields!.field];
                         const deltaVal =
                           pDelta !== undefined
                             ? delta
-                              ? delta(
-                                  summary.rounds.valuesRaw[roundKey],
-                                  summary.numGames,
+                              ? delta(summary.rounds.valuesRaw[roundKey], {
+                                  numGames: summary.numGames,
                                   roundKey,
-                                )
-                              : get(
-                                  pDelta.rounds.valuesRaw[roundKey],
-                                  summary.numGames + pDelta.numGames,
+                                })
+                              : get(pDelta.rounds.valuesRaw[roundKey], {
+                                  numGames: summary.numGames + pDelta.numGames,
+                                  fullValues: summary.rounds.valuesRaw[roundKey],
                                   roundKey,
-                                )
+                                })
                             : undefined;
                         acc[k].push({
                           pid,
