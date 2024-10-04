@@ -2,7 +2,7 @@ import { StorageLocation, makeConfigComposable } from ".";
 
 export const usePlayerConfig = makeConfigComposable("playerConfig", {
   allowGuestPlayers: {
-    fallback: false,
+    fallback: true,
     location: StorageLocation.Local,
     merge: "replace",
     parse: "json",
