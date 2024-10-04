@@ -57,6 +57,7 @@ export type SummaryRowGroup<PData extends { numGames: number }> = {
     showExtended: boolean;
     showDefault: boolean;
   })[];
+  noExpand?: boolean;
   /** Fallback Tooltip / hover. Only used when no child hover is available */
   groupTooltip?: () => VNodeChild;
 };

@@ -191,20 +191,23 @@ export const createSummaryComponent = <
         props.fieldDataV2.map((def, gpIdx) => {
           const label = typeof def.label === "function" ? def.label(false) : def.label;
           if (def.group) {
-            const expanded = expandedRows.value.fieldsV2.has(def.group);
+            const expandable = !def.noExpand;
+            const expanded = expandable && expandedRows.value.fieldsV2.has(def.group);
             return {
-              expandable: true,
+              expandable,
               expanded,
-              toggleExpansion: (e: MouseEvent) => {
-                if (expanded) {
-                  expandedRows.value.fieldsV2.delete(def.group);
-                } else {
-                  expandedRows.value.fieldsV2.add(def.group);
-                }
-                //TODO: TooltipStack
-                tooltipContent.value = undefined;
-                hoveredEl.value = undefined;
-              },
+              toggleExpansion: expandable
+                ? (e: MouseEvent) => {
+                    if (expanded) {
+                      expandedRows.value.fieldsV2.delete(def.group);
+                    } else {
+                      expandedRows.value.fieldsV2.add(def.group);
+                    }
+                    //TODO: TooltipStack
+                    tooltipContent.value = undefined;
+                    hoveredEl.value = undefined;
+                  }
+                : () => {},
               groupHeader: expanded ? (
                 <tr
                   class="parentRow expandableRow"
