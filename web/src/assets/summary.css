@@ -1,0 +1,64 @@
+table#gameSummaryTable {
+  font-size: 1.8vh;
+  & tbody {
+    font-size: 0.8em;
+    line-height: 1.2;
+  }
+  & tbody tr:hover {
+    background-color: var(--colour-table-hover);
+  }
+  & .rowLabel {
+    font-weight: bold;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  & .playerName {
+    white-space: normal;
+    font-weight: bold;
+    width: 4.5em;
+    vertical-align: bottom;
+  }
+  &.hasDeltas.hasValues .playerName {
+    width: 7em; /*4.5em;*/
+  }
+
+  & .summaryValue {
+    text-align: center;
+    position: relative;
+  }
+  & .summaryDeltaValue {
+    font-size: 0.8em;
+    /* vertical-align: calc(1em / 20); */
+    padding-left: 0.5ch;
+    position: absolute;
+    top: 15%;
+  }
+  & .summaryDeltaValue.better {
+    color: green;
+  }
+  & .summaryDeltaValue.worse {
+    color: red;
+  }
+  & .summaryDeltaValue.neutral {
+    color: blue;
+  }
+  & td.best {
+    background-color: #7eff7e;
+  }
+  & td.worst:not(.best) {
+    background-color: #ff7e7e;
+  }
+  & td.favourite:not(.best) {
+    background-color: #ceff7e;
+  }
+  & tr[data-summary-row^="rounds"] {
+    font-size: 0.9em;
+  }
+  & tr:not([data-summary-row^="rounds"]) + tr[data-summary-row^="rounds"] {
+    & th,
+    & td {
+      border-top: grey 1px dashed;
+    }
+  }
+}

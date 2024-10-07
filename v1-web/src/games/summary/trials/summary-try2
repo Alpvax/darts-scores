@@ -1,0 +1,176 @@
+import { reactive } from "vue";
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type DependsOnV1<
+  S extends object,
+  K extends keyof S,
+  D extends keyof S | undefined = undefined,
+> = D extends undefined ? number : {
+  [key in K | Exclude<D, undefined>]: number;
+};
+// type DependsOn<
+//   S extends object,
+//   K extends keyof S,
+//   D extends number | { [k in keyof S]: number },
+// > = D extends number ? number : {
+//   [key in K | Exclude<D, undefined>]: number;
+// };
+
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// type TSimple = DependsOn<{
+//   num: {
+//     default: number;
+//     calc: (prev: number) => number;
+//   };
+//   hits: {
+//     default: number;
+//     calc: (prev: {num: number; hits: number}) => number;
+//   };
+// }, "num">;
+// // eslint-disable-next-line @typescript-eslint/no-unused-vars
+// type TComplex = DependsOn<{
+//   num: {
+//     default: number;
+//     calc: (prev: number) => number;
+//   };
+//   hits: {
+//     default: number;
+//     calc: (prev: {num: number; hits: number}) => number;
+//     // dependsOn: ["num"];
+//   };
+// }, "hits", "num">;
+
+type SFCommon<S extends object, K extends keyof S> = {
+  default: number;
+  // dependsOn?: D extends undefined ? undefined : D[] | Set<D>;
+  cmp?: (prevVal: number, newVal: number) => "better" | "equal" | "worse";
+  display?: ((val: S[K]) => string) | false;
+}
+
+type SimpleSF<G, S extends object, K extends keyof S> = SFCommon<S, K> & {
+  calc: (score: G, prev: number) => number;
+};
+
+type DepsSF<G, S extends object, K extends keyof S> = SFCommon<S, K> & {
+  calc: (prev: { [k in keyof S]?: number}, score: G) => number;
+  dependsOn: (keyof S)[];
+};
+
+export type SummaryField<G, S extends object, K extends keyof S> =
+  SimpleSF<G, S, K> | DepsSF<G, S, K>;
+
+function hasDeps<
+  // G extends object,
+  S extends object,
+  K extends keyof S,
+>(field: SummaryField<any, S, K>): field is DepsSF<any, S, K> {
+  return Object.hasOwn(field, "dependsOn");
+}
+function notHasDeps<
+  // G extends object,
+  S extends object,
+  K extends keyof S,
+>(field: SummaryField<any, S, K>): field is SimpleSF<any, S, K> {
+  return !Object.hasOwn(field, "dependsOn");
+}
+
+type SummaryFieldFactory<
+  G extends object,
+  S extends { [k: string]: SummaryField<G, S, any> }
+> = {
+  template: {};
+  create: () => SummaryFields<G, S>;
+  defaults: { [K in keyof S]: number };
+  orderedDeps: { key: keyof S; deps: (keyof S)[]}[];
+  fields: S;
+}
+
+class SummaryFields<
+  G extends object,
+  S extends { [k: string]: SummaryField<G, S, any> }
+> {
+  private readonly values: { [K in keyof S]: number };
+  private constructor (readonly factory: SummaryFieldFactory<G, S>) {
+    this.values = reactive({ ...factory.defaults });
+  };
+  /** Completely clears all values and becomes the default values */
+  reset(): void {
+    for (const [key, def] of Object.entries(this.factory.defaults) as [keyof S, number][]) {
+      this.values[key] = def;
+    }
+  }
+  add(gameScore: G): void {
+    for (const { key, deps } of this.factory.orderedDeps) {
+      const field = this.factory.fields[key];
+      const oldVal = this.values[key];
+      let newVal: number;
+      if (hasDeps(field)) {
+        newVal = field.calc(
+          gameScore,
+          deps.reduce((obj, d) => ({ [d]: this.values[d], ...obj }), {}),
+        );
+      } else if (notHasDeps(field)) {
+        newVal = field.calc(gameScore, oldVal);
+      } else {
+        throw Error("Should be unreachable! Field is neither Simple or Deps");
+      }
+      // if (field.cmp == undefined) {
+      //   this.values[key] = Math.max(oldVal, newVal);
+      // } else if (field.cmp(oldVal, newVal) == "better") {
+      //   this.values[key] = newVal;
+      // }
+      this.values[key] = newVal;
+    }
+  }
+};
+
+export function summaryFields<G extends object>
+(fields: { [k: string]: SummaryField<G, typeof fields, string> }):
+ReturnType<typeof SummaryFieldFactory<G, typeof fields>> {
+  return SummaryFieldFactory<G, typeof fields>(fields);
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function SummaryFieldFactory<
+  G,
+  S extends { [k: string]: SummaryField<G, S, any> }
+>(fields: S) {
+  const defaults = Object.entries(fields).reduce(
+    (def, [k, f]) => ({ [k]: f.default, ...def }),
+    {} as { [K in keyof S]: number },
+  );
+  const toProcess = new Map(Object.entries(fields)
+    .map(([key, field]) => {
+      if (hasDeps(field)) {
+        const deps = new Set(field.dependsOn);
+        deps.delete(key);
+        return [ key, deps ];
+      }
+      return [key, null];
+    }));
+  const orderedMap = new Map<keyof S, (keyof S)[]>();
+  while (toProcess.size > 0) {
+    for (const [ key, deps ] of toProcess.entries()) {
+      if (!deps || new Set([...deps].filter(k => !orderedMap.has(k))).size < 0) {
+        orderedMap.set(key, deps ? [key, ...deps] : [key]);
+        toProcess.delete(key);
+      } else {
+        console.log(orderedMap, toProcess);//XXX
+      }
+    }
+  }
+  const prototype = {
+    values: reactive(defaults),
+    // reset: () => {
+    //   for (const [key, def] of Object.entries(defaults)) {
+    //     this.values
+    //   }
+    // },
+  };
+  return {
+    prototype,
+    create: () => ({ ...defaults }),
+    orderedDeps: [...orderedMap.entries()].map(([key, deps]) => ({ key, deps })),
+  };
+}
+

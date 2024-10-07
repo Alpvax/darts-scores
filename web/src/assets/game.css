@@ -1,0 +1,37 @@
+div.gameDiv {
+  display: grid;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  width: 100%;
+  grid-template-areas:
+    "pselect side"
+    "game side"
+    "completed completed";
+  grid-template-rows: max-content max-content min-content;
+  grid-template-columns: min-content max-content;
+  justify-content: space-between;
+
+  & .playerSelection {
+    grid-area: pselect;
+    width: max-content;
+  }
+  & table.game {
+    grid-area: game;
+    max-width: max-content;
+  }
+  & table:not(.game) {
+    grid-area: side;
+  }
+  & .completed {
+    grid-area: completed;
+  }
+}
+
+table.game tbody {
+  & td.winner {
+    background-color: #00ff00;
+  }
+  & td.tie:not(.winner) {
+    background-color: #bbff66;
+  }
+}

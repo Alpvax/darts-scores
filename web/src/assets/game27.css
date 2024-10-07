@@ -1,0 +1,144 @@
+table.game.twentyseven {
+  font-size: 1.8vb;
+  white-space: nowrap;
+  max-width: 100%;
+  min-width: min-content;
+
+  & .rowLabel {
+    font-weight: bold;
+    text-align: right;
+  }
+
+  & .gameDate {
+    width: fit-content;
+    font-weight: bold;
+  }
+
+  & .playerName {
+    white-space: normal;
+    font-weight: bold;
+    width: 4.5em;
+    vertical-align: bottom;
+
+    &.fatNick {
+      color: #ff0000;
+    }
+    &:not(.fatNick).allPositive {
+      color: #00cc00;
+    }
+  }
+
+  & .positionRow > td {
+    text-align: center;
+  }
+  & .positionRow.small {
+    font-size: 0.7em;
+  }
+  & :is(thead, tbody) .positionRow:not(.small) > td {
+    font-size: 0.85em;
+    border-bottom: 1px dashed black;
+  }
+
+  & tr:first-child:is(.current, .untaken),
+  & tr:not(.untaken, .current) + tr:is(.current, .untaken) {
+    background-color: var(--colour-table-hover);
+  }
+
+  & tr.allMissed > .rowLabel {
+    color: #ff0000;
+  }
+  & tr.allHit > .rowLabel {
+    color: #00cc00;
+  }
+
+  & .turn27 {
+    /* padding-bottom: 0.3em; */
+    padding-left: 0.5ch;
+
+    &:not(* .hitsInput) {
+      padding-right: 0.5ch;
+    }
+
+    /* score span */
+    & > span {
+      display: inline-block;
+      text-align: right;
+      width: 4ch;
+    }
+
+    /* score delta sup */
+    & > sup {
+      display: inline-block;
+      padding-left: 0.3ch;
+      padding-right: 0.3ch;
+      width: 5ch;
+    }
+
+    & .hitsInput {
+      margin: 0.2ch;
+      margin-left: 0.5ch;
+      width: calc(1ch + 25px);
+      font-size: 0.8em;
+    }
+
+    &.unplayed {
+      color: #b0b0b0;
+    }
+
+    &.cliff {
+      color: #00cc00;
+    }
+    &.doubledouble {
+      color: #0000ff;
+    }
+    &.miss {
+      color: #a82828;
+    }
+  }
+
+  /* .turn27td.turnScore.tie.winner {
+    background-color: #bbff66;
+  }
+  .turn27td.turnScore.winner {
+    background-color: #00ff00;
+  } */
+
+  & tr.jesusRow {
+    & input {
+      display: block;
+      margin: 0 auto;
+    }
+    & input::after {
+      position: absolute;
+      transform: translate(1.2em);
+    }
+    & input:not(:checked)::after {
+      content: "No";
+    }
+    & input:checked::after {
+      content: "Yes";
+    }
+  }
+
+  & tr.totalHitsRow > th {
+    border-top: 1px dashed black;
+    font-size: 0.95em;
+  }
+  & tr.totalHitsRow > td {
+    text-align: center;
+    border-top: 1px dashed black;
+    font-size: 0.95em;
+    width: 13ch;
+  }
+
+  & tr.finalScoreRow > th {
+    font-size: 0.8em;
+    line-height: 1;
+    white-space: normal;
+  }
+  & tr.finalScoreRow > td {
+    white-space: nowrap;
+    text-align: center;
+    font-size: 0.8em;
+  }
+}
