@@ -220,7 +220,7 @@ export const usePlayerStore = defineStore("player", () => {
     if (globalSubscription === null) {
       loadPlayer(playerId);
     }
-    const p = cachedPartialPlayers.value.get(playerId);
+    const p = loadedPlayers.value.get(playerId) ?? cachedPartialPlayers.value.get(playerId);
     if (p) {
       return p.name;
     }
