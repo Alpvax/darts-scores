@@ -135,6 +135,7 @@ export type SummaryPartAccumulator<PlayerData extends StatsTypeFor<any, any, any
     opponents: string[],
     tiebreakWinner?: string,
   ) => SummaryPart;
+  displayDefaults?: SummaryPartDisplay<PlayerData, SummaryPart>;
 };
 /**
  * Metadata used to accumulate player stats into part of a summary.
@@ -222,11 +223,12 @@ export const makeSummaryAccumulatorFactoryFor = <
     min: scoreDef?.minimum ?? Number.MIN_SAFE_INTEGER,
     max: scoreDef?.maximum ?? Number.MAX_SAFE_INTEGER,
   };
-  const scoreAccumulator: ScoreAccumulatorPart<G> = (([best, worst, cmpB, cmpW]: [
+  const scoreAccumulator: ScoreAccumulatorPart<G> = (([best, worst, cmpB, cmpW, bestDir]: [
     number,
     number,
     (a: number, b: number) => number,
     (a: number, b: number) => number,
+    "positive" | "negative" | "neutral",
   ]) => ({
     empty: () => ({
       best,
@@ -243,13 +245,28 @@ export const makeSummaryAccumulatorFactoryFor = <
         mean: tot / numGames,
       };
     },
+    displayDefaults: {
+      direction: bestDir,
+      zero: null,
+    },
   }))(
     gameDef.positionOrder === "highestFirst"
-      ? [scoreLimits.min, scoreLimits.max, Math.max, Math.min]
-      : [scoreLimits.max, scoreLimits.min, Math.min, Math.max],
+      ? [scoreLimits.min, scoreLimits.max, Math.max, Math.min, "positive"]
+      : [scoreLimits.max, scoreLimits.min, Math.min, Math.max, "negative"],
   );
 
+  const numGamesAccumulator: NumGamesAccumulatorPart<G> = {
+    empty: () => 0,
+    push: (prev) => prev + 1,
+    displayDefaults: {
+      direction: "neutral",
+    },
+  };
+
   const winsAccumulator: WinsAccumulatorPart<G> = {
+    displayDefaults: {
+      direction: "positive",
+    },
     empty: () => ({
       all: {
         totalOutright: 0,
@@ -379,7 +396,12 @@ export const makeSummaryAccumulatorFactoryFor = <
   );
 
   const parts = Object.assign(
-    { score: scoreAccumulator, wins: winsAccumulator, rounds: roundsAccumulator },
+    {
+      numGames: numGamesAccumulator,
+      score: scoreAccumulator,
+      wins: winsAccumulator,
+      rounds: roundsAccumulator,
+    },
     summaryParts,
   ) as SummaryAccumulatorParts<G, SummaryPartTypes<G, SummaryParts, RoundsField>, RoundsField>;
   return {
@@ -395,6 +417,7 @@ export interface FixedSummaryAccumulatorParts<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   RoundsField extends string,
 > {
+  numGames: NumGamesAccumulatorPart<G>;
   score: ScoreAccumulatorPart<G>;
   wins: WinsAccumulatorPart<G>;
   rounds: RoundsAccumulatorPart<G, RoundsField>;
@@ -403,16 +426,14 @@ export interface FixedSummaryAccumulatorParts<
 export type SummaryAccumulatorParts<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   SummaryPartTypes extends { [k: string]: [any] | [any, any] } & {
+    numGames?: never;
     score?: never;
     wins?: never;
-    numGames?: never;
     rounds?: never;
   },
   RoundsField extends string,
 > = FixedSummaryAccumulatorParts<G, RoundsField> & {
-  [K in keyof SummaryPartTypes as K extends
-    | keyof FixedSummaryAccumulatorParts<G, RoundsField>
-    | "numGames"
+  [K in keyof SummaryPartTypes as K extends keyof FixedSummaryAccumulatorParts<G, RoundsField>
     ? never
     : K]: [SummaryPartTypes[K]] extends [[infer T, infer M]]
     ? SummaryPartAccumulatorWithMeta<StatsTypeForGame<G>, T, M>
@@ -431,9 +452,7 @@ export type PlayerSummaryValues<
   wins: AccumulatorValuesLookup<WinsAccumulatorPart<G>>;
   rounds: AccumulatorValuesLookup<RoundsAccumulatorPart<G, RoundsField>>;
 } & {
-  [K in keyof SummaryPartTypes as K extends
-    | keyof FixedSummaryAccumulatorParts<G, RoundsField>
-    | "numGames"
+  [K in keyof SummaryPartTypes as K extends keyof FixedSummaryAccumulatorParts<G, RoundsField>
     ? never
     : K]: SummaryPartTypes[K] extends [infer T, infer M]
     ? T
@@ -441,6 +460,26 @@ export type PlayerSummaryValues<
       ? T
       : never;
 };
+export type PlayerSummaryValuesNoRounds<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+  SummaryPartTypes extends { [k: string]: [any] | [any, any] },
+> = {
+  numGames: AccumulatorValuesLookup<NumGamesAccumulatorPart<G>>;
+  score: AccumulatorValuesLookup<ScoreAccumulatorPart<G>>;
+  wins: AccumulatorValuesLookup<WinsAccumulatorPart<G>>;
+} & {
+  [K in keyof SummaryPartTypes as K extends keyof FixedSummaryAccumulatorParts<G, any>
+    ? never
+    : K]: SummaryPartTypes[K] extends [infer T, infer M]
+    ? T
+    : SummaryPartTypes[K] extends [infer T]
+      ? T
+      : never;
+};
+
+type NumGamesAccumulatorPart<
+  G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
+> = SummaryPartAccumulator<StatsTypeForGame<G>, number>;
 
 type ScoreAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
   SummaryPartAccumulator<
@@ -499,25 +538,6 @@ type WinsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, 
     }
   >;
 
-// type RoundsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> =
-//   SummaryPartAccumulator<StatsTypeForGame<G>, GameTurnStatsType<G>>;
-// type RoundsAccumulatorPart<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> = G extends GameDefinition<
-// any,
-// any,
-// any,
-// infer PlayerState,
-// any,
-// infer TurnType,
-// infer SoloStats,
-// infer FullPlayerStats,
-// infer PlayerId
-// >
-// ? SummaryPartAccumulator<StatsTypeFor<
-//     TurnType,
-//     PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
-//   >, TurnStatsType<TurnType>>
-// : never;
-
 type AccumulatorValuesLookup<Part extends SummaryPartAccumulator<any, any>> =
   Part extends SummaryPartAccumulator<any, infer T> ? T : never;
 
@@ -559,9 +579,9 @@ const calcDefaultDeltas = <T>(prevVals: T, newVals: T, key?: string): T => {
 export class SummaryAccumulator<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   SummaryPartTypes extends { [k: string]: [any] | [any, any] } & {
+    numGames?: never;
     score?: never;
     wins?: never;
-    numGames?: never;
     rounds?: never;
   },
   RoundsField extends string,
@@ -578,9 +598,10 @@ export class SummaryAccumulator<
         keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
         SummaryPartAccumulator<StatsTypeForGame<G>, any>,
       ][]
-    ).reduce((summary, [key, part]) => Object.assign(summary, { [key]: part.empty() }), {
-      numGames: 0,
-    } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>);
+    ).reduce(
+      (summary, [key, part]) => Object.assign(summary, { [key]: part.empty() }),
+      {} as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
+    );
   }
   makeGameDeltas(
     gameResult: GameResult<PlayerDataForGame<G>>,
@@ -591,7 +612,7 @@ export class SummaryAccumulator<
       const numGames = prev.numGames + 1;
       const opponents = gameResult.playerOrder.filter((p) => p !== pid);
       const pStats: StatsTypeForGame<G> = playerStats(pData);
-      const deltaSummary = { numGames: 1 } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>;
+      const deltaSummary = {} as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>;
       for (const [key, part] of Object.entries(this.parts) as [
         keyof PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
         SummaryPartAccumulator<StatsTypeForGame<G>, any>,
@@ -614,7 +635,6 @@ export class SummaryAccumulator<
   pushGame(gameResult: GameResult<PlayerDataForGame<G>>): void {
     for (const [pid, pData] of Object.entries(gameResult.results)) {
       const prev = this.playerSummaries.get(pid) ?? this.makeEmptyPlayerSummary();
-      const numGames = prev.numGames + 1;
       const opponents = gameResult.playerOrder.filter((p) => p !== pid);
       const pStats: StatsTypeForGame<G> = playerStats(pData);
       const newSummary = (
@@ -625,9 +645,15 @@ export class SummaryAccumulator<
       ).reduce(
         (summary, [key, part]) =>
           Object.assign(summary, {
-            [key]: part.push(prev[key], pStats, numGames, opponents, gameResult.tiebreak?.winner),
+            [key]: part.push(
+              prev[key],
+              pStats,
+              prev.numGames + 1,
+              opponents,
+              gameResult.tiebreak?.winner,
+            ),
           }),
-        { numGames } as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
+        {} as PlayerSummaryValues<G, SummaryPartTypes, RoundsField>,
       );
       this.playerSummaries.set(pid, newSummary);
     }

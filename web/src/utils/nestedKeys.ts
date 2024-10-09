@@ -143,7 +143,7 @@ export const flattenedAccessProxy = <T extends object>(obj: T): Flatten<T> =>
  * Like Flatten, but also preserve the initial structure
  * (i.e. obj["a.b.c"] is also accessible as obj.a["b.c"] or obj.a.b.c or obj["a.b"].c)
  */
-type NestedKeys<T extends object> = object extends T
+export type NestedKeys<T extends object> = object extends T
   ? T
   : T & {
         [K in keyof T]-?: (
@@ -171,7 +171,7 @@ type NestedKeys<T extends object> = object extends T
 /**
  * Flattens an object, changing access from obj.a.b.c into obj["a.b.c"]
  */
-type Flatten<T extends object> = object extends T
+export type Flatten<T extends object> = object extends T
   ? T
   : {
         [K in keyof T]: (
