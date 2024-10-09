@@ -95,7 +95,7 @@ export type NumericHighlightDef =
   | {
       [clas: string]: "highest" | "lowest" | number | boolean;
     };
-export type HighlightFn<T extends number = number> = (
+export type HighlightFn<T extends number | number[] = number> = (
   value: T,
 ) => (limits: { best: T; worst: T }) => ClassBindings;
 export const makeHighlightFn = <T extends number = number>(
@@ -130,9 +130,133 @@ export type HighlightGetter<T extends number = number> = (
   limits: { best: T; worst: T },
   rawValue: T,
 ) => ClassBindings;
-export type HighlightDef =
-  | HighlightGetter
+export type HighlightDef<T extends number = number> =
+  | HighlightGetter<T>
   | ("best" | "worst")[]
   | {
       [clas: string]: "best" | "worst" | number | boolean;
     };
+
+export type ArrayRowHighlight<PData, T extends [...number[]] = number[]> = {
+  values: (playerData: PData, playerId: string) => T;
+  cmp: CmpFn<T> | "higher" | "lower" | { [K in keyof T & number]: CmpFn<T[K]> };
+  classes:
+    | ((
+        cmp: (vals: T) => ComparisonResult,
+        limits: { [K in keyof T]: { best: T[K]; worst: T[K] } },
+        rawValues: T,
+      ) => ClassBindings)
+    | ("best" | "worst")[]
+    | {
+        [clas: string]: "best" | "worst" | Partial<T> | boolean;
+      };
+};
+export type NumRowHighlight<PData, T extends number = number> = {
+  value: (playerData: PData, playerId: string) => T;
+  cmp: CmpFn<T> | "higher" | "lower";
+  classes:
+    | ((
+        cmp: (val: T) => ComparisonResult,
+        limits: { best: T; worst: T },
+        rawValue: T,
+      ) => ClassBindings)
+    | ("best" | "worst")[]
+    | {
+        [clas: string]: "best" | "worst" | Partial<T> | boolean;
+      };
+};
+export type RowHighlightDefinition<PData> =
+  | NumRowHighlight<PData, number>
+  | ArrayRowHighlight<PData, number[]>;
+
+export const makeRowHighlightFn = <PData extends {}>(
+  def: RowHighlightDefinition<PData> | undefined,
+):
+  | {
+      getVal: (data: PData, playerId: string) => number[];
+      cmp: CmpFn<number[]>;
+      fn: HighlightFn<number[]>;
+    }
+  | undefined => {
+  if (def === undefined) {
+    return undefined;
+  } else if (Object.hasOwn(def, "value")) {
+    const { value, cmp: cmpDef, classes } = def as NumRowHighlight<PData>;
+    const cmp: CmpFn<number> =
+      typeof cmpDef === "function"
+        ? cmpDef
+        : cmpDef === "higher"
+          ? (a, b) => (a - b > 0 ? "better" : a - b < 0 ? "worse" : "equal")
+          : (a, b) => (a - b < 0 ? "better" : a - b > 0 ? "worse" : "equal");
+    const fn = makeHighlightFn(classes)(cmp);
+    return {
+      getVal: (data, pid) => [value(data, pid)],
+      cmp: ([a], [b]) => cmp(a, b),
+      fn:
+        ([val]) =>
+        ({ best: [best], worst: [worst] }) =>
+          fn(val)({ best, worst }),
+    };
+  } else {
+    const { values, cmp: cmpDef, classes } = def as ArrayRowHighlight<PData>;
+    const cmp: CmpFn<number[]> =
+      typeof cmpDef === "function"
+        ? cmpDef
+        : (([gt, lt]: [ComparisonResult, ComparisonResult]) => {
+            return (arrA, arrB) => {
+              const l = arrA.length;
+              if (arrB.length !== arrA.length) {
+                console.warn(
+                  `Array comparison with arrays of differing lengths! ${arrA.length} != ${arrB.length}`,
+                  arrA,
+                  arrB,
+                );
+              }
+              let i = 0;
+              while (i < l) {
+                const d = arrA[i] - arrB[i];
+                if (d > 0) {
+                  return gt;
+                }
+                if (d < 0) {
+                  return lt;
+                }
+                i++;
+              }
+              return "equal";
+            };
+          })(cmpDef === "higher" ? ["better", "worse"] : ["worse", "better"]);
+    return {
+      getVal: values,
+      cmp,
+      fn: (typeof classes === "function"
+        ? (vals) =>
+            ({ best, worst }) =>
+              classes(
+                (v) => cmp(vals, v),
+                Array.from({ length: vals.length }, (_, i) => ({ best: best[i], worst: worst[i] })),
+                vals,
+              )
+        : Array.isArray(classes)
+          ? (val) =>
+              ({ best, worst }) => ({
+                best: classes.includes("best") && cmp(val, best) === "equal",
+                worst: classes.includes("worst") && cmp(val, worst) === "equal",
+              })
+          : (val) =>
+              ({ best, worst }) =>
+                mapObjectValues(classes, (criteria) => {
+                  if (criteria === "best") {
+                    return cmp(val, best) === "equal";
+                  }
+                  if (criteria === "worst") {
+                    return cmp(val, worst) === "equal";
+                  }
+                  if (typeof criteria === "number") {
+                    return cmp(val, criteria) === "equal";
+                  }
+                  return criteria as boolean;
+                })) as HighlightFn<number[]>,
+    };
+  }
+};

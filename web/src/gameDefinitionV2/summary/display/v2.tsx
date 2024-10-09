@@ -7,6 +7,7 @@ import {
   type DeltaDirectionDef,
   type HighlightDef,
   type HighlightFn,
+  type RowHighlightDefinition,
 } from ".";
 
 type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
@@ -39,11 +40,7 @@ export type SummaryRow<PData extends { numGames: number }> = {
   key?: string;
   label: RowLabelDef;
   display: RowFormat<PData>;
-  highlight?: {
-    getVal: (playerData: PData, pid: string) => number;
-    cmp: CmpFn<number> | "higher" | "lower";
-    classes: HighlightDef;
-  };
+  highlight?: RowHighlightDefinition<PData>;
   /** Tooltip / hover over row. Overriden by `valueTooltip` if defined and hovering over value cell */
   fieldTooltip?: () => VNodeChild;
   /** Tooltip / hover over value */

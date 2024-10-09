@@ -12,6 +12,7 @@ import {
 } from "./roundStats";
 import { floatCompareFunc, mapObjectValues, type ClassBindings } from "@/utils";
 import { createSummaryComponent } from "./summaryComponent";
+import type { SummaryPartDisplay } from "./display/parts";
 
 type FloatingFieldDef<PlayerGameStats extends {}> = (Omit<
   SummaryFieldDef<number, PlayerGameStats>,

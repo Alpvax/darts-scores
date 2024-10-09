@@ -7,7 +7,7 @@ import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 import type { ContextMenuItem } from "@/components/contextmenu";
 import type { ComparisonResult } from "./roundStats";
 import { type NormalisedSummaryRowsDef } from "./display/v1";
-import { getVDNumFormat, makeHighlightFn, type CmpFn, type HighlightFn } from "./display";
+import { getVDNumFormat, makeRowHighlightFn, type HighlightFn } from "./display";
 import type { SummaryFieldRow, SummaryRow } from "./display/v2";
 
 export type RoundRowsMeta<
@@ -247,32 +247,29 @@ export const createSummaryComponent = <
                     return [];
                   }
                   const label = typeof row.label === "function" ? row.label(expanded) : row.label;
-                  const cmp: CmpFn<number> | undefined = row.highlight
-                    ? typeof row.highlight.cmp === "function"
-                      ? row.highlight.cmp
-                      : row.highlight.cmp === "higher"
-                        ? (a, b) => (a - b > 0 ? "better" : a - b < 0 ? "worse" : "equal")
-                        : (a, b) => (a - b < 0 ? "better" : a - b > 0 ? "worse" : "equal")
-                    : undefined;
 
-                  const highlightFn = row.highlight
-                    ? makeHighlightFn(row.highlight.classes)(cmp!)
-                    : () => () => undefined;
+                  const highlightMeta = makeRowHighlightFn(row.highlight);
                   const { playerValues, ...limits } = props.players.reduce(
                     (acc, pid) => {
                       const summary = props.summaries.get(pid);
                       const pDelta = props.deltaGame?.get(pid) ?? {};
                       if (summary) {
-                        let highlight: ReturnType<HighlightFn> = () => undefined;
-                        if (row.highlight) {
-                          const val = row.highlight.getVal(summary, pid);
-                          if (acc.best === undefined || cmp!(val, acc.best) === "better") {
-                            acc.best = val;
+                        let highlight: ReturnType<HighlightFn<number[]>> = () => undefined;
+                        if (highlightMeta) {
+                          const vals = highlightMeta.getVal(summary, pid);
+                          if (
+                            acc.best.length < 1 ||
+                            highlightMeta.cmp(vals, acc.best) === "better"
+                          ) {
+                            acc.best = [...vals];
                           }
-                          if (acc.worst === undefined || cmp!(val, acc.worst) === "worse") {
-                            acc.worst = val;
+                          if (
+                            acc.worst.length < 1 ||
+                            highlightMeta.cmp(vals, acc.worst) === "worse"
+                          ) {
+                            acc.worst = [...vals];
                           }
-                          highlight = highlightFn(val);
+                          highlight = highlightMeta.fn(vals);
                         }
                         acc.playerValues.push((limits) => (
                           <td
@@ -309,11 +306,11 @@ export const createSummaryComponent = <
                       return acc;
                     },
                     {
-                      best: undefined as number | undefined,
-                      worst: undefined as number | undefined,
+                      best: [] as number[],
+                      worst: [] as number[],
                       playerValues: [] as ((limits: {
-                        best: number;
-                        worst: number;
+                        best: number[];
+                        worst: number[];
                       }) => VNodeChild)[],
                     },
                   );
@@ -321,7 +318,7 @@ export const createSummaryComponent = <
                     {
                       key: `${def.group}:${key ?? (["string", "number"].includes(typeof label) ? label : idx)}`,
                       label,
-                      limits: limits as { best: number; worst: number },
+                      limits,
                       playerValues,
                       fieldTooltip,
                     },
@@ -332,31 +329,22 @@ export const createSummaryComponent = <
             };
           } else {
             const row = def as SummaryRow<PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>;
-            const cmp: CmpFn<number> | undefined = row.highlight
-              ? typeof row.highlight.cmp === "function"
-                ? row.highlight.cmp
-                : row.highlight.cmp === "higher"
-                  ? (a, b) => (a - b > 0 ? "better" : a - b < 0 ? "worse" : "equal")
-                  : (a, b) => (a - b < 0 ? "better" : a - b > 0 ? "worse" : "equal")
-              : undefined;
-            const highlightFn = row.highlight
-              ? makeHighlightFn(row.highlight.classes)(cmp!)
-              : () => () => undefined;
+            const highlightMeta = makeRowHighlightFn(row.highlight);
             const { playerValues, ...limits } = props.players.reduce(
               (acc, pid) => {
                 const summary = props.summaries.get(pid);
                 const pDelta = props.deltaGame?.get(pid) ?? {};
                 if (summary) {
-                  let highlight: ReturnType<HighlightFn> = () => undefined;
-                  if (row.highlight) {
-                    const val = row.highlight.getVal(summary, pid);
-                    if (acc.best === undefined || cmp!(val, acc.best) === "better") {
-                      acc.best = val;
+                  let highlight: ReturnType<HighlightFn<number[]>> = () => undefined;
+                  if (highlightMeta) {
+                    const vals = highlightMeta.getVal(summary, pid);
+                    if (acc.best.length < 1 || highlightMeta.cmp(vals, acc.best) === "better") {
+                      acc.best = [...vals];
                     }
-                    if (acc.worst === undefined || cmp!(val, acc.worst) === "worse") {
-                      acc.worst = val;
+                    if (acc.worst.length < 1 || highlightMeta.cmp(vals, acc.worst) === "worse") {
+                      acc.worst = [...vals];
                     }
-                    highlight = highlightFn(val);
+                    highlight = highlightMeta.fn(vals);
                   }
                   acc.playerValues.push((limits) => (
                     <td
@@ -393,9 +381,9 @@ export const createSummaryComponent = <
                 return acc;
               },
               {
-                best: undefined as number | undefined,
-                worst: undefined as number | undefined,
-                playerValues: [] as ((limits: { best: number; worst: number }) => VNodeChild)[],
+                best: [] as number[],
+                worst: [] as number[],
+                playerValues: [] as ((limits: { best: number[]; worst: number[] }) => VNodeChild)[],
               },
             );
             return {
@@ -407,7 +395,7 @@ export const createSummaryComponent = <
                 {
                   key: row.key ?? (["string", "number"].includes(typeof label) ? label : gpIdx),
                   label,
-                  limits: limits as { best: number; worst: number },
+                  limits,
                   playerValues,
                   fieldTooltip: row.fieldTooltip,
                 },

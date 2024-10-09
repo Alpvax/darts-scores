@@ -25,7 +25,7 @@ import {
 } from "@/gameDefinitionV2/summary/display/v1";
 import { createRecord, floatCompareFunc } from "@/utils";
 import { row, RowFormat, type SummaryFieldRow } from "@/gameDefinitionV2/summary/display/v2";
-import { getVDNumFormat } from "@/gameDefinitionV2/summary/display";
+import { getVDNumFormat, type HighlightDef } from "@/gameDefinitionV2/summary/display";
 
 export default defineComponent({
   components: {
@@ -848,7 +848,7 @@ export default defineComponent({
           label: "Personal Best",
           display: RowFormat.field(({ score }) => score.best, { deltaSpec: "positive" }),
           highlight: {
-            getVal: ({ score }) => score.best,
+            value: ({ score }) => score.best,
             cmp: "higher",
             classes: ["best"],
           },
@@ -858,7 +858,7 @@ export default defineComponent({
           label: "Personal Worst",
           display: RowFormat.field(({ score }) => score.worst, { deltaSpec: "positive" }),
           highlight: {
-            getVal: ({ score }) => score.worst,
+            value: ({ score }) => score.worst,
             cmp: "higher",
             classes: { best: "best", worst: -393 },
           },
@@ -871,7 +871,7 @@ export default defineComponent({
             deltaSpec: "positive",
           }),
           highlight: {
-            getVal: ({ score }) => score.mean,
+            value: ({ score }) => score.mean,
             cmp: "higher",
             classes: ["best"],
           },
@@ -888,7 +888,7 @@ export default defineComponent({
             );
           }),
           highlight: {
-            getVal: ({ wins }, playerId) => {
+            value: ({ wins }, playerId) => {
               const req = realWinsPlayers.value.filter((pid) => pid !== playerId);
               return [...wins.byOpponents.entries()].reduce(
                 (wins, [players, { total }]) =>
@@ -924,7 +924,7 @@ export default defineComponent({
               showDefault: true,
               showExtended: true,
               highlight: {
-                getVal: ({ wins }) => wins.all.totalOutright,
+                value: ({ wins }) => wins.all.totalOutright,
                 cmp: "higher",
                 classes: ["best"],
               },
@@ -942,7 +942,7 @@ export default defineComponent({
               showDefault: true,
               showExtended: false,
               highlight: {
-                getVal: ({ wins }) => wins.all.tiebreakWins,
+                value: ({ wins }) => wins.all.tiebreakWins,
                 cmp: "higher",
                 classes: ["best"],
               },
@@ -956,7 +956,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               highlight: {
-                getVal: ({ wins }) => wins.all.tiebreakWins,
+                value: ({ wins }) => wins.all.tiebreakWins,
                 cmp: "higher",
                 classes: ["best"],
               },
@@ -970,7 +970,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               // highlight: {
-              //   getVal: ({wins}) => wins.all.tiebreaksPlayed,
+              //   value: ({wins}) => wins.all.tiebreaksPlayed,
               //   cmp: "higher",
               //   classes: ["best"],
               // },
@@ -985,7 +985,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               highlight: {
-                getVal: ({ wins }) => wins.all.tiebreakWinRate,
+                value: ({ wins }) => wins.all.tiebreakWinRate,
                 cmp: "higher",
                 classes: ["best"],
               },
@@ -1000,7 +1000,7 @@ export default defineComponent({
               showDefault: true,
               showExtended: true,
               highlight: {
-                getVal: ({ wins }) => wins.all.mean,
+                value: ({ wins }) => wins.all.mean,
                 cmp: "higher",
                 classes: ["best"],
               },
@@ -1033,7 +1033,7 @@ export default defineComponent({
               showDefault: true,
               showExtended: false,
               highlight: {
-                getVal: ({ fatNicks }) => parseFloat(`${fatNicks.count}.${fatNicks.furthest}`),
+                values: ({ fatNicks }) => [fatNicks.count, fatNicks.furthest],
                 cmp: "lower",
                 classes: ["worst"],
               },
@@ -1046,7 +1046,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               highlight: {
-                getVal: ({ fatNicks }) => fatNicks.count,
+                value: ({ fatNicks }) => fatNicks.count,
                 cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
                 classes: ["worst"],
               },
@@ -1060,7 +1060,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               highlight: {
-                getVal: ({ fatNicks }) => fatNicks.furthest,
+                value: ({ fatNicks }) => fatNicks.furthest,
                 cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
                 classes: ["worst"],
               },
@@ -1075,7 +1075,7 @@ export default defineComponent({
               showDefault: false,
               showExtended: true,
               highlight: {
-                getVal: ({ fatNicks }) => fatNicks.rate,
+                value: ({ fatNicks }) => fatNicks.rate,
                 cmp: "lower", //(a, b) => a > b ? "worse" : a < b ? "better" : "equal",
                 classes: ["worst"],
               },
@@ -1091,11 +1091,11 @@ export default defineComponent({
               label: "Cliff Rate",
               display: row`${{ value: ({ cliffs }) => cliffs.rate, format: rateFmt, deltaSpec: "positive" }}${({ cliffs }) => (cliffs.total > 0 ? row` (${{ value: ({ cliffs }) => cliffs.total, deltaSpec: "positive" }})` : [])}`,
               highlight: {
-                getVal: ({ cliffs }) => cliffs.rate,
+                value: ({ cliffs }) => cliffs.rate as number,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: true,
               showExtended: false,
@@ -1108,11 +1108,11 @@ export default defineComponent({
                 deltaSpec: "positive",
               }),
               highlight: {
-                getVal: ({ cliffs }) => cliffs.rate,
+                value: ({ cliffs }) => cliffs.rate,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1122,11 +1122,11 @@ export default defineComponent({
               label: "Total",
               display: RowFormat.field(({ cliffs }) => cliffs.total, { deltaSpec: "positive" }),
               highlight: {
-                getVal: ({ cliffs }) => cliffs.total,
+                value: ({ cliffs }) => cliffs.total,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1136,11 +1136,11 @@ export default defineComponent({
               label: "Most / game",
               display: RowFormat.field(({ cliffs }) => cliffs.most, { deltaSpec: "positive" }),
               highlight: {
-                getVal: ({ cliffs }) => cliffs.most,
+                value: ({ cliffs }) => cliffs.most,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1150,11 +1150,11 @@ export default defineComponent({
               label: "Fewest / game",
               display: RowFormat.field(({ cliffs }) => cliffs.least, { deltaSpec: "positive" }),
               highlight: {
-                getVal: ({ cliffs }) => cliffs.least,
+                value: ({ cliffs }) => cliffs.least,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1170,11 +1170,11 @@ export default defineComponent({
               label: "Double Double Rate",
               display: row`${{ value: ({ doubleDoubles }) => doubleDoubles.rate, format: rateFmt, deltaSpec: "positive" }}${({ doubleDoubles }) => (doubleDoubles.total > 0 ? row` (${{ value: ({ doubleDoubles }) => doubleDoubles.total, deltaSpec: "positive" }})` : [])}`,
               highlight: {
-                getVal: ({ doubleDoubles }) => doubleDoubles.rate,
+                value: ({ doubleDoubles }) => doubleDoubles.rate,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: true,
               showExtended: false,
@@ -1187,11 +1187,11 @@ export default defineComponent({
                 deltaSpec: "positive",
               }),
               highlight: {
-                getVal: ({ doubleDoubles }) => doubleDoubles.rate,
+                value: ({ doubleDoubles }) => doubleDoubles.rate,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1203,11 +1203,11 @@ export default defineComponent({
                 deltaSpec: "positive",
               }),
               highlight: {
-                getVal: ({ doubleDoubles }) => doubleDoubles.total,
+                value: ({ doubleDoubles }) => doubleDoubles.total,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1219,11 +1219,11 @@ export default defineComponent({
                 deltaSpec: "positive",
               }),
               highlight: {
-                getVal: ({ doubleDoubles }) => doubleDoubles.most,
+                value: ({ doubleDoubles }) => doubleDoubles.most,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
               },
               showDefault: false,
               showExtended: true,
@@ -1235,11 +1235,139 @@ export default defineComponent({
                 deltaSpec: "positive",
               }),
               highlight: {
-                getVal: ({ doubleDoubles }) => doubleDoubles.least,
+                value: ({ doubleDoubles }) => doubleDoubles.least,
                 cmp: "higher",
-                classes: (cmp, { best }) => ({
+                classes: ((cmp, { best }) => ({
                   best: cmp(0) === "better" && cmp(best) === "equal",
-                }),
+                })) satisfies HighlightDef,
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+          ],
+        },
+        {
+          key: "hans",
+          label: "Hans",
+          display: RowFormat.field(({ hans }) => hans.total, { deltaSpec: "positive" }),
+          highlight: {
+            value: ({ hans }) => hans.total,
+            cmp: "higher",
+            classes: ["best"],
+          },
+          fieldTooltip: () => "Three consecutive double doubles",
+        },
+        {
+          key: "goblins",
+          label: "Goblins",
+          display: RowFormat.field(({ goblins }) => goblins.count, { deltaSpec: "positive" }),
+          highlight: {
+            value: ({ goblins }) => goblins.count,
+            cmp: "higher",
+            classes: ["best"],
+          },
+          fieldTooltip: () => "Only double doubles or cliffs hit in the game",
+        },
+        {
+          key: "piranhas",
+          label: "Piranhas",
+          display: RowFormat.field(({ piranhas }) => piranhas.count, { deltaSpec: "positive" }),
+          highlight: {
+            value: ({ piranhas }) => piranhas.count,
+            cmp: "higher",
+            classes: ["best"],
+          },
+          fieldTooltip: () => "Only a single double 1 hit in the game",
+        },
+        {
+          key: "jesus",
+          label: "Jesus",
+          display: RowFormat.field(({ jesus }) => jesus.count, { deltaSpec: "positive" }),
+          highlight: {
+            value: ({ jesus }) => jesus.count,
+            cmp: "higher",
+            classes: ["best"],
+          },
+          fieldTooltip: () => "Only hit with the last dart of the game",
+        },
+        {
+          group: "dream",
+          label: "Dreams",
+          rows: [
+            {
+              key: "combined",
+              label: "Dreams",
+              display: row`${{ value: ({ dreams }) => dreams.count, deltaSpec: "positive" }}${({ dreams }) => (dreams.count < 1 ? row` (furthest ${{ value: ({ dreams }) => dreams.furthest, deltaSpec: "positive" }})` : [])}`,
+              highlight: {
+                values: ({ dreams }) => [dreams.count, dreams.furthest],
+                cmp: "higher",
+                classes: ["best"],
+              },
+              showDefault: true,
+              showExtended: false,
+            },
+            {
+              key: "total",
+              label: "Total",
+              display: RowFormat.field(({ dreams }) => dreams.count, { deltaSpec: "positive" }),
+              highlight: {
+                value: ({ dreams }) => dreams.count,
+                cmp: "higher",
+                classes: ["best"],
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "furthest",
+              label: "Furthest",
+              display: RowFormat.field(({ dreams }) => dreams.furthest, { deltaSpec: "positive" }),
+              highlight: {
+                value: ({ dreams }) => dreams.furthest,
+                cmp: "higher",
+                classes: ["best"],
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+          ],
+        },
+        {
+          group: "allPos",
+          label: "All Positives",
+          rows: [
+            {
+              key: "combined",
+              label: "All Positives",
+              display: row`${{ value: ({ allPos }) => allPos.count, deltaSpec: "positive" }}${({ allPos }) => (allPos.count < 1 ? row` (furthest ${{ value: ({ allPos }) => allPos.furthest, deltaSpec: "positive" }})` : [])}`,
+              highlight: {
+                values: ({ allPos }) => [allPos.count, allPos.furthest],
+                cmp: "higher",
+                classes: ["best"],
+              },
+              showDefault: true,
+              showExtended: false,
+            },
+            {
+              key: "total",
+              label: "Total",
+              display: RowFormat.field(({ allPos }) => allPos.count, { deltaSpec: "positive" }),
+              highlight: {
+                value: ({ allPos }) => allPos.count,
+                cmp: "higher",
+                classes: ["best"],
+              },
+              showDefault: false,
+              showExtended: true,
+            },
+            {
+              key: "furthest",
+              label: "Furthest",
+              display: RowFormat.field(({ allPos }) => allPos.furthest, { deltaSpec: "positive" }),
+              highlight: {
+                value: ({ allPos }) => allPos.furthest,
+                cmp: "higher",
+                classes: ["best"],
               },
               showDefault: false,
               showExtended: true,
