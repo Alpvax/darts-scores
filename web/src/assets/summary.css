@@ -15,12 +15,15 @@ table#gameSummaryTable {
     white-space: nowrap;
   }
 
+  & tr.expandableRow > th {
+    padding-left: calc(10px + 1ch);
+  }
   & tr.expandableRow > th::before {
     position: absolute;
     left: 5px;
     content: "−";
     font-weight: bold;
-    color: blue;
+    color: grey;
   }
   & tr.expandableRow:not(.parentRow) > th::before {
     content: "+";
@@ -44,7 +47,7 @@ table#gameSummaryTable {
         left: 0.3em;
         font-size: small;
         content: "├";
-        color: blue;
+        color: grey;
       }
     }
   }
