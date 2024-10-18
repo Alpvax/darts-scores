@@ -4,34 +4,12 @@ import {
   makeHighlightFn,
   type CmpFn,
   type DeltaDirection,
-  type DeltaDirectionDef,
   type HighlightDef,
   type HighlightFn,
   type RowHighlightDefinition,
 } from ".";
 
-type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
-
-type SimpleSummaryRow<PData> = {
-  /** added to row as data-summary-row, if undefined then label(.innerText if element) is used instead */
-  key?: string;
-  label: RowLabelDef;
-  value: (playerData: PData, playerId: string) => number;
-  cmp: (a: number, b: number) => number;
-  /**
-   * If "positive", higher values are better. If "negative", lower values are better. If "neutral", no values are better than others (e.g. numGames).
-   * If a function returning "equal", the delta will not be displayed (i.e. there is no change). Otherwise return is self explanitary.
-   */
-  deltaDirection?: DeltaDirectionDef<number>;
-  highlight?: HighlightDef;
-  format?:
-    | Intl.NumberFormatOptions
-    | ((value: number, isDelta: boolean /*, playerData: PlayerGameStats*/) => VNodeChild);
-  /** Tooltip / hover over row. Overriden by `valueTooltip` if defined and hovering over value cell */
-  fieldTooltip?: () => VNodeChild;
-  /** Tooltip / hover over value */
-  valueTooltip?: (value: number, delta?: number /*, playerData: PlayerGameStats*/) => VNodeChild;
-};
+export type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
 
 export type SummaryRow<PData extends { numGames: number }> = {
   /** Added to type to allow using `group` as a descriminator */
@@ -68,7 +46,7 @@ type LiteralDisplayPart = {
 };
 type FieldDisplayPart<PData> = {
   type: "field";
-  value: (values: PData, playerId: string, totalNumGames: number) => number;
+  value: (values: PData, playerId: string, totalNumGames: number) => number | undefined;
   /**
    * Normalised function to convert the raw value to a displayable value for inserting into the cell.
    * If undefined, the value will not be displayed.
@@ -91,7 +69,7 @@ type NestedDisplayPart<PData extends { numGames: number }> = {
   type: "nested";
   func: (
     values: PData,
-    deltas: Partial<PData>,
+    deltas: Partial<PData> | undefined,
     playerId: string,
   ) => RowDisplayPart<PData>[] | RowFormat<PData>;
 };
@@ -316,15 +294,18 @@ export class RowFormat<PData extends { numGames: number }> {
   ) {
     return this.builder<PData>().field(value, opts).build();
   }
-  display(values: PData, deltas: Partial<PData>, playerId: string): VNodeChild {
+  display(values: PData, deltas: Partial<PData> | undefined, playerId: string): VNodeChild {
     const display_part = (part: RowDisplayPart<PData>): VNodeChild[] => {
       switch (part.type) {
         case "field": {
           const parts: VNodeChild[] = [];
           if (part.valueFormat) {
-            parts.push(part.valueFormat(part.value(values, playerId, values.numGames)));
+            const value = part.value(values, playerId, values.numGames);
+            if (value !== undefined) {
+              parts.push(part.valueFormat(value));
+            }
           }
-          if (part.deltaFormat) {
+          if (part.deltaFormat && deltas) {
             //TODO: Fix deltas being partial?
             try {
               const delta = part.value(deltas as PData, playerId, values.numGames);

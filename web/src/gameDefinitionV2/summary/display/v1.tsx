@@ -5,7 +5,7 @@ import type {
   SummaryPartAccumulatorWithMeta,
 } from "..";
 import type { GameDefinition } from "../../definition";
-import type { ComparisonResult } from "../roundStats";
+import type { ComparisonResult } from "..";
 import type { VNodeChild } from "vue";
 import {
   getVDNumFormat,

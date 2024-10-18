@@ -1,11 +1,7 @@
 import { gameDefinitionBuilder } from "@/gameDefinitionV2/builder";
 import type { PlayerDataForGame } from "@/gameDefinitionV2/definition";
 import type { GameResult } from "@/gameDefinitionV2/gameResult";
-import {
-  makeSummaryAccumulatorFactoryFor,
-  SummaryAccumulator,
-  type PlayerSummaryValues,
-} from "@/gameDefinitionV2/summary";
+import { SummaryAccumulator, type PlayerSummaryValues } from "@/gameDefinitionV2/summary";
 import type { RoundRowsMeta } from "@/gameDefinitionV2/summary/summaryComponent";
 import type { NumericRange } from "@/utils/types";
 import dbAdapter27 from "./database";
@@ -86,202 +82,20 @@ export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
   })
   .build("highestFirst", dbAdapter27());
 
-export const summaryAccumulator27 = makeSummaryAccumulatorFactoryFor(
-  gameDefinition27,
-  {
-    fatNicks: {
-      empty: () => ({
-        furthest: 0,
-        count: 0,
-        rate: 0,
-      }),
-      push: ({ furthest, count }, { farFN, fatNick }, numGames) => ({
-        furthest: Math.max(farFN, furthest),
-        count: count + +fatNick,
-        rate: (count + +fatNick) / numGames,
-      }),
-      // push: ({ furthest, count }, { farFN, fatNick }) => {
-      //   console.log("FatNick.push", { fatNick, farFN, furthest, count });
-      //   return {
-      //     furthest: Math.max(farFN, furthest),
-      //     count: count + +fatNick,
-      //   };
-      // },
-    },
-    dreams: {
-      empty: () => ({
-        furthest: 0,
-        count: 0,
-      }),
-      push: ({ furthest, count }, { farDream, dream }) => ({
-        furthest: Math.max(farDream, furthest),
-        count: count + +dream,
-      }),
-    },
-    allPos: {
-      empty: () => ({
-        furthest: 0,
-        count: 0,
-      }),
-      push: ({ furthest, count }, { farPos, allPos }) => ({
-        furthest: Math.max(farPos, furthest),
-        count: count + +allPos,
-      }),
-    },
-    cliffs: {
-      empty: () => ({
-        most: 0,
-        least: 20, // Is it really worth calculating?
-        total: 0,
-        available: 0,
-        /** Average cliff per game */
-        perGameMean: 0,
-        /** Mean cliff rate of a single round */
-        rate: 0,
-      }),
-      push: (
-        { most, least, total: prev, available: prevA, perGameMean, rate },
-        { roundStatsGameSummary: { cliff } },
-        numGames,
-      ) => {
-        const total = prev + cliff.total;
-        const available = prevA + cliff.max;
-        return {
-          most: Math.max(most, cliff.total),
-          least: Math.min(least, cliff.total),
-          total,
-          available,
-          perGameMean: total / numGames,
-          rate: total / available,
-        };
-      },
-    },
-    doubleDoubles: {
-      empty: () => ({
-        most: 0,
-        least: 20, // Is it really worth calculating?
-        total: 0,
-        available: 0,
-        /** Average dd per game */
-        perGameMean: 0,
-        /** Mean dd rate of a single round */
-        rate: 0,
-      }),
-      push: (
-        { most, least, total: prev, available: prevA, perGameMean, rate },
-        { roundStatsGameSummary: { dd } },
-        numGames,
-      ) => {
-        const total = prev + dd.total;
-        const available = prevA + dd.max;
-        return {
-          most: Math.max(most, dd.total),
-          least: Math.min(least, dd.total),
-          total,
-          available,
-          perGameMean: total / numGames,
-          rate: total / available,
-        };
-      },
-    },
-    hits: {
-      empty: () => ({
-        most: 0,
-        least: 60,
-        total: 0,
-        available: 0,
-        /** Average hit per game */
-        perGameMean: 0,
-        /** Mean hit rate of a single dart */
-        rate: 0,
-      }),
-      push: (
-        { most, least, total: prev, available: prevA, perGameMean, rate },
-        { roundStatsGameSummary: { hits } },
-        numGames,
-      ) => {
-        const total = prev + hits.total;
-        const available = prevA + hits.roundsPlayed.all * 3;
-        return {
-          most: Math.max(most, hits.total),
-          least: Math.min(least, hits.total),
-          total,
-          available,
-          perGameMean: total / numGames,
-          rate: total / available,
-        };
-      },
-    },
-    hans: {
-      empty: () => ({
-        most: 0,
-        least: 20, // Is it really worth calculating?
-        total: 0,
-        mean: 0,
-      }),
-      push: ({ most, least, total: prev, mean }, { hans }, numGames) => {
-        const total = prev + hans;
-        return {
-          most: Math.max(most, hans),
-          least: Math.min(least, hans),
-          total,
-          mean: total / numGames,
-        };
-      },
-    },
-    goblins: {
-      empty: () => ({
-        count: 0,
-        mean: 0,
-      }),
-      push: ({ count, mean }, { goblin }, numGames) => {
-        const total = count + +goblin;
-        return {
-          count: total,
-          mean: total / numGames,
-        };
-      },
-    },
-    piranhas: {
-      empty: () => ({
-        count: 0,
-        mean: 0,
-      }),
-      push: ({ count, mean }, { piranha }, numGames) => {
-        const total = count + +piranha;
-        return {
-          count: total,
-          mean: total / numGames,
-        };
-      },
-    },
-    jesus: {
-      empty: () => ({
-        count: 0,
-        mean: 0,
-      }),
-      push: ({ count, mean }, { jesus }, numGames) => {
-        const total = count + (jesus ? 1 : 0);
-        return {
-          count: total,
-          mean: total / numGames,
-        };
-      },
-    },
-    banana: {
-      empty: () => ({
-        count: 0,
-        mean: 0,
-      }),
-      push: ({ count, mean }, { banana }, numGames) => {
-        const total = count + +banana;
-        return {
-          count: total,
-          mean: total / numGames,
-        };
-      },
-    },
-  },
+export const summaryAccumulator27 = gameDefinition27.makeSummaryAccumulatorFactory(
+  ({ countFurthestRound, countRoundStats, numeric, boolPart }) => ({
+    fatNicks: countFurthestRound("fn", ({ farFN, fatNick }) => [farFN, fatNick], "negative"),
+    dreams: countFurthestRound("dream", ({ farDream, dream }) => [farDream, dream], "positive"),
+    allPos: countFurthestRound("allPos", ({ farPos, allPos }) => [farPos, allPos], "positive"),
+    cliffs: countRoundStats("cliff", "positive"),
+    doubleDoubles: countRoundStats("dd", "positive"),
+    hits: countRoundStats("hits", ({ all }) => all * 3, "positive"),
+    hans: numeric("hans", "positive"),
+    goblins: boolPart("goblin", "positive"),
+    piranhas: boolPart("piranha", "positive"),
+    jesus: boolPart("jesus", "positive"),
+    banana: boolPart("banana", "positive"),
+  }),
   {
     cliffs: {
       label: "Cliffs",

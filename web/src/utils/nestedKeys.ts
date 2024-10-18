@@ -171,10 +171,10 @@ export type NestedKeys<T extends object> = object extends T
 /**
  * Flattens an object, changing access from obj.a.b.c into obj["a.b.c"]
  */
-export type Flatten<T extends object> = object extends T
+export type Flatten<T extends object> = keyof T extends never
   ? T
   : {
-        [K in keyof T]: (
+        [K in keyof T]-?: (
           x: NonNullable<T[K]> extends infer V
             ? V extends object
               ? V extends any[]
