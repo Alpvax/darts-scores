@@ -1,10 +1,9 @@
-import type { FlattenObjectUnion, NumericRange } from "@/utils/types";
-import type { GameDefinition, GameTurnStatsType } from "../definition";
-import type { StatsTypeForGame, SummaryPartAccumulatorWithMeta } from ".";
+import type { FlattenObjectUnion } from "@/utils/types";
+import type { GameDefinition, GameTurnStatsType } from "../../definition";
+import type { ComparisonResult, StatsTypeForGame, SummaryPartAccumulatorWithMeta } from "..";
 import type { VNodeChild } from "vue";
 import { floatCompareFunc, mapObjectValues } from "@/utils";
-import type { gameDefinition27 } from "@/game/27/gameDefv2";
-import type { TurnKey, TurnStatsType } from "../types";
+import type { TurnKey, TurnStatsType } from "../../types";
 
 type BoolStatAcc = {
   /** The total number of times that the stat has been true */
@@ -67,13 +66,13 @@ type StatTypeMap<
     : never;
 }; // extends infer T ? true extends OmitInvalid ? { [K in keyof T as T[K] extends { valid: never } ? never : K]: T[K] } : T : never;
 
-type BoolStatExpansion = {
+export type BoolStatExpansion = {
   /** Number of turns this game where the stat was true */
   total: number;
   /** Total number of turns this stat was valid for */
   max: number;
 };
-type NumStatExpansion = {
+export type NumStatExpansion = {
   /** The highest value the stat reached in a single turn */
   highest: number;
   /** The lowest value the stat reached in a single turn */
@@ -168,16 +167,6 @@ export type RoundStatsAccumulatedValues<
     }
   : never;
 
-type RoundKey<G extends GameDefinition<any, any, any, any, any, any, any, any, any>> = [
-  GameTurnStatsType<G>,
-] extends [
-  infer RoundStats extends
-    | Record<any, Record<any, number | boolean>>
-    | Record<any, number | boolean>[],
-]
-  ? keyof { [K in keyof RoundStats & (string | number) as `round.${K}`]: never }
-  : never;
-
 type FavSpecCmpDefDir = "highest" | "lowest";
 type FavSpecCmpDefObj = {
   /** The value to pick */
@@ -188,7 +177,6 @@ type FavSpecCmpDefObj = {
    */
   precision?: number;
 };
-export type ComparisonResult = "better" | "equal" | "worse";
 type FavSpecCmpDefFunc = {
   /**
    * Whether the stat is deemed a favourite
@@ -385,7 +373,7 @@ export type RoundsAccumulatorPart<
   }
 >;
 
-export const roundStatsAccumulator = <
+export const makeRoundStatsAccumulatorPart = <
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
   RoundsField extends string,
 >(

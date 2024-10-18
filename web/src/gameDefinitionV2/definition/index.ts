@@ -16,9 +16,28 @@ import type {
 } from "../types";
 import type { Position } from "..";
 import type { TurnMeta } from "../rounds";
-import { expandRoundStats } from "../summary/roundStats";
-
-type PositionRowLocation = "head" | "body" | "foot" | "none";
+import {
+  SummaryAccumulator,
+  type FixedSummaryAccumulatorParts,
+  type PlayerSummaryValues,
+  type StatsTypeFor,
+  type SummaryAccumulatorFactory,
+  type SummaryAccumulatorParts,
+  type SummaryPartAccumulator,
+  type SummaryPartAccumulatorWithMeta,
+  type SummaryPartTypes,
+} from "../summary";
+import { expandRoundStats, type RoundsFieldDef } from "../summary/parts/roundStats";
+import {
+  makeNumGamesAccPart,
+  makeScoreAccPart,
+  makeSummaryParts,
+  makeWinsAccPart,
+  makeRoundStatsAccumulatorPart,
+  type SummaryPartsFactoryHelper,
+} from "../summary/parts";
+import { summaryRowFactory } from "../summary/display/parts";
+import { createSummaryComponent } from "../summary/summaryComponent";
 
 export type DatabaseAdapter<
   Config,
@@ -220,8 +239,206 @@ export class GameDefinition<
       positionsOrdered: positions.ordered,
     };
   }
-}
 
+  makeSummaryAccumulatorFactory<
+    SummaryParts extends {
+      [k: string]:
+        | SummaryPartAccumulatorWithMeta<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any,
+            any
+          >
+        | SummaryPartAccumulator<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any
+          >;
+    } & {
+      [K in keyof FixedSummaryAccumulatorParts<this, RoundsField>]?: never;
+    },
+    RoundsField extends string,
+  >(
+    partsFactory: SummaryPartsFactoryHelper<this, SummaryParts, RoundsField>,
+    roundsDef?: RoundsFieldDef<this, RoundsField>,
+    scoreLimits?: {
+      minimum?: number;
+      maximum?: number;
+    },
+  ): SummaryAccumulatorFactory<this, SummaryParts, RoundsField>;
+  makeSummaryAccumulatorFactory<
+    SummaryParts extends {
+      [k: string]:
+        | SummaryPartAccumulatorWithMeta<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any,
+            any
+          >
+        | SummaryPartAccumulator<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any
+          >;
+    } & {
+      [K in keyof FixedSummaryAccumulatorParts<this, RoundsField>]?: never;
+    },
+    RoundsField extends string,
+  >(
+    summaryPartsAndScoreLimits: Omit<
+      SummaryParts,
+      keyof FixedSummaryAccumulatorParts<this, RoundsField>
+    > & {
+      score?: {
+        minimum?: number;
+        maximum?: number;
+      };
+    },
+    roundsDef?: RoundsFieldDef<this, RoundsField>,
+  ): SummaryAccumulatorFactory<this, SummaryParts, RoundsField>;
+  makeSummaryAccumulatorFactory<
+    SummaryParts extends {
+      [k: string]:
+        | SummaryPartAccumulatorWithMeta<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any,
+            any
+          >
+        | SummaryPartAccumulator<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any
+          >;
+    } & {
+      [K in keyof FixedSummaryAccumulatorParts<this, RoundsField>]?: never;
+    },
+    RoundsField extends string,
+  >(
+    summaryPartsAndScoreLimits: Omit<
+      SummaryParts,
+      keyof FixedSummaryAccumulatorParts<this, RoundsField>
+    >,
+    roundsDef?: RoundsFieldDef<this, RoundsField>,
+    maybeScoreLimits?: {
+      minimum?: number;
+      maximum?: number;
+    },
+  ): SummaryAccumulatorFactory<this, SummaryParts, RoundsField>;
+  makeSummaryAccumulatorFactory<
+    SummaryParts extends {
+      [k: string]:
+        | SummaryPartAccumulatorWithMeta<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any,
+            any
+          >
+        | SummaryPartAccumulator<
+            StatsTypeFor<
+              TurnType,
+              PlayerDataFull<PlayerState, TurnType, SoloStats, FullPlayerStats, PlayerId>
+            >,
+            any
+          >;
+    } & {
+      [K in keyof FixedSummaryAccumulatorParts<this, RoundsField>]?: never;
+    },
+    RoundsField extends string,
+  >(
+    arg0:
+      | (Omit<SummaryParts, keyof FixedSummaryAccumulatorParts<this, RoundsField>> & {
+          score?: {
+            minimum?: number;
+            maximum?: number;
+          };
+        })
+      | SummaryPartsFactoryHelper<this, SummaryParts, RoundsField>,
+    roundsDef?: RoundsFieldDef<this, RoundsField>,
+    maybeScoreLimits?: {
+      minimum?: number;
+      maximum?: number;
+    },
+  ): SummaryAccumulatorFactory<this, SummaryParts, RoundsField> {
+    let scoreLimits = maybeScoreLimits;
+    let summaryParts;
+    if (typeof arg0 === "function") {
+      summaryParts = makeSummaryParts(arg0);
+    } else {
+      scoreLimits = {
+        minimum: scoreLimits?.minimum ?? arg0.score?.minimum,
+        maximum: scoreLimits?.maximum ?? arg0.score?.maximum,
+      };
+      summaryParts = arg0;
+    }
+
+    const numGamesAccumulator = makeNumGamesAccPart<this>();
+
+    const scoreAccumulator = makeScoreAccPart<this>(
+      this.positionOrder === "highestFirst" ? "positive" : "negative",
+      {
+        maximumValue: scoreLimits?.maximum,
+        minimumValue: scoreLimits?.minimum,
+      },
+    );
+
+    const winsAccumulator = makeWinsAccPart<this>();
+
+    const roundsAccumulator = makeRoundStatsAccumulatorPart<this, RoundsField>(
+      roundsDef ?? ({} as RoundsFieldDef<this, RoundsField>),
+    );
+
+    const parts = Object.assign(
+      {
+        numGames: numGamesAccumulator,
+        score: scoreAccumulator,
+        wins: winsAccumulator,
+        rounds: roundsAccumulator,
+      },
+      summaryParts,
+    ) as SummaryAccumulatorParts<
+      this,
+      SummaryPartTypes<this, SummaryParts, RoundsField>,
+      RoundsField
+    >;
+    return {
+      parts,
+      create: () =>
+        new SummaryAccumulator<
+          this,
+          SummaryPartTypes<this, SummaryParts, RoundsField>,
+          RoundsField
+        >(parts),
+      createComponent: () =>
+        createSummaryComponent<
+          this,
+          SummaryPartTypes<this, SummaryParts, RoundsField>,
+          RoundsField
+        >(parts),
+      rowFactory: summaryRowFactory<
+        this,
+        SummaryPartTypes<this, SummaryParts, RoundsField>,
+        RoundsField,
+        typeof parts,
+        PlayerSummaryValues<this, SummaryPartTypes<this, SummaryParts, RoundsField>, RoundsField>
+      >(parts),
+    };
+  }
+}
 export type PlayerDataForGame<
   G extends GameDefinition<any, any, any, any, any, any, any, any, any>,
 > =

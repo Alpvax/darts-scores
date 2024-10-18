@@ -1,11 +1,10 @@
 import { computed, defineComponent, ref, type PropType, type VNodeChild, type VNodeRef } from "vue";
 import type { GameDefinition, GameTurnStatsType } from "../definition";
-import type { PlayerSummaryValues, SummaryAccumulatorParts, SummaryFieldDef } from ".";
+import type { ComparisonResult, PlayerSummaryValues, SummaryAccumulatorParts } from ".";
 import PlayerName from "@/components/PlayerName";
 import { extendClass, mapObjectValues, type ClassBindings } from "@/utils";
 import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 import type { ContextMenuItem } from "@/components/contextmenu";
-import type { ComparisonResult } from "./roundStats";
 import { type NormalisedSummaryRowsDef } from "./display/v1";
 import { getVDNumFormat, makeRowHighlightFn, type HighlightFn } from "./display";
 import type { SummaryFieldRow, SummaryRow } from "./display/v2";
@@ -252,7 +251,7 @@ export const createSummaryComponent = <
                   const { playerValues, ...limits } = props.players.reduce(
                     (acc, pid) => {
                       const summary = props.summaries.get(pid);
-                      const pDelta = props.deltaGame?.get(pid) ?? {};
+                      const pDelta = props.deltaGame?.get(pid);
                       if (summary) {
                         let highlight: ReturnType<HighlightFn<number[]>> = () => undefined;
                         if (highlightMeta) {
@@ -277,7 +276,7 @@ export const createSummaryComponent = <
                             onMouseover={(e) => {
                               //TODO: TooltipStack
                               if (valueTooltip) {
-                                tooltipContent.value = valueTooltip(summary, pDelta, pid);
+                                tooltipContent.value = valueTooltip(summary, pDelta ?? {}, pid);
                                 hoveredEl.value = e.target as HTMLElement;
                               }
                             }}

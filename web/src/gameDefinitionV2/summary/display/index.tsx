@@ -1,5 +1,6 @@
 import { mapObjectValues, type ClassBindings } from "@/utils";
 import { DeepMap } from "deep-equality-data-structures";
+import type { ComparisonResult } from "..";
 
 const formatCache = new DeepMap<
   Intl.NumberFormatOptions,
@@ -80,7 +81,6 @@ export const getVDNumFormat = (
  * If undefined, delta will not be displayed (should return undefined when delta is zero or "equal").
  */
 export type DeltaDirection = "better" | "neutral" | "worse" | undefined;
-export type ComparisonResult = "better" | "equal" | "worse";
 /**
  * @returns whether `a` is `"better"`, `"equal"` or `"worse"` than `b`
  */
@@ -167,7 +167,12 @@ export type NumRowHighlight<PData, T extends number = number> = {
 };
 export type RowHighlightDefinition<PData> =
   | NumRowHighlight<PData, number>
-  | ArrayRowHighlight<PData, number[]>;
+  | ArrayRowHighlight<PData, number[]>
+  | {
+      getVal: (data: PData, playerId: string) => number[];
+      cmp: CmpFn<number[]>;
+      fn: HighlightFn<number[]>;
+    };
 
 export const makeRowHighlightFn = <PData extends {}>(
   def: RowHighlightDefinition<PData> | undefined,
@@ -180,6 +185,12 @@ export const makeRowHighlightFn = <PData extends {}>(
   | undefined => {
   if (def === undefined) {
     return undefined;
+  } else if (Object.hasOwn(def, "getVal")) {
+    return def as {
+      getVal: (data: PData, playerId: string) => number[];
+      cmp: CmpFn<number[]>;
+      fn: HighlightFn<number[]>;
+    };
   } else if (Object.hasOwn(def, "value")) {
     const { value, cmp: cmpDef, classes } = def as NumRowHighlight<PData>;
     const cmp: CmpFn<number> =

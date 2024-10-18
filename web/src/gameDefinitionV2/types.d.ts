@@ -1,7 +1,7 @@
 import type { FixedLengthArray, NumericRange } from "@/utils/types";
 import type { Position } from ".";
 import type { TurnMeta } from "./rounds";
-import type { RoundStatsExpanded } from "./summary/roundStats";
+import type { RoundStatsExpanded } from "./summary/parts/roundStats";
 
 type ArrayTurnDataType<V, S, Len extends number> = {
   valueType: V;
