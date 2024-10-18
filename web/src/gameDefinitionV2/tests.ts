@@ -9,15 +9,9 @@ import { gameDefinitionBuilder, type ArrayGameDef } from ".";
 import { gameDefinitionBuilder as gameDefBuilder } from "./builder";
 import { makePlayerGameState, type CalculatedPlayerData } from "./gameData";
 import type { SoloGameStatsFactory } from "./stats";
-import { makeGameInstanceFactoryFor } from "./gameDataInstance";
 import { GameDefinition, type PlayerDataForGame } from "./definition";
 import type { TurnKey } from "./types";
-import {
-  makeSummaryAccumulatorFactoryFor,
-  type PlayerSummaryValues,
-  type StatsTypeForGame,
-} from "./summary";
-import type { GameResult } from "./gameResult";
+import type { StatsTypeForGame } from "./summary";
 import { gameDefinition27 } from "@/game/27/gameDefv2";
 
 const gameType27 = gameDefinitionBuilder("twentyseven")<{ score: number; jesus?: boolean }>(
@@ -145,18 +139,10 @@ const randomGame = (players: string[]) =>
     ]),
   );
 const testGameScores = randomGame(["totally a real player", "NotABot01"]);
-(() => {
-  console.log(
-    "Running GameDefinition test game:",
-    gameDefinition27.calculateGameResult(testGameScores, {}),
-  );
-
-  const gameInstanceFactory = makeGameInstanceFactoryFor(gameType27v2);
-  console.log(
-    "Running test game (makeGameInstanceFactoryFor):",
-    gameInstanceFactory(testGameScores, {}),
-  );
-})();
+console.log(
+  "Running GameDefinition test game:",
+  gameDefinition27.calculateGameResult(testGameScores, {}),
+);
 
 type T27GameDefTarget = ArrayGameDef<
   "twentyseven",
