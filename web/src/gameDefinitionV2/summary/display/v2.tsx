@@ -1,15 +1,11 @@
 import type { VNodeChild } from "vue";
 import {
   getVDNumFormat,
-  makeHighlightFn,
   type CmpFn,
   type DeltaDirection,
-  type HighlightDef,
-  type HighlightFn,
   type RowHighlightDefinition,
+  type RowLabelDef,
 } from ".";
-
-export type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
 
 export type SummaryRow<PData extends { numGames: number }> = {
   /** Added to type to allow using `group` as a descriminator */
@@ -57,13 +53,6 @@ type FieldDisplayPart<PData> = {
    * If undefined, the delta value will not be displayed.
    */
   deltaFormat?: (delta: number) => VNodeChild;
-  /**
-   * If value has highlights, an object with the comparison function
-   */
-  highlight?: {
-    cmp: CmpFn<number>;
-    f: HighlightFn;
-  };
 };
 type NestedDisplayPart<PData extends { numGames: number }> = {
   type: "nested";
@@ -87,18 +76,9 @@ type FieldFormatSpec = SplitFieldFormatSpec | Intl.NumberFormatOptions | Intl.Nu
 const isSplitFormat = (spec: FieldFormatSpec | undefined): spec is SplitFieldFormatSpec =>
   spec !== undefined && Object.hasOwn(spec, "value") && Object.hasOwn(spec, "delta");
 
-const test: FieldOptsSpec = {
-  format: {
-    value: {},
-    delta: {},
-  },
-  // cmp: (a, b) => "equal",
-};
-
 type FieldOptsSpec = {
   cmp?: CmpFn<number>;
   format?: FieldFormatSpec;
-  highlightSpec?: HighlightDef;
   deltaSpec?: "positive" | "negative" | "neutral" | "none";
 };
 
@@ -140,7 +120,7 @@ class RowFormatBuilder<PData extends { numGames: number }> {
     value: (values: PData, playerId: string, totalNumGames: number) => number,
     opts?: FieldOptsSpec,
   ): this {
-    const { cmp, format, deltaSpec, highlightSpec } = opts ?? {};
+    const { cmp, format, deltaSpec } = opts ?? {};
     let valueFormat: undefined | ((value: number) => VNodeChild);
     let deltaDir: undefined | ((delta: number) => DeltaDirection);
     let deltaFmt: undefined | ((value: number) => VNodeChild);
@@ -186,17 +166,6 @@ class RowFormatBuilder<PData extends { numGames: number }> {
         deltaFmt = (d) => delta.format(d);
       }
     }
-    let highlightFn: undefined | HighlightFn;
-    if (highlightSpec !== undefined) {
-      if (cmp === undefined) {
-        console.warn("Cannot specify highlightSpec without specifying cmp function:", {
-          highlightSpec,
-          cmp,
-        });
-      } else {
-        highlightFn = makeHighlightFn(highlightSpec)(cmp);
-      }
-    }
     this.parts.push({
       type: "field",
       value,
@@ -208,13 +177,6 @@ class RowFormatBuilder<PData extends { numGames: number }> {
                 {deltaFmt(d)}
               </span>
             )
-          : undefined,
-      highlight:
-        cmp && highlightFn
-          ? {
-              cmp,
-              f: highlightFn,
-            }
           : undefined,
     });
     return this;
@@ -315,10 +277,6 @@ export class RowFormat<PData extends { numGames: number }> {
             } catch {
               console.debug("Could not get delta from:", deltas);
             }
-          }
-          if (part.highlight) {
-            console.log("TODO: implement highlight (probably not at this level!)", part.highlight);
-            // return [<span class={part.highlight.f()}>{parts}</span>]
           }
           return parts;
         }
