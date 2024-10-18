@@ -1,6 +1,7 @@
 import { mapObjectValues, type ClassBindings } from "@/utils";
 import { DeepMap } from "deep-equality-data-structures";
 import type { ComparisonResult } from "..";
+import type { VNodeChild } from "vue";
 
 const formatCache = new DeepMap<
   Intl.NumberFormatOptions,
@@ -74,6 +75,13 @@ export const getVDNumFormat = (
     return formatCache.get(opts)!;
   }
 };
+
+/**
+ * The label for the row.
+ * If a function, allows specifying a different label depending on
+ * whether or not the row is being displayed in an extended group.
+ */
+export type RowLabelDef = VNodeChild | ((extended: boolean) => VNodeChild);
 
 /**
  * The class to add to the delta element.

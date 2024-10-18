@@ -7,10 +7,16 @@ import type {
   ComparisonResult,
 } from "..";
 import type { Flatten } from "@/utils/nestedKeys";
-import { getVDNumFormat, type CmpFn, type DeltaDirection, type HighlightFn } from ".";
+import {
+  getVDNumFormat,
+  type CmpFn,
+  type DeltaDirection,
+  type HighlightFn,
+  type RowLabelDef,
+} from ".";
 import { GameDefinition } from "@/gameDefinitionV2/definition";
 import { floatCompareFunc, mapObjectValues } from "@/utils";
-import { RowFormat, type RowLabelDef, type SummaryFieldRow, type SummaryRow } from "./v2";
+import { RowFormat, type SummaryFieldRow, type SummaryRow } from "./v2";
 
 type FormatSpec = Intl.NumberFormat | Intl.NumberFormatOptions;
 
