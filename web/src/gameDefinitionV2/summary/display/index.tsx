@@ -2,6 +2,7 @@ import { mapObjectValues, type ClassBindings } from "@/utils";
 import { DeepMap } from "deep-equality-data-structures";
 import type { ComparisonResult } from "..";
 import type { VNodeChild } from "vue";
+export { makeRowSchema } from "./parse";
 
 const formatCache = new DeepMap<
   Intl.NumberFormatOptions,

@@ -16,11 +16,13 @@
   "dependencies": {
     "@floating-ui/vue": "^1.1.4",
     "array-keyed-map": "^2.1.3",
+    "currency-codes-ts": "^3.0.0",
     "deep-equality-data-structures": "^1.5.0",
     "firebase": "^10.13.1",
     "pinia": "^2.2.2",
     "vue": "^3.5.3",
-    "vue-router": "^4.4.3"
+    "vue-router": "^4.4.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.10.0",
