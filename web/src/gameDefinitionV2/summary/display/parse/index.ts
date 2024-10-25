@@ -12,71 +12,102 @@ export const classBindingsSchema: z.ZodType<ClassBindings> = z
   .optional();
 
 export const cmpResultSchema = z.enum(["better", "equal", "worse"]);
-export const cmpFnSchema = <T extends z.ZodTypeAny>(schema: T) =>
-  z.function().args(schema, schema).returns(cmpResultSchema);
+export type ComparisonResult = z.infer<typeof cmpResultSchema>;
+
+export const cmpFnSchema = <S extends z.ZodType<number, any, any> | z.ZodType<number[], any, any>>(
+  schema: S,
+) => {
+  type T = z.infer<S>;
+  return z.union([
+    z.function(z.tuple([schema, schema]), cmpResultSchema),
+    z.enum(["higher", "lower"]).transform((direction) =>
+      (([gt, lt]: [ComparisonResult, ComparisonResult]) => {
+        return (a: T, b: T) => {
+          if (typeof a === "number" && typeof b === "number") {
+            const d = a - b;
+            if (d > 0) {
+              return gt;
+            }
+            if (d < 0) {
+              return lt;
+            }
+            return "equal";
+          }
+          const arrA: number[] = Array.isArray(a) ? a : [a];
+          const arrB: number[] = Array.isArray(b) ? b : [b];
+          const aLen = arrA.length;
+          const bLen = arrB.length;
+          if (bLen !== aLen) {
+            console.warn(
+              `Array comparison with arrays of differing lengths! ${aLen} != ${bLen}`,
+              arrA,
+              arrB,
+            );
+          }
+          let i = 0;
+          while (i < aLen) {
+            if (i >= bLen) {
+              console.warn(`Ran out of values to compare (index ${i} / ${aLen})`, arrA, arrB);
+              break;
+            }
+            const d = arrA[i] - arrB[i];
+            if (d > 0) {
+              return gt;
+            }
+            if (d < 0) {
+              return lt;
+            }
+            i++;
+          }
+          return "equal";
+        };
+      })(direction === "higher" ? ["better", "worse"] : ["worse", "better"]),
+    ),
+  ]);
+};
 
 const makeHighlightClassesSchema = <T extends z.ZodTypeAny>(schema: T) =>
   z.union([
     z.array(z.enum(["best", "worst"])),
     z.record(z.string().min(1), z.union([z.enum(["best", "worst"]), z.boolean(), z.number()])),
-    z
-      .function()
-      .args(z.function().args(schema), z.object({ best: schema, worst: schema }), schema)
-      .returns(classBindingsSchema),
+    z.function(
+      z.tuple([
+        z.function(z.tuple([schema]), cmpResultSchema),
+        z.object({ best: schema, worst: schema }),
+        schema,
+      ]),
+      classBindingsSchema,
+    ),
   ]);
 
 const makeArrayRowHighlightSchema = <PData>() =>
   z.object({
-    values: z.function().args(z.custom<PData>(), z.string()).returns(z.array(z.number())),
-    cmp: z.union([
-      z.enum(["higher", "lower"]),
-      cmpFnSchema(z.array(z.number())),
-      z.array(cmpFnSchema(z.number())),
-    ]),
+    values: z.function(z.tuple([z.custom<PData>(), z.string()]), z.array(z.number())),
+    cmp: z.union([cmpFnSchema(z.array(z.number())), z.array(cmpFnSchema(z.number()))]),
     classes: makeHighlightClassesSchema(z.array(z.number())),
   });
 const makeNumRowHighlightSchema = <PData>() =>
   z.object({
-    value: z.function().args(z.custom<PData>(), z.string()).returns(z.number()),
-    cmp: z.union([z.enum(["higher", "lower"]), cmpFnSchema(z.number())]),
+    value: z.function(z.tuple([z.custom<PData>(), z.string()]), z.number()),
+    cmp: cmpFnSchema(z.number()),
     classes: makeHighlightClassesSchema(z.number()),
   });
-// export type ObjRowHighlight<PData, T extends Record<any, number> = Record<any, number>> = {
-//   values: (playerData: PData, playerId: string) => Partial<T>;
-//   cmp:
-//     | CmpFn<T>
-//     | {
-//         fields: "higher" | "lower" | { [K in keyof T]: CmpFn<T[K]> };
-//         order: (keyof T)[];
-//       };
-//   classes:
-//     | ((
-//         cmp: (vals: T) => ComparisonResult,
-//         limits: { [K in keyof T]: { best: T[K]; worst: T[K] } },
-//         rawValues: T,
-//       ) => ClassBindings)
-//     | ("best" | "worst")[]
-//     | {
-//         [clas: string]: "best" | "worst" | Partial<T> | boolean;
-//       };
-// };
+
 export const rowHighlightDefinition = <PData>() =>
   z.union([
     makeNumRowHighlightSchema<PData>(),
     makeArrayRowHighlightSchema<PData>(),
     // | ObjRowHighlight<PData, Record<any, number>>,
     z.object({
-      getVal: z.function().args(z.custom<PData>(), z.string()).returns(z.array(z.number())),
+      getVal: z.function(z.tuple([z.custom<PData>(), z.string()]), z.array(z.number())),
       cmp: cmpFnSchema(z.array(z.number())),
-      fn: z
-        .function()
-        .args(z.array(z.number()))
-        .returns(
-          z
-            .function()
-            .args(z.object({ best: z.array(z.number()), worst: z.array(z.number()) }))
-            .returns(classBindingsSchema),
+      fn: z.function(
+        z.tuple([z.array(z.number())]),
+        z.function(
+          z.tuple([z.object({ best: z.array(z.number()), worst: z.array(z.number()) })]),
+          classBindingsSchema,
         ),
+      ),
     }),
   ]);
 
@@ -197,13 +228,13 @@ const tooltipSchema = <PData extends {}>(
       /** Tooltip / hover over row. Overriden by `valueTooltip` if defined and hovering over value cell */
       fieldTooltip: vNodeChildSchema
         .transform((content) => () => content)
-        .or(z.function().args().returns(vNodeChildSchema)),
+        .or(z.function(z.tuple([]), vNodeChildSchema)),
       /** Tooltip / hover over value */
       valueTooltip: displaySchema(fieldValidator, allowRefs).or(
-        z
-          .function()
-          .args(z.custom<PData>(), z.custom<Partial<PData>>(), z.string().length(20))
-          .returns(vNodeChildSchema),
+        z.function(
+          z.tuple([z.custom<PData>(), z.custom<Partial<PData>>(), z.string().length(20)]),
+          vNodeChildSchema,
+        ),
       ),
     })
     .partial();
