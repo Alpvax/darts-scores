@@ -4,6 +4,8 @@ import { formatOptionsSchema } from "./builtin";
 import type { ClassBindings } from "@/utils";
 import type { VNodeChild } from "vue";
 import type { Flatten } from "@/utils/nestedKeys";
+import { RowFormat, type SummaryFieldRow } from "../v2";
+import { getVDNumFormat } from "..";
 
 export { makeFieldSchema, isSameField } from "./field";
 
@@ -121,12 +123,8 @@ export const fieldFormatSchema = z.union([
     delta: fmt,
   })),
   z.object({
-    value: formatOptionsSchema,
-    delta: formatOptionsSchema.optional(),
-  }),
-  z.object({
-    value: formatOptionsSchema.optional(),
-    delta: formatOptionsSchema,
+    value: formatOptionsSchema.nullable(),
+    delta: formatOptionsSchema.nullable(),
   }),
 ]);
 
@@ -154,6 +152,9 @@ type FormattedField<PData extends {}, Extra extends {} = {}> = FieldSpec<
 } & {
   [K in keyof Extra]: Extra[K] extends z.ZodTypeAny ? z.infer<Extra[K]> : Extra[K];
 };
+type FormattedFieldT<PData extends {}, Extra extends z.ZodRawShape = {}> = z.infer<
+  ReturnType<typeof makeFormattedFieldSchema<PData, Extra>>
+>;
 
 export const vNodeChildSchema = z.custom<VNodeChild>((data) => {
   const isVNodeChild = (data: any): boolean => {
@@ -192,12 +193,7 @@ const displaySchema = <PData extends {}>(
       .object({ type: z.literal("raw"), value: vNodeChildSchema })
       .transform(({ value }) => ({ type: "raw" as "raw", value })),
   ]);
-  const formattedField = makeFieldSchema(fieldValidator).and(
-    z.object({
-      delta: deltaOverrideSchema.optional(),
-      format: fieldFormatSchema.optional(),
-    }),
-  );
+  const formattedField = makeFormattedFieldSchema(fieldValidator);
   const fieldPart = allowRefs
     ? formattedField.or(
         z
@@ -219,36 +215,41 @@ const displaySchema = <PData extends {}>(
     .transform((part) => (Array.isArray(part) ? part : [part]));
 };
 
-const tooltipSchema = <PData extends {}>(
+const baseRowSchema = <PData extends {}>(
   fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
   allowRefs: boolean,
 ) =>
-  z
-    .object({
-      /** Tooltip / hover over row. Overriden by `valueTooltip` if defined and hovering over value cell */
-      fieldTooltip: vNodeChildSchema
-        .transform((content) => () => content)
-        .or(z.function(z.tuple([]), vNodeChildSchema)),
-      /** Tooltip / hover over value */
-      valueTooltip: displaySchema(fieldValidator, allowRefs).or(
+  z.object({
+    label: z.union([z.string(), z.function(z.tuple([z.boolean()]), vNodeChildSchema)]),
+    /** Tooltip / hover over row. Overriden by `valueTooltip` if defined and hovering over value cell */
+    fieldTooltip: z
+      .union([
+        vNodeChildSchema.transform((content) => () => content),
+        z.function(z.tuple([]), vNodeChildSchema),
+      ])
+      .optional(),
+    /** Tooltip / hover over value */
+    valueTooltip: z
+      .union([
+        displaySchema(fieldValidator, allowRefs),
         z.function(
           z.tuple([z.custom<PData>(), z.custom<Partial<PData>>(), z.string().length(20)]),
           vNodeChildSchema,
         ),
-      ),
-    })
-    .partial();
+      ])
+      .optional(),
+  });
 
 const singleFieldRowSchema = <PData extends {}>(
   fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
 ) =>
-  tooltipSchema(fieldValidator, false)
+  baseRowSchema(fieldValidator, false)
     .extend({
       field: makeFieldSchema(fieldValidator),
       delta: deltaOverrideSchema.optional(),
       format: fieldFormatSchema.optional(),
       ignoreClassValue: z.number().nullish(),
-      classes: makeHighlightClassesSchema(z.number()),
+      classes: makeHighlightClassesSchema(z.number()).optional(),
     })
     .transform(({ field, delta, format, valueTooltip: vTooltipArgs, ...rest }, ctx) => {
       let errors = false;
@@ -257,7 +258,7 @@ const singleFieldRowSchema = <PData extends {}>(
           ? undefined
           : typeof vTooltipArgs === "function"
             ? vTooltipArgs
-            : (pData: PData, playerId: string) =>
+            : (values: PData, _deltas: Partial<PData>, playerId: string) =>
                 vTooltipArgs.map((part) => {
                   if (part.type === "raw") {
                     return part.value;
@@ -276,7 +277,7 @@ const singleFieldRowSchema = <PData extends {}>(
                       });
                       `@@FIELD_REF:${part.ref}@@`;
                     } else {
-                      return evaluateField(pData, playerId, part);
+                      return evaluateField(part, values, playerId);
                     }
                   }
                 });
@@ -310,7 +311,7 @@ const multiFieldRowSchema = <PData extends {}>(
         .transform(({ ref }) => ({ type: "ref" as "ref", ref })),
     ]),
   );
-  return tooltipSchema(fieldValidator, true)
+  return baseRowSchema(fieldValidator, true)
     .extend({
       fieldDefs: z
         .record(
@@ -388,7 +389,7 @@ const multiFieldRowSchema = <PData extends {}>(
                 ? undefined
                 : typeof valueTooltip === "function"
                   ? valueTooltip
-                  : (pData: PData, playerId: string) =>
+                  : (pData: PData, _deltas: Partial<PData>, playerId: string) =>
                       valueTooltip.map((part) => {
                         if (part.type === "raw") {
                           return part.value;
@@ -396,10 +397,10 @@ const multiFieldRowSchema = <PData extends {}>(
                           if (part.type === "ref") {
                             const field = getFieldDef(part.ref, "valueTooltip");
                             return field
-                              ? evaluateField(pData, playerId, field)
+                              ? evaluateField(field, pData, playerId)
                               : `@@INVALID_FIELD_REF:${part.ref}@@`;
                           } else {
-                            return evaluateField(pData, playerId, part);
+                            return evaluateField(part, pData, playerId);
                           }
                         }
                       }),
@@ -416,6 +417,77 @@ export const makeRowSchema = <PData extends {}>(
     multiFieldRowSchema<PData>(fieldValidator),
   ]);
 
+export const makeV2SummaryRowsSchema = <PData extends { numGames: number }>(
+  fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
+) => {
+  return z.union([
+    singleFieldRowSchema<PData>(fieldValidator).transform(
+      ({ label, field, classes, fieldTooltip, valueTooltip, ignoreClassValue }) =>
+        ({
+          key: field.type === "simple" ? field.field : undefined,
+          label,
+          display: RowFormat.field((pData, pid) => evaluateFieldNumeric(field, pData, pid), {
+            deltaSpec: field.delta,
+            format: field.format,
+          }),
+          highlight:
+            classes === undefined
+              ? undefined
+              : {
+                  value: (pData, pid) => evaluateFieldNumeric(field, pData, pid),
+                  classes,
+                  //TODO: fix defaulting to higher with no override
+                  cmp: field.delta === "negative" ? "lower" : "higher",
+                },
+          fieldTooltip,
+          valueTooltip,
+        }) satisfies SummaryFieldRow<PData>,
+    ),
+    multiFieldRowSchema<PData>(fieldValidator).transform(
+      ({ label, display, highlight, fieldTooltip, valueTooltip }) => {
+        return {
+          // key: ??,
+          label,
+          display: RowFormat.create(
+            display.map((part) => {
+              if (part.type === "raw") {
+                return {
+                  type: "literal",
+                  value: part.value,
+                };
+              } else {
+                const field = part as FormattedFieldT<PData>;
+                const fmts = [field.format?.value, field.format?.delta];
+                const vFmt = fmts[0] === null ? null : getVDNumFormat(fmts[0] ?? {}).value;
+                const dFmt = fmts[1] === null ? null : getVDNumFormat(fmts[1] ?? {}).delta;
+                return {
+                  type: "field",
+                  value: (values: PData, playerId: string, totalNumGames: number) =>
+                    evaluateField(field, values, playerId),
+                  valueFormat: vFmt === null ? undefined : (value: number) => vFmt.format(value),
+                  deltaFormat: dFmt === null ? undefined : (delta: number) => dFmt.format(delta),
+                };
+              }
+            }),
+          ),
+          highlight:
+            highlight === undefined
+              ? undefined
+              : {
+                  values: (pData, pid) =>
+                    highlight.order.map((field) => evaluateFieldNumeric(field, pData, pid)),
+                  classes: ["best"], //TODO: highlight.classes,
+                  //TODO: fix defaulting to higher with no override
+                  cmp: "higher",
+                },
+          fieldTooltip,
+          valueTooltip,
+        } satisfies SummaryFieldRow<PData>;
+      },
+    ),
+  ]);
+};
+
 export type RowSchemaArgsSingleField<PData extends {}> = z.input<
   ReturnType<typeof singleFieldRowSchema<PData>>
 >;
@@ -425,12 +497,12 @@ export type RowSchemaArgsMultiField<PData extends {}> = z.input<
 export type RowSchemaArgs<PData extends {}> = z.input<ReturnType<typeof makeRowSchema<PData>>>;
 
 const evaluateFieldNumeric = <PData extends {}>(
+  field: FieldSpec<keyof Flatten<PData> & string>,
   pData: PData,
   playerId: string,
-  field: FieldSpec<keyof Flatten<PData> & string>,
   fallback?: number,
 ): number => {
-  const val = evaluateField(pData, playerId, field);
+  const val = evaluateField(field, pData, playerId);
   if (typeof val === "number") {
     return val;
   }
@@ -447,24 +519,28 @@ const evaluateFieldNumeric = <PData extends {}>(
   );
 };
 const evaluateField = <PData extends {}>(
+  field: FieldSpec<keyof Flatten<PData> & string>,
   pData: PData,
   playerId: string,
-  field: FieldSpec<keyof Flatten<PData> & string>,
-): VNodeChild => {
+): number | undefined => {
+  if (pData === undefined || playerId === undefined) {
+    // @ts-ignore
+    return (pData, pid) => evaluateField(field, pData, pid);
+  }
   switch (field.type) {
     case "div":
       return (
-        evaluateFieldNumeric(pData, playerId, field.numerator, 1) /
-        evaluateFieldNumeric(pData, playerId, field.divisor, 1)
+        evaluateFieldNumeric(field.numerator, pData, playerId, 1) /
+        evaluateFieldNumeric(field.divisor, pData, playerId, 1)
       );
     case "mul":
       return field.fields.reduce(
-        (total, f) => total * evaluateFieldNumeric(pData, playerId, f, 1),
+        (total, f) => total * evaluateFieldNumeric(f, pData, playerId, 1),
         1,
       );
     case "add":
       return field.fields.reduce(
-        (total, f) => total + evaluateFieldNumeric(pData, playerId, f, 0),
+        (total, f) => total + evaluateFieldNumeric(f, pData, playerId, 0),
         0,
       );
     case "logical": {
@@ -478,37 +554,37 @@ const evaluateField = <PData extends {}>(
             return !evalCondition(condition.condition);
           case "gt":
             return (
-              evaluateFieldNumeric(pData, playerId, condition.left, 0) >
-              evaluateFieldNumeric(pData, playerId, condition.right, 0)
+              evaluateFieldNumeric(condition.left, pData, playerId, 0) >
+              evaluateFieldNumeric(condition.right, pData, playerId, 0)
             );
           case "lt":
             return (
-              evaluateFieldNumeric(pData, playerId, condition.left, 0) <
-              evaluateFieldNumeric(pData, playerId, condition.right, 0)
+              evaluateFieldNumeric(condition.left, pData, playerId, 0) <
+              evaluateFieldNumeric(condition.right, pData, playerId, 0)
             );
           case "gte":
             return (
-              evaluateFieldNumeric(pData, playerId, condition.left, 0) >=
-              evaluateFieldNumeric(pData, playerId, condition.right, 0)
+              evaluateFieldNumeric(condition.left, pData, playerId, 0) >=
+              evaluateFieldNumeric(condition.right, pData, playerId, 0)
             );
           case "lte":
             return (
-              evaluateFieldNumeric(pData, playerId, condition.left, 0) <=
-              evaluateFieldNumeric(pData, playerId, condition.right, 0)
+              evaluateFieldNumeric(condition.left, pData, playerId, 0) <=
+              evaluateFieldNumeric(condition.right, pData, playerId, 0)
             );
           case "eq": {
-            const val = evaluateFieldNumeric(pData, playerId, condition.operands[0], 0);
+            const val = evaluateFieldNumeric(condition.operands[0], pData, playerId, 0);
             for (let i = 1; i < condition.operands.length; i++) {
-              if (val !== evaluateFieldNumeric(pData, playerId, condition.operands[i], 0)) {
+              if (val !== evaluateFieldNumeric(condition.operands[i], pData, playerId, 0)) {
                 return false;
               }
             }
             return true;
           }
           case "neq": {
-            const val = evaluateFieldNumeric(pData, playerId, condition.operands[0], 0);
+            const val = evaluateFieldNumeric(condition.operands[0], pData, playerId, 0);
             for (let i = 1; i < condition.operands.length; i++) {
-              if (val === evaluateFieldNumeric(pData, playerId, condition.operands[i], 0)) {
+              if (val === evaluateFieldNumeric(condition.operands[i], pData, playerId, 0)) {
                 return false;
               }
             }
@@ -517,19 +593,19 @@ const evaluateField = <PData extends {}>(
         }
       };
       return evalCondition(field.condition)
-        ? evaluateField(pData, playerId, field.t)
+        ? evaluateField(field.t, pData, playerId)
         : field.f
-          ? evaluateField(pData, playerId, field.f)
+          ? evaluateField(field.f, pData, playerId)
           : undefined;
     }
     case "max":
       return field.fields.reduce(
-        (highest, f) => Math.max(highest, evaluateFieldNumeric(pData, playerId, f)),
+        (highest, f) => Math.max(highest, evaluateFieldNumeric(f, pData, playerId)),
         Number.MIN_SAFE_INTEGER,
       );
     case "min":
       return field.fields.reduce(
-        (lowest, f) => Math.min(lowest, evaluateFieldNumeric(pData, playerId, f)),
+        (lowest, f) => Math.min(lowest, evaluateFieldNumeric(f, pData, playerId)),
         Number.MAX_SAFE_INTEGER,
       );
     case "simple": {
@@ -554,17 +630,21 @@ const evaluateField = <PData extends {}>(
   }
 };
 
-(() => {
+export const runParseTests = () => {
   type TestPData = {
+    numGames: number;
     foo: number;
     bar: { baz: number };
     qux: { quuz: number; nested: { deep: number } };
   };
   const isTestField = (s: string): s is keyof Flatten<TestPData> & string => s.length > 0;
 
+  const testRowSchema = makeV2SummaryRowsSchema<TestPData>(isTestField);
   console.log(
     "parsedTestRowSingle:",
-    singleFieldRowSchema<TestPData>(isTestField).parse({
+    // singleFieldRowSchema<TestPData>(isTestField).parse({
+    testRowSchema.parse({
+      label: "Test Single Field Row",
       field: "foo",
       delta: "positive",
       classes: ["best"],
@@ -574,7 +654,8 @@ const evaluateField = <PData extends {}>(
   );
   console.log(
     "parsedTestRowMultiple:",
-    multiFieldRowSchema<TestPData>(isTestField).parse({
+    testRowSchema.parse({
+      label: "Test Multiple Field Row",
       fieldDefs: { fooOnly: "foo", delta: "positive" },
       display: { ref: "fooOnly" },
       highlight: {
@@ -585,4 +666,4 @@ const evaluateField = <PData extends {}>(
       valueTooltip: "bar.baz",
     } satisfies RowSchemaArgsMultiField<TestPData>),
   );
-})();
+};

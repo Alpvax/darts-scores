@@ -280,3 +280,6 @@ export const makeRowHighlightFn = <PData extends {}>(
     };
   }
 };
+
+import { runParseTests } from "./parse";
+runParseTests();
