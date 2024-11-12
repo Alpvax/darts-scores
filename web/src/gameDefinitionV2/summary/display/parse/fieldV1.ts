@@ -1,22 +1,40 @@
 import type { Flatten } from "@/utils/nestedKeys";
+import type { VNodeChild } from "vue";
 import { z } from "zod";
 type BinOp<T> = [T, T, ...T[]];
 
 export type FieldSpec<Fields extends string> =
   | MathSpec<Fields>
   | FieldSpecBranching<Fields>
-  | SimpleFieldSpec<Fields>;
-export type FieldSpecOrField<Fields extends string> =
-  | MathSpec<Fields>
-  | FieldSpecBranching<Fields>
   | SimpleFieldSpec<Fields>
+  | FieldSpecReference
+  | FieldSpecRaw;
+export type FieldSpecInput<Fields extends string> =
+  | MathSpecInput<Fields>
+  | FieldSpecBranchingInput<Fields>
+  | SimpleFieldSpec<Fields>
+  | FieldSpecReferenceInput
+  | FieldSpecRawInput
   | Fields;
-type BinOpFields<Fields extends string> = BinOp<FieldSpec<Fields>>;
 type SimpleFieldSpec<Fields extends string> = {
   type: "simple";
   field: Fields;
 };
-/** For subtract, use "add" and negate the corresponding value(s) */
+type FieldSpecReference = {
+  type: "ref";
+  ref: string;
+};
+type FieldSpecReferenceInput = {
+  ref: string;
+};
+type FieldSpecRaw = {
+  type: "raw";
+  value: VNodeChild;
+};
+type FieldSpecRawInput = {
+  raw: string;
+};
+/** For subtract, use "add" and "negate" the corresponding value(s) */
 type MathSpec<Fields extends string> =
   | {
       type: "div"; // | "/";
@@ -25,11 +43,41 @@ type MathSpec<Fields extends string> =
     }
   | {
       type: "mul"; // | "*";
-      fields: BinOpFields<Fields>;
+      fields: BinOp<FieldSpec<Fields>>;
     }
   | {
       type: "add"; // | "+";
-      fields: BinOpFields<Fields>;
+      fields: BinOp<FieldSpec<Fields>>;
+    }
+  | {
+      type: "negate";
+      field: FieldSpec<Fields>;
+    }
+  | {
+      type: "abs";
+      field: FieldSpec<Fields>;
+    };
+type MathSpecInput<Fields extends string> =
+  | {
+      type: "div" | "/";
+      numerator: FieldSpecInput<Fields>;
+      divisor: FieldSpecInput<Fields>;
+    }
+  | {
+      type: "mul" | "*";
+      fields: BinOp<FieldSpecInput<Fields>>;
+    }
+  | {
+      type: "add" | "+";
+      fields: BinOp<FieldSpecInput<Fields>>;
+    }
+  | {
+      type: "negate";
+      field: FieldSpecInput<Fields>;
+    }
+  | {
+      type: "abs";
+      field: FieldSpecInput<Fields>;
     };
 
 // type ConditionSpec<T> = BoolOperationSpec<T> | "highest" | "lowest"
@@ -77,7 +125,7 @@ type BoolOperationSpec<T> =
 type FieldSpecBranching<Fields extends string> =
   | {
       type: "logical";
-      condition: BoolOperationSpec<FieldSpec<Fields>>;
+      condition: BoolOperationSpec<FieldSpec<Fields> | number>;
       t: FieldSpec<Fields>;
       f?: FieldSpec<Fields>;
     }
@@ -89,16 +137,33 @@ type FieldSpecBranching<Fields extends string> =
       type: "min";
       fields: BinOp<FieldSpec<Fields>>;
     };
+type FieldSpecBranchingInput<Fields extends string> =
+  | {
+      type: "logical";
+      condition: BoolOperationSpec<FieldSpecInput<Fields> | number>;
+      t: FieldSpecInput<Fields>;
+      f?: FieldSpec<Fields>;
+    }
+  | {
+      type: "max";
+      fields: BinOp<FieldSpecInput<Fields>>;
+    }
+  | {
+      type: "min";
+      fields: BinOp<FieldSpecInput<Fields>>;
+    };
 
 export const isSameField = <Fields extends string>(
-  fieldA: FieldSpecOrField<Fields>,
-  fieldB: FieldSpecOrField<Fields>,
+  a: FieldSpec<Fields> | number,
+  b: FieldSpec<Fields> | number,
 ): boolean => {
-  if (fieldA === fieldB) {
+  if (a === b) {
     return true;
   }
-  let a = typeof fieldA === "string" ? { type: "simple", field: fieldA } : fieldA;
-  let b = typeof fieldB === "string" ? { type: "simple", field: fieldB } : fieldB;
+  if (typeof a === "number" || typeof b === "number") {
+    // At least one is number and they are not equal
+    return false;
+  }
   if (a.type === "simple" && b.type === "simple") {
     return a.field === b.field;
   }
@@ -109,7 +174,6 @@ export const isSameField = <Fields extends string>(
         return isSameField(a.numerator, b.numerator) && isSameField(a.divisor, b.divisor);
       case "mul":
       case "add": {
-        // @ts-expect-error
         const aFields: BinOp<FieldSpec<Fields>> = a.fields;
         // @ts-expect-error
         const bFields: BinOp<FieldSpec<Fields>> = b.fields;
@@ -124,8 +188,8 @@ export const isSameField = <Fields extends string>(
 };
 
 const flattenOperations = <Fields extends string>(
-  operation: BoolOperationSpec<FieldSpec<Fields>>,
-): BoolOperationSpec<FieldSpec<Fields>> => {
+  operation: BoolOperationSpec<FieldSpec<Fields> | number>,
+): BoolOperationSpec<FieldSpec<Fields> | number> => {
   switch (operation.op) {
     // case "&&":
     //   operation.op = "and";
@@ -264,10 +328,13 @@ const binOpSchema = <S extends z.ZodTypeAny>(schemaFactory: S | (() => S)) =>
   });
 
 const logicalOperation = <S extends z.ZodTypeAny>(schemaFactory: S | (() => S)) => {
-  const schema = typeof schemaFactory === "function" ? z.lazy(schemaFactory) : schemaFactory;
+  const schema = z.union([
+    typeof schemaFactory === "function" ? z.lazy(schemaFactory) : schemaFactory,
+    z.number(),
+  ]);
   const lazyLogical = z.lazy(() => logicalOp);
   // @ts-ignore
-  const logicalOp: z.ZodType<BoolOperationSpec<z.infer<S>>> = z.discriminatedUnion("op", [
+  const logicalOp: z.ZodType<BoolOperationSpec<z.infer<S> | number>> = z.discriminatedUnion("op", [
     z.object({
       op: z.enum(["and", "&&"]).transform(() => "and" as "and"),
       conditions: binOpSchema(() => logicalOp),
@@ -312,9 +379,9 @@ const logicalOperation = <S extends z.ZodTypeAny>(schemaFactory: S | (() => S)) 
   return logicalOp;
 };
 
-// const makeSchemas = <Fields extends string>(fields: readonly [Fields, ...Fields[]]) => {
 export const makeFieldSchema = <Fields extends string>(
   fieldValidator: (s: string) => s is Fields,
+  { allowRefs = false } = {} as any,
 ) => {
   const fieldSchema = z.custom<Fields>(
     (data) => (typeof data === "string" ? fieldValidator(data) : false),
@@ -341,32 +408,182 @@ export const makeFieldSchema = <Fields extends string>(
     fields: binOpSchema(() => basic),
   });
   // @ts-ignore
-  const basic: z.ZodType<FieldSpec<Fields>, z.ZodTypeDef, FieldSpecOrField<Fields>> = z.preprocess(
-    (arg) =>
-      typeof arg === "string" && fieldValidator(arg) ? { type: "simple", field: arg } : arg,
-    z.discriminatedUnion("type", [
-      simpleObj,
-      divOp,
-      mulOp,
-      addOp,
-      z.object({
-        type: z.literal("logical"),
-        condition: logicalOperation(() => basic).transform(flattenOperations),
-        t: z.lazy(() => basic),
-        f: z.lazy(() => basic).optional(),
-      }),
-      z.object({
-        type: z.literal("max"),
-        fields: binOpSchema(() => basic),
-      }),
-      z.object({
-        type: z.literal("min"),
-        fields: binOpSchema(() => basic),
-      }),
-    ]),
+  const basic: z.ZodType<FieldSpec<Fields>, z.ZodTypeDef, FieldSpecInput<Fields>> = z.preprocess(
+    (arg) => {
+      if (typeof arg === "string") {
+        if (fieldValidator(arg)) {
+          return { type: "simple", field: arg };
+        }
+        if (allowRefs) {
+          return { type: "ref", ref: arg };
+        }
+      }
+      return arg;
+    },
+    z
+      .discriminatedUnion("type", [
+        simpleObj,
+        z.object({
+          type: z.literal("ref"),
+          ref: z.string().min(1),
+        }),
+        divOp,
+        mulOp,
+        addOp,
+        z.object({
+          type: z.literal("negate"),
+          field: z.lazy(() => basic),
+        }),
+        z.object({
+          type: z.literal("abs"),
+          field: z.lazy(() => basic),
+        }),
+        z.object({
+          type: z.literal("logical"),
+          condition: logicalOperation(() => basic).transform(flattenOperations),
+          t: z.lazy(() => basic),
+          f: z.lazy(() => basic).optional(),
+        }),
+        z.object({
+          type: z.literal("max"),
+          fields: binOpSchema(() => basic),
+        }),
+        z.object({
+          type: z.literal("min"),
+          fields: binOpSchema(() => basic),
+        }),
+      ])
+      .refine(
+        ({ type }) => allowRefs || type !== "ref",
+        'Cannot use "ref" fields when refs are not allowed!',
+      ),
   );
   return basic;
 };
+
+export const makeFieldSchemaWithOpts = <Fields extends string>(
+  fieldValidator: (s: string) => s is Fields,
+  { allowRefs = false, rawSchema } = {} as { allowRefs?: boolean; rawSchema?: z.ZodTypeAny },
+) => {
+  const fieldSchema = z.custom<Fields>(
+    (data) => (typeof data === "string" ? fieldValidator(data) : false),
+    "Must be a valid string property key",
+  );
+  const simpleObj = z.object({
+    type: z.literal("simple"),
+    field: fieldSchema,
+  });
+  const divOp = z.object({
+    // type: z.literal("div"),//z.enum(["div", "/"]),
+    type: z.enum(["div", "/"]).transform((t) => "div" as "div"),
+    numerator: z.lazy(() => basic),
+    divisor: z.lazy(() => basic),
+  });
+  const mulOp = z.object({
+    // type: z.literal("mul"),//z.enum(["mul", "*"]),
+    type: z.enum(["mul", "*"]).transform((t) => "mul" as "mul"),
+    fields: binOpSchema(() => basic),
+  });
+  const addOp = z.object({
+    // type: z.literal("add"),//z.enum(["add", "+"]),
+    type: z.enum(["add", "+"]).transform((t) => "add" as "add"),
+    fields: binOpSchema(() => basic),
+  });
+  // @ts-ignore
+  const basic: z.ZodType<FieldSpec<Fields>, z.ZodTypeDef, FieldSpecInput<Fields>> = z.preprocess(
+    (arg) => {
+      console.log("Parsing field from:", arg, allowRefs, rawSchema); //XXX
+      if (arg === null) {
+        return null;
+      }
+      if (typeof arg === "string") {
+        if (fieldValidator(arg)) {
+          return { type: "simple", field: arg };
+        }
+        if (allowRefs) {
+          return { type: "ref", ref: arg };
+        }
+        if (rawSchema !== undefined) {
+          return { type: "raw", value: arg };
+        }
+      } else if (typeof arg === "object" && !Object.hasOwn(arg, "type")) {
+        if (Object.hasOwn(arg, "ref")) {
+          return { type: "ref", ...arg };
+        }
+        if (Object.hasOwn(arg, "raw")) {
+          return { type: "raw", ...arg };
+        }
+      }
+      return arg;
+    },
+    z
+      .discriminatedUnion("type", [
+        simpleObj,
+        z.object({
+          type: z.literal("ref"),
+          ref: z.string().min(1),
+        }),
+        z.object({
+          type: z.literal("raw"),
+          ref: rawSchema ?? z.any(),
+        }),
+        divOp,
+        mulOp,
+        addOp,
+        z.object({
+          type: z.literal("negate"),
+          field: z.lazy(() => basic),
+        }),
+        z.object({
+          type: z.literal("abs"),
+          field: z.lazy(() => basic),
+        }),
+        z.object({
+          type: z.literal("logical"),
+          condition: logicalOperation(() => basic).transform(flattenOperations),
+          t: z.lazy(() => basic),
+          f: z.lazy(() => basic).optional(),
+        }),
+        z.object({
+          type: z.literal("max"),
+          fields: binOpSchema(() => basic),
+        }),
+        z.object({
+          type: z.literal("min"),
+          fields: binOpSchema(() => basic),
+        }),
+      ])
+      .superRefine(({ type }, ctx) => {
+        const options = ["simple", "div", "mul", "add", "negate", "abs", "logical", "max", "min"];
+        if (allowRefs) {
+          options.push("ref");
+        }
+        if (rawSchema !== undefined) {
+          options.push("raw");
+        }
+        if (!allowRefs && type === "ref") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.invalid_union_discriminator,
+            options,
+            message: 'Cannot use "ref" fields when refs are not allowed!',
+            fatal: true,
+          });
+          return z.NEVER;
+        }
+        if (!rawSchema && type === "raw") {
+          ctx.addIssue({
+            code: z.ZodIssueCode.invalid_union_discriminator,
+            options,
+            message: 'Cannot use "raw" fields when raw/literal fields are not allowed!',
+            fatal: true,
+          });
+          return z.NEVER;
+        }
+      }),
+  );
+  return basic;
+};
+
 export const makeFieldObjSchema = <Fields extends string>(
   fieldValidator: (s: string) => s is Fields,
 ) => {
@@ -378,11 +595,7 @@ export const makeFieldObjSchema = <Fields extends string>(
     type: z.literal("simple"),
     field: fieldSchema,
   });
-  const nestedBasic = z.preprocess(
-    (arg) =>
-      typeof arg === "string" && fieldValidator(arg) ? { type: "simple", field: arg } : arg,
-    z.lazy(() => basic),
-  );
+  const nestedBasic = makeFieldSchema(fieldValidator);
   const divOp = z.object({
     // type: z.literal("div"),//z.enum(["div", "/"]),
     type: z.enum(["div", "/"]).transform((t) => "div" as "div"),
@@ -399,8 +612,7 @@ export const makeFieldObjSchema = <Fields extends string>(
     type: z.enum(["add", "+"]).transform((t) => "add" as "add"),
     fields: binOpSchema(nestedBasic),
   });
-  // @ts-ignore
-  const basic: z.ZodType<FieldSpec<Fields>> = z.discriminatedUnion("type", [
+  return z.discriminatedUnion("type", [
     simpleObj,
     divOp,
     mulOp,
@@ -419,8 +631,7 @@ export const makeFieldObjSchema = <Fields extends string>(
       type: z.literal("min"),
       fields: binOpSchema(nestedBasic),
     }),
-  ]);
-  return basic;
+  ]) as z.ZodType<FieldSpec<Fields>, z.ZodTypeDef, FieldSpecInput<Fields>>;
 };
 
 (() => {

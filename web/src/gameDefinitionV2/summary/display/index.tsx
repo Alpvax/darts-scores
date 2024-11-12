@@ -174,6 +174,25 @@ export type NumRowHighlight<PData, T extends number = number> = {
         [clas: string]: "best" | "worst" | Partial<T> | boolean;
       };
 };
+// export type ObjRowHighlight<PData, T extends Record<any, number> = Record<any, number>> = {
+//   values: (playerData: PData, playerId: string) => Partial<T>;
+//   cmp:
+//     | CmpFn<T>
+//     | {
+//         fields: "higher" | "lower" | { [K in keyof T]: CmpFn<T[K]> };
+//         order: (keyof T)[];
+//       };
+//   classes:
+//     | ((
+//         cmp: (vals: T) => ComparisonResult,
+//         limits: { [K in keyof T]: { best: T[K]; worst: T[K] } },
+//         rawValues: T,
+//       ) => ClassBindings)
+//     | ("best" | "worst")[]
+//     | {
+//         [clas: string]: "best" | "worst" | Partial<T> | boolean;
+//       };
+// };
 export type RowHighlightDefinition<PData> =
   | NumRowHighlight<PData, number>
   | ArrayRowHighlight<PData, number[]>
@@ -182,6 +201,7 @@ export type RowHighlightDefinition<PData> =
       cmp: CmpFn<number[]>;
       fn: HighlightFn<number[]>;
     };
+// | ObjRowHighlight<PData, Record<any, number>>;
 
 export const makeRowHighlightFn = <PData extends {}>(
   def: RowHighlightDefinition<PData> | undefined,

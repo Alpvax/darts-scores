@@ -1,74 +1,78 @@
 import { z } from "zod";
-import { makeFieldSchema, makeFieldObjSchema, type FieldSpec } from "./field";
-import { formatOptionsSchema } from "./builtin";
-import type { ClassBindings } from "@/utils";
+import { makeFieldSchema, makeFieldObjSchema, type FieldSpec } from "./fieldV1";
 import type { VNodeChild } from "vue";
 import type { Flatten } from "@/utils/nestedKeys";
 import { RowFormat, type SummaryFieldRow } from "../v2";
 import { getVDNumFormat } from "..";
+import {
+  classBindingsSchema,
+  cmpFnSchema,
+  cmpResultSchema,
+  deltaOverrideSchema,
+  fieldFormatSchema,
+  vNodeChildSchema,
+} from "./common";
 
-export { makeFieldSchema, isSameField } from "./field";
+export * from "./common";
+export { singleRowSchema } from "./row";
+export const singleRowSchemaAsV2RowDef = <PData extends { numGames: number }>(
+  fieldValidator: (arg: string) => arg is keyof Flatten<PData> & string,
+): z.ZodType<
+  SummaryFieldRow<PData>,
+  z.ZodTypeDef,
+  z.input<ReturnType<typeof singleRowSchema<keyof Flatten<PData> & string>>>
+> =>
+  singleRowSchema<keyof Flatten<PData> & string>(fieldValidator).transform<SummaryFieldRow<PData>>(
+    ({ label, display, highlight, rowTooltip, cellTooltip: valueTooltip }) => {
+      return {
+        // key: ??,
+        label,
+        display: RowFormat.create(
+          display.map((part) => {
+            if (part.type === "raw") {
+              return {
+                type: "literal",
+                value: part.value,
+              };
+            } else {
+              const field = part as FormattedField<PData>;
+              const fmts = [field.format?.value, field.format?.delta];
+              const vFmt = fmts[0] === null ? null : getVDNumFormat(fmts[0] ?? {}).value;
+              const dFmt = fmts[1] === null ? null : getVDNumFormat(fmts[1] ?? {}).delta;
+              return {
+                type: "field",
+                value: (values: PData, playerId: string, totalNumGames: number) =>
+                  evaluateField(field, values, playerId),
+                valueFormat: vFmt === null ? undefined : (value: number) => vFmt.format(value),
+                deltaFormat: dFmt === null ? undefined : (delta: number) => dFmt.format(delta),
+              };
+            }
+          }),
+        ),
+        highlight:
+          highlight === undefined
+            ? undefined
+            : {
+                values: (pData, pid) =>
+                  highlight.order.map((field) => evaluateFieldNumeric(field, pData, pid)),
+                classes: ["best"], //TODO: highlight.classes,
+                //TODO: fix defaulting to higher with no override
+                cmp: "higher",
+              },
+        fieldTooltip: rowTooltip,
+        valueTooltip,
+      };
+    },
+  );
 
-export const classBindingsSchema: z.ZodType<ClassBindings> = z
-  .union([z.record(z.string().min(1), z.boolean()), z.array(z.string().min(1)), z.string().min(1)])
-  .optional();
+export type CmpFn<S extends z.ZodTypeAny> = [
+  z.output<ReturnType<typeof cmpFnSchema<S>>>,
+  z.input<ReturnType<typeof cmpFnSchema<S>>>,
+];
+type TCmp = CmpFn<z.ZodNumber>[0];
+type TACmp = CmpFn<z.ZodArray<z.ZodNumber>>[0];
 
-export const cmpResultSchema = z.enum(["better", "equal", "worse"]);
-export type ComparisonResult = z.infer<typeof cmpResultSchema>;
-
-export const cmpFnSchema = <S extends z.ZodType<number, any, any> | z.ZodType<number[], any, any>>(
-  schema: S,
-) => {
-  type T = z.infer<S>;
-  return z.union([
-    z.function(z.tuple([schema, schema]), cmpResultSchema),
-    z.enum(["higher", "lower"]).transform((direction) =>
-      (([gt, lt]: [ComparisonResult, ComparisonResult]) => {
-        return (a: T, b: T) => {
-          if (typeof a === "number" && typeof b === "number") {
-            const d = a - b;
-            if (d > 0) {
-              return gt;
-            }
-            if (d < 0) {
-              return lt;
-            }
-            return "equal";
-          }
-          const arrA: number[] = Array.isArray(a) ? a : [a];
-          const arrB: number[] = Array.isArray(b) ? b : [b];
-          const aLen = arrA.length;
-          const bLen = arrB.length;
-          if (bLen !== aLen) {
-            console.warn(
-              `Array comparison with arrays of differing lengths! ${aLen} != ${bLen}`,
-              arrA,
-              arrB,
-            );
-          }
-          let i = 0;
-          while (i < aLen) {
-            if (i >= bLen) {
-              console.warn(`Ran out of values to compare (index ${i} / ${aLen})`, arrA, arrB);
-              break;
-            }
-            const d = arrA[i] - arrB[i];
-            if (d > 0) {
-              return gt;
-            }
-            if (d < 0) {
-              return lt;
-            }
-            i++;
-          }
-          return "equal";
-        };
-      })(direction === "higher" ? ["better", "worse"] : ["worse", "better"]),
-    ),
-  ]);
-};
-
-const makeHighlightClassesSchema = <T extends z.ZodTypeAny>(schema: T) =>
+export const makeHighlightClassesSchema = <T extends z.ZodTypeAny>(schema: T) =>
   z.union([
     z.array(z.enum(["best", "worst"])),
     z.record(z.string().min(1), z.union([z.enum(["best", "worst"]), z.boolean(), z.number()])),
@@ -113,86 +117,44 @@ export const rowHighlightDefinition = <PData>() =>
     }),
   ]);
 
-type T = z.infer<ReturnType<typeof rowHighlightDefinition<{ numGames: number }>>>;
-
-export const deltaOverrideSchema = z.enum(["none", "positive", "negative", "neutral"]);
-
-export const fieldFormatSchema = z.union([
-  formatOptionsSchema.transform((fmt) => ({
-    value: fmt,
-    delta: fmt,
-  })),
-  z.object({
-    value: formatOptionsSchema.nullable(),
-    delta: formatOptionsSchema.nullable(),
-  }),
-]);
-
 export const makeFormattedFieldSchema = <PData extends {}, Extra extends z.ZodRawShape = {}>(
   fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
   extraFields?: Extra,
-) =>
-  z.preprocess(
+) => {
+  const schema = makeFieldObjSchema(fieldValidator).and(
+    z.object({
+      delta: deltaOverrideSchema.optional(),
+      format: fieldFormatSchema.optional(),
+      ...extraFields,
+    }),
+  );
+  type S = typeof schema;
+  return z.preprocess(
     (arg) =>
       typeof arg === "string" && fieldValidator(arg) ? { type: "simple", field: arg } : arg,
-    makeFieldObjSchema(fieldValidator).and(
-      z.object({
-        delta: deltaOverrideSchema.optional(),
-        format: fieldFormatSchema.optional(),
-        ...extraFields,
-      }),
-    ),
-  );
-
-type FormattedField<PData extends {}, Extra extends {} = {}> = FieldSpec<
-  keyof Flatten<PData> & string
-> & {
-  delta?: z.infer<typeof deltaOverrideSchema>;
-  format?: z.infer<typeof fieldFormatSchema>;
-} & {
-  [K in keyof Extra]: Extra[K] extends z.ZodTypeAny ? z.infer<Extra[K]> : Extra[K];
+    schema,
+  ) as z.ZodEffects<S, z.infer<S>, z.input<S> | (keyof Flatten<PData> & string)>;
 };
-type FormattedFieldT<PData extends {}, Extra extends z.ZodRawShape = {}> = z.infer<
+
+type FormattedField<PData extends {}, Extra extends z.ZodRawShape = {}> = z.infer<
   ReturnType<typeof makeFormattedFieldSchema<PData, Extra>>
 >;
-
-export const vNodeChildSchema = z.custom<VNodeChild>((data) => {
-  const isVNodeChild = (data: any): boolean => {
-    switch (typeof data) {
-      case "string":
-      case "number":
-      case "boolean":
-      case "undefined":
-        return true;
-      case "object":
-        return (
-          (Object.hasOwn(data, "type") &&
-            Object.hasOwn(data, "shapeFlag") &&
-            Object.hasOwn(data, "patchFlag")) ||
-          (Array.isArray(data) && data.every(isVNodeChild))
-        );
-      case "bigint":
-      case "symbol":
-      case "function":
-        return false;
-    }
-  };
-  //TODO: implement VNodeChild checks
-  return isVNodeChild(data);
-});
 
 const displaySchema = <PData extends {}>(
   fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
   allowRefs: boolean,
 ) => {
-  const rawPart = z.union([
-    z
-      .object({ raw: vNodeChildSchema })
-      .transform(({ raw }) => ({ type: "raw" as "raw", value: raw })),
-    z
-      .object({ type: z.literal("raw"), value: vNodeChildSchema })
-      .transform(({ value }) => ({ type: "raw" as "raw", value })),
-  ]);
+  const rawPart = z.preprocess(
+    (arg) =>
+      arg !== null && typeof arg === "object" && Object.hasOwn(arg, "raw")
+        ? { type: "raw", value: (arg as any).raw }
+        : arg,
+    z.object({ type: z.literal("raw"), value: vNodeChildSchema }),
+  ) as z.ZodType<
+    { type: "raw"; value: VNodeChild },
+    z.ZodTypeDef,
+    { raw: VNodeChild } | { type: "raw"; value: VNodeChild }
+  >;
   const formattedField = makeFormattedFieldSchema(fieldValidator);
   const fieldPart = allowRefs
     ? formattedField.or(
@@ -201,6 +163,8 @@ const displaySchema = <PData extends {}>(
           .transform(({ ref }) => ({ type: "ref" as "ref", ref })),
       )
     : formattedField;
+  const fieldOrRaw = fieldPart.or(rawPart);
+  type FoRS = typeof fieldOrRaw;
   const displayPart = z.preprocess(
     (arg) =>
       typeof arg === "string"
@@ -208,8 +172,8 @@ const displaySchema = <PData extends {}>(
           ? { type: "simple", field: arg }
           : { type: "raw", value: arg }
         : arg,
-    fieldPart.or(rawPart),
-  );
+    fieldOrRaw,
+  ) as z.ZodEffects<FoRS, z.infer<FoRS>, z.input<FoRS> | string>;
   return z
     .union([displayPart, z.array(displayPart)])
     .transform((part) => (Array.isArray(part) ? part : [part]));
@@ -297,6 +261,13 @@ const singleFieldRowSchema = <PData extends {}>(
 const multiFieldRowSchema = <PData extends {}>(
   fieldValidator: (s: string) => s is keyof Flatten<PData> & string,
 ) => {
+  const fieldOrRefUnion = z.union([
+    makeFieldSchema(fieldValidator),
+    z
+      .object({ type: z.literal("ref").optional(), ref: z.string().min(1) })
+      .transform(({ ref }) => ({ type: "ref" as "ref", ref })),
+  ]);
+  type FoRUS = typeof fieldOrRefUnion;
   const fieldOrRef = z.preprocess(
     (arg) =>
       typeof arg === "string"
@@ -304,13 +275,9 @@ const multiFieldRowSchema = <PData extends {}>(
           ? { type: "simple", field: arg }
           : { type: "ref", ref: arg }
         : arg,
-    z.union([
-      makeFieldObjSchema(fieldValidator),
-      z
-        .object({ type: z.literal("ref").optional(), ref: z.string().min(1) })
-        .transform(({ ref }) => ({ type: "ref" as "ref", ref })),
-    ]),
-  );
+    fieldOrRefUnion,
+  ) as z.ZodEffects<FoRUS, z.infer<FoRUS>, z.input<FoRUS> | string>;
+  type T = z.input<FoRUS>; //XXX
   return baseRowSchema(fieldValidator, true)
     .extend({
       fieldDefs: z
@@ -456,7 +423,7 @@ export const makeV2SummaryRowsSchema = <PData extends { numGames: number }>(
                   value: part.value,
                 };
               } else {
-                const field = part as FormattedFieldT<PData>;
+                const field = part as FormattedField<PData>;
                 const fmts = [field.format?.value, field.format?.delta];
                 const vFmt = fmts[0] === null ? null : getVDNumFormat(fmts[0] ?? {}).value;
                 const dFmt = fmts[1] === null ? null : getVDNumFormat(fmts[1] ?? {}).delta;
@@ -497,12 +464,12 @@ export type RowSchemaArgsMultiField<PData extends {}> = z.input<
 export type RowSchemaArgs<PData extends {}> = z.input<ReturnType<typeof makeRowSchema<PData>>>;
 
 const evaluateFieldNumeric = <PData extends {}>(
-  field: FieldSpec<keyof Flatten<PData> & string>,
+  field: FieldSpec<keyof Flatten<PData> & string> | number,
   pData: PData,
   playerId: string,
   fallback?: number,
 ): number => {
-  const val = evaluateField(field, pData, playerId);
+  const val = typeof field === "number" ? field : evaluateField(field, pData, playerId);
   if (typeof val === "number") {
     return val;
   }
@@ -543,6 +510,10 @@ const evaluateField = <PData extends {}>(
         (total, f) => total + evaluateFieldNumeric(f, pData, playerId, 0),
         0,
       );
+    case "negate":
+      return -evaluateFieldNumeric(field.field, pData, playerId);
+    case "abs":
+      return Math.abs(evaluateFieldNumeric(field.field, pData, playerId));
     case "logical": {
       const evalCondition = (condition: typeof field.condition): boolean => {
         switch (condition.op) {
@@ -609,16 +580,17 @@ const evaluateField = <PData extends {}>(
         Number.MAX_SAFE_INTEGER,
       );
     case "simple": {
-      let val: any = pData;
+      const [root, ...parts] = field.field.split(".");
+      let val = (pData as any)[root];
       if (val === undefined) {
         return undefined;
       }
-      for (const k of field.field.split(".")) {
+      for (const k of parts) {
         if (typeof val === "object" && k in val) {
           val = val[k];
         } else {
           console.error(
-            `Error getting value for player "${playerId}": Bad field path: ${field.field}`,
+            `Error getting value for player "${playerId}": Bad field path: "${field.field}"`,
             k,
             val,
           );
@@ -630,6 +602,8 @@ const evaluateField = <PData extends {}>(
   }
 };
 
+import { runV2FieldParseTests } from "./field/fieldV2";
+import { runV2RowParseTests, singleRowSchema } from "./row";
 export const runParseTests = () => {
   type TestPData = {
     numGames: number;
@@ -640,30 +614,71 @@ export const runParseTests = () => {
   const isTestField = (s: string): s is keyof Flatten<TestPData> & string => s.length > 0;
 
   const testRowSchema = makeV2SummaryRowsSchema<TestPData>(isTestField);
+  const testValues: TestPData = {
+    numGames: 3,
+    foo: 14.36825,
+    bar: { baz: 8 },
+    qux: {
+      quuz: -1,
+      nested: { deep: 126 },
+    },
+  };
+  const singleTest = testRowSchema.parse({
+    label: "Test Single Field Row",
+    field: "foo",
+    delta: "positive",
+    classes: ["best"],
+    fieldTooltip: "Description of a test field",
+    valueTooltip: "bar.baz",
+  } satisfies RowSchemaArgsSingleField<TestPData>);
+  const multiTest = testRowSchema.parse({
+    label: "Test Multiple Field Row",
+    fieldDefs: {
+      fooOnly: {
+        type: "simple",
+        field: "foo",
+        delta: "positive",
+        format: { maximumFractionDigits: 2 },
+      },
+      foobar: {
+        type: "add",
+        fields: ["foo", "bar.baz"],
+        delta: "positive",
+        format: { maximumFractionDigits: 2 },
+      },
+    },
+    display: [
+      { raw: "Foo: " },
+      { ref: "fooOnly" },
+      { raw: "(baz = " },
+      { type: "simple", field: "bar.baz", delta: "positive" },
+      { raw: ")" },
+      { ref: "foobar" },
+      {
+        type: "logical",
+        condition: { op: "lt", left: "foo", right: 0 },
+        t: { type: "negate", field: "qux.nested.deep" } /*, f: { type: "raw", value: "False" }*/,
+      },
+    ],
+    highlight: {
+      order: [{ ref: "fooOnly" /*, bestDirection: "positive"*/ }],
+      classes: ["best"],
+    },
+    fieldTooltip: "Description of a test field",
+    valueTooltip: "bar.baz",
+  } satisfies RowSchemaArgsMultiField<TestPData>);
   console.log(
     "parsedTestRowSingle:",
     // singleFieldRowSchema<TestPData>(isTestField).parse({
-    testRowSchema.parse({
-      label: "Test Single Field Row",
-      field: "foo",
-      delta: "positive",
-      classes: ["best"],
-      fieldTooltip: "Description of a test field",
-      valueTooltip: "bar.baz",
-    } satisfies RowSchemaArgsSingleField<TestPData>),
+    singleTest,
+    singleTest.display.display(testValues, {}, "playerid"),
   );
   console.log(
     "parsedTestRowMultiple:",
-    testRowSchema.parse({
-      label: "Test Multiple Field Row",
-      fieldDefs: { fooOnly: "foo", delta: "positive" },
-      display: { ref: "fooOnly" },
-      highlight: {
-        order: ["fooOnly"],
-        classes: ["best"],
-      },
-      fieldTooltip: "Description of a test field",
-      valueTooltip: "bar.baz",
-    } satisfies RowSchemaArgsMultiField<TestPData>),
+    multiTest,
+    multiTest.display.display(testValues, {}, "playerid"),
   );
+
+  runV2FieldParseTests();
+  runV2RowParseTests();
 };

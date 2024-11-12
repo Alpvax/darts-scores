@@ -108,3 +108,11 @@ type __UnionisePropsInternal<T extends {}, U extends {} = {}, L = LastOfUnion<T>
  * Properties missing from types are ignored (not merged into a union of type | undefined).
  */
 export type FlattenObjectUnion<T extends {}> = __UnionisePropsInternal<T>;
+
+/**
+ * Creates a type from a type union where any non-object element of the union is left as-is, and objects have the properties of U added to them.
+ * Allows using a more specific object filter than `object` to match elements to add the properties to (i.e. if you only want to add to specific object type(s)).
+ */
+type WithExtraObjProps<T, U extends {}, F extends object = object> = T extends F
+  ? T & U /*{ [K in (keyof T | keyof U)]: (T & U)[K] }*/
+  : T;
