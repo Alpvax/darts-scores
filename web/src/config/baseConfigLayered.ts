@@ -69,4 +69,12 @@ export const useBasicConfig = makeLayeredConfigComposable({
       return all.size > 0 ? [...all] : fallback;
     },
   } satisfies AnyLayeredDef<string[]>,
+  summaryVersion: {
+    fallback: "v1" as "v1" | "v2",
+    browser: {
+      key: "summaryDisplayVersion",
+      convert: "rawString",
+    },
+    merge: "replace",
+  } satisfies AnyLayeredDef<"v1" | "v2">,
 });

@@ -257,3 +257,13 @@ export const createRecord = <T, Keys extends string | number | symbol>(
   f: (key: Keys, index: number) => T,
 ): { [K in Keys]: T } =>
   [...keys].reduce((acc, key, index) => Object.assign(acc, { [key]: f(key, index) }), {} as any);
+
+export const debounce = <A extends [...any[]]>(func: (...args: A) => any, timeout = 300) => {
+  let timer: number;
+  return (...args: A) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
+  };
+};

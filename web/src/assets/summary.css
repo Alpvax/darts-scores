@@ -16,16 +16,20 @@ table#gameSummaryTable {
   }
 
   & tr.expandableRow > th {
-    padding-left: calc(10px + 1ch);
+    /* padding-left: calc(10px + 1ch); */
   }
   & tr.expandableRow > th::before {
-    position: absolute;
-    left: 5px;
+    /* & tr.expandableRow::before { */
+    float: left;
+    padding-right: 1ch;
+    position: relative;
+    left: 0.5em;
     content: "−";
     font-weight: bold;
     color: grey;
   }
   & tr.expandableRow:not(.parentRow) > th::before {
+    /* & tr.expandableRow:not(.parentRow)::before { */
     content: "+";
   }
   & tr.parentRow {
@@ -35,6 +39,15 @@ table#gameSummaryTable {
     font-size: 0.8em;
     border-collapse: collapse;
 
+    /* &::before {
+      float: left;
+      position: relative;
+      left: 0.3em;
+      font-size: small;
+      content: "├";
+      color: grey;
+    } */
+
     & th,
     tr {
       border-width: 0px;
@@ -43,7 +56,8 @@ table#gameSummaryTable {
     & .rowLabel {
       font-weight: normal;
       &::before {
-        position: absolute;
+        float: left;
+        position: relative;
         left: 0.3em;
         font-size: small;
         content: "├";
@@ -53,6 +67,7 @@ table#gameSummaryTable {
   }
   & tr.childRow:has(+ tr:not(.childRow)) {
     & .rowLabel::before {
+      /* &::before { */
       content: "└";
     }
     & th,
