@@ -89,43 +89,46 @@ export default defineComponent({
     type PastGameResult = GameResult<TurnData27> & { gameId: string };
 
     const games = computed(() => historyStore.games as unknown as PastGameResult[]);
+    const convertGame = (gameV1: PastGameResult) => {
+      const playerDataRaw = new Map(
+        [...gameV1.results].map(([pid, { complete, allTurns }]) => {
+          return [
+            pid,
+            {
+              startScore: 27,
+              completed: complete,
+              turns: [...allTurns]
+                .toSorted(([a], [b]) => a - b)
+                .map(([_, { value }]) => value) as unknown as FixedLengthArray<0 | 1 | 2 | 3, 20>,
+              displayName: gameV1.players.find(({ pid: p }) => (pid = p))?.displayName,
+            } satisfies PlayerDataRaw<{ startScore: number; jesus?: boolean }, {}>,
+          ];
+        }),
+      );
+      const game = gameDefinition27.calculateGameResult(playerDataRaw, {});
+      const result: GameResult27 = {
+        date: gameV1.date,
+        playerOrder: players.value.filter((pid) => playerDataRaw.has(pid)),
+        results: [...game.players].reduce(
+          (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
+          {},
+        ),
+      };
+      const winners = game.positionsOrdered[0].players;
+      if (winners.length > 1) {
+        result.tiebreak = {
+          players: winners,
+          type: "UNKNOWN",
+          winner: winners[Math.floor(Math.random() * winners.length)],
+        };
+        console.log("Tiebreak:", result.tiebreak); //XXX
+      }
+      return result;
+    };
     const calculateSummary = () => {
       accumulator.value = summaryAccumulator27.create();
       for (const pastGameV1 of games.value) {
-        const playerDataRaw = new Map(
-          [...pastGameV1.results].map(([pid, { complete, allTurns }]) => {
-            return [
-              pid,
-              {
-                startScore: 27,
-                completed: complete,
-                turns: [...allTurns]
-                  .toSorted()
-                  .map(([_, { value }]) => value) as unknown as FixedLengthArray<0 | 1 | 2 | 3, 20>,
-                displayName: pastGameV1.players.find(({ pid: p }) => (pid = p))?.displayName,
-              } satisfies PlayerDataRaw<{ startScore: number; jesus?: boolean }, {}>,
-            ];
-          }),
-        );
-        const game = gameDefinition27.calculateGameResult(playerDataRaw, {});
-        const result: GameResult27 = {
-          date: new Date(),
-          playerOrder: players.value.filter((pid) => playerDataRaw.has(pid)),
-          results: [...game.players].reduce(
-            (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
-            {},
-          ),
-        };
-        const winners = game.positionsOrdered[0].players;
-        if (winners.length > 1) {
-          result.tiebreak = {
-            players: winners,
-            type: "UNKNOWN",
-            winner: winners[Math.floor(Math.random() * winners.length)],
-          };
-          console.log("Tiebreak:", result.tiebreak); //XXX
-        }
-        accumulator.value.pushGame(result);
+        accumulator.value.pushGame(convertGame(pastGameV1));
       }
     };
     watch(games, debounce(calculateSummary), {
@@ -242,6 +245,13 @@ export default defineComponent({
                 <tr
                   class={game.isDebugGame ? "debugGame" : ""}
                   onClick={(e) => {
+                    if (e.ctrlKey) {
+                      if (e.shiftKey) {
+                        console.log("Game result v2:", convertGame(game));
+                      } else {
+                        console.log("Game result v1:", game);
+                      }
+                    }
                     setDisplayedGame(game, e.currentTarget as Element | null);
                     e.stopPropagation();
                     e.preventDefault();
