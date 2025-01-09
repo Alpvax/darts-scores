@@ -2,10 +2,9 @@ import { computed, defineComponent, ref, type PropType, type VNodeChild, type VN
 import type { GameDefinition, GameTurnStatsType } from "../definition";
 import type { ComparisonResult, PlayerSummaryValues, SummaryAccumulatorParts } from ".";
 import PlayerName from "@/components/PlayerName";
-import { extendClass, mapObjectValues, type ClassBindings } from "@/utils";
+import { extendClass, mapObjectValues } from "@/utils";
 import { autoUpdate, flip, useFloating } from "@floating-ui/vue";
 import type { ContextMenuItem } from "@/components/contextmenu";
-import { type NormalisedSummaryRowsDef } from "./display/v1";
 import { getVDNumFormat, makeRowHighlightFn, type HighlightFn } from "./display";
 import type { SummaryFieldRow, SummaryRow } from "./display/v2";
 
@@ -62,13 +61,6 @@ export const createSummaryComponent = <
       },
       fieldData: {
         type: Array as PropType<
-          NormalisedSummaryRowsDef<any, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
-          // SummaryFieldDef<number, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
-        >,
-        required: true,
-      },
-      fieldDataV2: {
-        type: Array as PropType<
           SummaryFieldRow<PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
           // SummaryFieldDef<number, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>[]
         >,
@@ -103,91 +95,7 @@ export const createSummaryComponent = <
       });
 
       const fieldData = computed(() =>
-        props.fieldData.map(({ rows: simpleRows, ...def }, idx) => {
-          const expandable = def.extended !== undefined;
-          const expanded = expandable && expandedRows.value.fields.has(idx);
-          const rows = expanded ? def.extended!.rows : simpleRows;
-          return {
-            ...props.players.reduce(
-              (acc, pid) => {
-                const summary = props.summaries.get(pid);
-                if (summary) {
-                  const values = def.fields.getValues(summary, pid);
-                  const pDelta = props.deltaGame?.get(pid);
-                  const deltaVals = pDelta !== undefined ? def.fields.getValues(pDelta, pid) : {};
-                  for (const [key, cmp] of Object.entries(def.fields.cmp) as [
-                    keyof typeof values & string,
-                    (a: number, b: number) => number,
-                  ][]) {
-                    const value = values[key];
-                    const limits = acc.fieldLimits.get(key);
-                    if (limits) {
-                      if (cmp(value, limits.highest) > 0) {
-                        limits.highest = value;
-                      }
-                      if (cmp(value, limits.lowest) < 0) {
-                        limits.lowest = value;
-                      }
-                    } else {
-                      acc.fieldLimits.set(key, {
-                        highest: value,
-                        lowest: value,
-                      });
-                    }
-                  }
-                  for (const row of acc.rows) {
-                    row.playerValues.push({
-                      pid,
-                      display: () => row.display(values, deltaVals),
-                      highlight: (limits) =>
-                        row.highlight(values, limits.get(row.cmpField(values))!),
-                      tooltip: row.valueTooltip
-                        ? () => row.valueTooltip!(values, deltaVals)
-                        : undefined,
-                    });
-                  }
-                }
-                return acc;
-              },
-              {
-                fieldLimits: new Map<
-                  string,
-                  {
-                    highest: number;
-                    lowest: number;
-                  }
-                >(),
-                rows: rows.map((r) => ({
-                  ...r,
-                  playerValues: [] as {
-                    pid: string;
-                    display: () => VNodeChild;
-                    highlight: (
-                      limits: Map<
-                        string,
-                        {
-                          highest: number;
-                          lowest: number;
-                        }
-                      >,
-                    ) => ClassBindings;
-                    tooltip?: () => VNodeChild;
-                    // value: number;
-                    // delta?: { val: number; direction: ComparisonResult | "neutral" };
-                  }[],
-                })),
-              },
-            ),
-            ...def,
-            expandable,
-            expanded,
-            expandedLabel: expanded ? def.extended?.label : undefined,
-          };
-        }),
-      );
-
-      const fieldDataV2 = computed(() =>
-        props.fieldDataV2.map((def, gpIdx) => {
+        props.fieldData.map((def, gpIdx) => {
           const label = typeof def.label === "function" ? def.label(false) : def.label;
           if (def.group) {
             const expandable = !def.noExpand;
@@ -582,100 +490,7 @@ export const createSummaryComponent = <
               </tr>
             </thead>
             <tbody>
-              {/*fieldData.value.flatMap(
-                ({ expandable, expanded, expandedLabel, fieldLimits, rows }, idx) => {
-                  let parentRow: VNodeChild | undefined = undefined;
-                  if (expanded) {
-                    const label = expandedLabel!();
-                    parentRow = (
-                      <tr
-                        class="parentRow expandableRow"
-                        data-summary-row={label}
-                        onMouseleave={() => {
-                          tooltipContent.value = undefined;
-                          hoveredEl.value = undefined;
-                        }}
-                        onClick={() => {
-                          if (expanded) {
-                            expandedRows.value.fields.delete(idx);
-                          } else {
-                            expandedRows.value.fields.add(idx);
-                          }
-                          tooltipContent.value = undefined;
-                          hoveredEl.value = undefined;
-                        }}
-                      >
-                        <th class="rowLabel">{label}</th>
-                        <td
-                          class="expandedRowFiller"
-                          colspan={expanded ? props.players.length : 1}
-                        ></td>
-                      </tr>
-                    );
-                  }
-                  return [
-                    parentRow,
-                    ...rows.map((r) => {
-                      const label = r.label();
-                      return (
-                        <>
-                          <tr
-                            class={{
-                              expandableRow: expandable && !expanded,
-                              childRow: expanded,
-                            }}
-                            data-summary-row={label}
-                            onMouseover={(e) => {
-                              if (r.fieldTooltip) {
-                                tooltipContent.value = r.fieldTooltip();
-                                hoveredEl.value = e.currentTarget as HTMLElement;
-                              }
-                            }}
-                            onMouseleave={() => {
-                              tooltipContent.value = undefined;
-                              hoveredEl.value = undefined;
-                            }}
-                            onClick={() => {
-                              if (expanded) {
-                                expandedRows.value.fields.delete(idx);
-                              } else if (expandable) {
-                                expandedRows.value.fields.add(idx);
-                              }
-                              tooltipContent.value = undefined;
-                              hoveredEl.value = undefined;
-                            }}
-                          >
-                            <th class="rowLabel">{label}</th>
-                            {r.playerValues.map(({ pid, display, highlight, tooltip }) => {
-                              // const hasDelta = deltaFmt !== null && delta !== undefined && delta !== 0;
-                              return (
-                                <td
-                                  class={extendClass(highlight(fieldLimits), "summaryValue")}
-                                  onMouseover={(e) => {
-                                    if (tooltip) {
-                                      tooltipContent.value = tooltip();
-                                      hoveredEl.value = e.target as HTMLElement;
-                                    }
-                                  }}
-                                  onMouseleave={() => {
-                                    if (tooltip) {
-                                      tooltipContent.value = undefined;
-                                      hoveredEl.value = undefined;
-                                    }
-                                  }}
-                                >
-                                  {display()}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        </>
-                      );
-                    }),
-                  ];
-                },
-              )*/}
-              {fieldDataV2.value.map(
+              {fieldData.value.map(
                 ({ expandable, expanded, groupHeader, rows, toggleExpansion }) => [
                   groupHeader,
                   ...rows.map(({ key, label, limits, playerValues, fieldTooltip }) => (

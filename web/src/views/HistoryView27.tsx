@@ -335,8 +335,7 @@ export default defineComponent({
           <Summary27Component
             players={players.value}
             summaries={accumulator.value.getAllSummaries()}
-            fieldData={[]}
-            fieldDataV2={fieldData}
+            fieldData={fieldData}
             roundsFields={roundsFields.value}
             onChangeRoundsField={(f) => {
               roundField.value = f;
