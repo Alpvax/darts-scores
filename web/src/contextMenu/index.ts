@@ -166,9 +166,7 @@ export default {
           itemsRef = ref([]); //TODO: function bindings
         } else if (Array.isArray(binding.value)) {
           itemsRef = ref(binding.value);
-          console.log("Ctx menu binding:", binding.value); //XXX
         } else {
-          console.log("Ctx menu non array binding:", binding.value); //XXX
           const { items, ...rest } = binding.value;
           itemsRef = ref(items);
           floatingOptions.value = { ...floatingOptions.value, ...rest };
