@@ -71,9 +71,9 @@ export const defaultFieldData = (realWinsPlayers: Ref<string[]>) =>
               showDefault: true,
               showExtended: false,
               highlight: {
-                value: ({ wins }) => wins.all.tiebreakWins,
-                cmp: "higher",
-                classes: ["best"],
+                getVal: ({ wins }) => [wins.all.tiebreakWins],
+                cmp: ([a]: number[], [b]: number[]) => (a - b > 0 ? "better" : a - b < 0 ? "worse" : "equal"),
+                fn: ([val]) => ({ best: [best] }) => ({ best: val > 0 && val === best }),
               },
             },
             {
