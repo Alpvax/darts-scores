@@ -1,0 +1,218 @@
+import { ref, Ref } from "vue";
+
+type DependsOn<
+  S extends object,
+  K extends keyof S,
+  D extends keyof S | undefined = undefined,
+> = D extends undefined ? number : {
+  [key in K | Exclude<D, undefined>]: number;
+};
+
+export type SummaryField<
+  G extends object,
+  S extends object,
+  K extends keyof S,
+  D extends Exclude<keyof S, K> | undefined = undefined,
+> = {
+  default: number;
+  dependsOn?: D extends undefined ? undefined : D[] | Set<D>;
+  calc: (prev: DependsOn<S, K, D>, score: G) => number;
+  cmp?: (prev: number, new_: number) => "better" | "equal" | "worse";
+  display?: (val: S[K]) => string;
+};
+
+type NormSummaryField<
+  G extends object,
+  S extends object,
+  K extends keyof S,
+  T,
+  D extends keyof S | undefined,
+> = {
+  default: T;
+  dependsOn: Set<D>;
+  calc: (prev: DependsOn<S, K, D>, score: G) => S[K];
+  cmp?: (prev: T, new_: T) => "better" | "equal" | "worse";
+  display?: (val: S[K]) => string;
+};
+
+// function normaliseField<
+//   G extends object,
+//   S extends object,
+//   K extends keyof S,
+//   D extends Exclude<keyof S, K> | undefined,
+// >(field: SummaryField<G, S, K, D>): NormSummaryField<G, S, K, D | K>
+
+class SummaryFields<G extends object, S extends { [k: string]: SummaryField<G, S, any, any> }> {
+  private readonly default: () => {
+    [K in keyof S]: Ref<number>;
+  }
+  /** Ordered by the required dependencies (i.e. dependencies will be processed first). Dependencies includes this field key */
+  private readonly orderedDeps: { key: keyof S, deps: (keyof S)[]}[];
+  // private readonly : {
+  //   [K in keyof S]: S[K] extends SummaryField<G, S, any, infer T, any> ? Ref<T> : never;
+  // }
+  constructor(readonly fields: S) {
+    this.default = () => Object.assign({}, ...Object.entries(fields).map(([k, f]) => ({ [k]: f.default })));
+    // this.values = Object.assign({}, ...Object.entries(fields).map(([k, f]) => ({ [k]: ref(f.default) })));
+    let toProcess = new Map(Object.entries(fields).map(([key, {dependsOn}]) => {
+      const deps = new Set(dependsOn);
+      deps.delete(key);
+      return [ key, deps ];
+    }));
+    let orderedMap = new Map<keyof S, (keyof S)[]>();
+    while (toProcess.size > 0) {
+      for (const [ key, deps ] of toProcess.entries()) {
+        if (new Set([...deps].filter(k => !orderedMap.has(k))).size < 0) {
+          orderedMap.set(key, [key, ...deps]);
+          toProcess.delete(key);
+        } else {
+          console.log(orderedMap, toProcess);//XXX
+        }
+      }
+    }
+    this.orderedDeps = [...orderedMap.entries()].map(([key, deps]) => ({key, deps}));
+  }
+
+  values(games: G[]): {
+    [K in keyof S]: Ref<number>;
+  } {
+    return games.reduce((acc, score) => {
+      for (const { key, deps } of this.orderedDeps) {
+        const field = this.fields[key];
+        const oldVal = acc[key].value;
+        const newVal = field.calc(
+          deps.reduce((obj, d) => {
+            obj[d] = acc[d];
+            return obj;
+          }, {} as { [K in keyof S]: any }),
+          score,
+        );
+        if (field.cmp == undefined) {
+          acc[key].value = Math.max(oldVal, newVal);
+        }
+        if (field.cmp) {
+          if (field.cmp(oldVal, newVal) == "better") {
+            acc[key].value = newVal;
+          }
+        }
+      }
+      return acc;
+    }, this.default())
+  }
+}
+
+export function summaryFields<G extends object, S extends {
+  [K in keyof S]: SummaryField<G, S, K, any>;
+}>(fields: S): S {
+  //TODO: ...
+  return fields;
+}
+
+type SummaryValues<G extends object, S extends {
+  [K in keyof S]: SummaryField<G, S, K, any>;
+}> = {
+  [K in keyof S]: S[K] extends SummaryField<G, S, K, infer D> ? ;
+};
+
+const summaryTest = summaryFields({
+  pb: {
+    key: "pb",
+    default: -394,
+    calc: (prev: number, score: {score: number}) => Math.max(prev, score.score),
+  },
+});
+
+const pb = {
+  key: "pb",
+  default: -394,
+  calc: (prev: number, score: {score: number}) => Math.max(prev, score.score),
+};
+
+type T = typeof summaryTest extends SummaryField<infer G, infer S extends {pb: any}, "pb", infer D>
+  ? typeof pb
+  : never;
+
+// Test stuff:
+type FavouriteTargets = {
+  hits: number;
+  targets: number[];
+}
+export type PlayerStats = {
+  num: number;
+  best: number;
+  worst: number;
+  sum: number;
+  mean: number;
+  fn: number;
+  cliffs: number;
+  cliffR: number;
+  dd: number;
+  ddR: number;
+  goblins: number;
+  piranhas: number;
+  hans: number;
+  jesus: number;
+  allPos: number;
+  farPos: number;
+  farDream: number;
+  bestHits: number;
+  worstHits: number;
+  meanHits: number;
+  sumHits: number;
+  roundData: {
+    [r: number]: {
+      total: number;
+      games: number;
+      dd: number;
+      cliffs: number;
+    };
+    favourites: {
+      /** Most hit numbers, total hits (i.e. up to 3 per game) */
+      total: FavouriteTargets;
+      /** Most cliffed numbers */
+      cliffs: FavouriteTargets;
+      /** Most double doubled numbers */
+      dd: FavouriteTargets;
+      /** Most hit numbers, number of games (i.e. up to 1 per game) */
+      games: FavouriteTargets;
+    };
+  };
+}
+
+const newStats = (): PlayerStats => ({
+  num: 0,
+  best: -394,
+  worst: 1288,
+  sum: 0,
+  mean: 0,
+  fn: 0,
+  cliffs: 0,
+  cliffR: 0,
+  dd: 0,
+  ddR: 0,
+  goblins: 0,
+  piranhas: 0,
+  hans: 0,
+  jesus: 0,
+  allPos: 0,
+  farPos: 0,
+  farDream: 0,
+  bestHits: 0,
+  worstHits: 60,
+  meanHits: 0,
+  sumHits: 0,
+  roundData: {
+    favourites: {
+      total: { hits: 0, targets: []},
+      games: { hits: 0, targets: []},
+      dd: { hits: 0, targets: []},
+      cliffs: { hits: 0, targets: []},
+    },
+    ...Array.from({ length: 20 }, _ => ({
+      total: 0,
+      games: 0,
+      dd: 0,
+      cliffs: 0,
+    })).reduce((obj, round, i) => Object.assign(obj, { [i + 1]: round }), {}),
+  },
+});

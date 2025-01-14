@@ -1,0 +1,75 @@
+div.historyDiv {
+  padding: 1em;
+  display: grid;
+  grid-template-areas:
+    "filter filter side"
+    "games g_ side"
+    "games g_ _";
+  grid-template-rows: max-content max-content 1fr;
+  grid-template-columns: max-content 1fr min-content;
+  font-size: small;
+
+  & .playerName,
+  & .tableHeader {
+    white-space: normal;
+    font-weight: bold;
+    width: 4.5em;
+    vertical-align: bottom;
+  }
+
+  & .historyFilter {
+    grid-area: filter;
+    width: max-content;
+    white-space: nobreak;
+  }
+  & table.gamesList {
+    grid-area: games;
+    width: min-content;
+    text-align: center;
+
+    & tr.debugGame > .rowLabel {
+      color: orange !important;
+    }
+    & tr.selectedGame {
+      background-color: var(--colour-table-hover);
+    }
+
+    & td {
+      padding: 0 0.2em;
+      white-space: nowrap;
+    }
+
+    & tbody tr:hover {
+      background-color: var(--colour-table-hover);
+    }
+    & td.tie {
+      background-color: #bbff66;
+    }
+    & td.winner {
+      background-color: #00ff00;
+    }
+
+    & td::after {
+      content: attr(data-notables);
+      color: #228b22;
+    }
+  }
+  & table:not(.gamesList) {
+    grid-area: side;
+  }
+
+  & div#pastGameOverlay {
+    background: var(--color-background);
+    border: 2px lightslategrey solid;
+    /* margin: 5em; */
+
+    & th.gameDate > span {
+      font-weight: bold;
+    }
+
+    & input {
+      /* Currently disabled until game sharing is re-implemented*/
+      display: none;
+    }
+  }
+}
