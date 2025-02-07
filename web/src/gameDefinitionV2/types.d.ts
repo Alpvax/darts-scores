@@ -10,6 +10,7 @@ type ArrayTurnDataType<V, S, Len extends number> = {
 };
 type TupleTurnDataType<T extends [...{ value: any; stats: any }[]]> = T;
 type ObjectTurnDataType<T extends Record<any, { value: any; stats: any }>> = T;
+type AnyTurnDataType = ArrayTurnDataType<any, any, any> | TupleTurnDataType<any> | ObjectTurnDataType<any>
 type TurnValueType<T> =
   T extends ArrayTurnDataType<infer V, any, infer Len>
     ? FixedLengthArray<V, Len>
@@ -54,6 +55,14 @@ type TurnMetaType<T> =
             [K in keyof Obj]: TurnMeta<Obj[K]["value"], Obj[K]["stats"], Obj[K]["value"]>;
           }
         : Record<any, TurnMeta<any, any, any>>;
+type TurnMetaTypeLookup<T, K extends TurnKey<T>> =
+  T extends ArrayTurnDataType<infer V, infer S, infer Len>
+    ? TurnMeta<V, S, V>
+    : T extends TupleTurnDataType<infer Tup>
+      ? TurnMeta<Tup[K]["value"], Tup[K]["stats"], Tup[K]["value"]>
+      : T extends ObjectTurnDataType<infer Obj>
+        ? TurnMeta<Obj[K]["value"], Obj[K]["stats"], Obj[K]["value"]>
+        : TurnMeta<any, any, any>
 type PlayerTurnData<T> =
   T extends ArrayTurnDataType<infer V, infer S, infer Len>
     ? FixedLengthArray<

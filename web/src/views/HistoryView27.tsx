@@ -6,7 +6,6 @@ import {
   watch,
   watchEffect,
   type VNodeRef,
-  nextTick,
 } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { usePlayerStore } from "@/stores/player";
@@ -101,6 +100,7 @@ export default defineComponent({
                 .toSorted(([a], [b]) => a - b)
                 .map(([_, { value }]) => value) as unknown as FixedLengthArray<0 | 1 | 2 | 3, 20>,
               displayName: gameV1.players.find(({ pid: p }) => (pid = p))?.displayName,
+              // jesus: gameV1.results
             } satisfies PlayerDataRaw<{ startScore: number; jesus?: boolean }, {}>,
           ];
         }),

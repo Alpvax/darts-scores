@@ -10,7 +10,7 @@ import {
 import { use27Config } from "./config";
 
 const listFormat = new Intl.ListFormat(undefined, { type: "conjunction", style: "long" });
-export const defaultFieldData = (realWinsPlayers: Ref<string[]>) =>
+export const defaultFieldData = (realWinsPlayers: Ref<string[]>, filteredWinsLabel = "Real wins") =>
   summaryAccumulator27.rowFactory(
     ({ simpleField }) =>
       [
@@ -26,7 +26,7 @@ export const defaultFieldData = (realWinsPlayers: Ref<string[]>) =>
         }),
         {
           key: "wins.real",
-          label: "Real wins",
+          label: filteredWinsLabel,
           display: RowFormat.field(({ wins }) => wins.getWithAtLeast(realWinsPlayers.value).total),
           highlight: {
             value: ({ wins }) => wins.getWithAtLeast(realWinsPlayers.value).total,

@@ -36,6 +36,16 @@ export const gameDefinition27 = gameDefinitionBuilder("twentyseven")<
         dd: val >= 2, //TODO: config27.ddIncludeCliffs
         hits: val,
       }),
+      label: (idx + 1).toString(),
+      rowClass: (data) => {
+        const values = data.map((d) => d.value);
+        return {
+          current: values.some((v) => v !== undefined) && values.some((v) => v === undefined),
+          untaken: values.every((v) => v === undefined),
+          allMissed: values.every((v) => v < 1),
+          allHit: values.every((v) => v > 0),
+        };
+      },
       component: (val, { deltaScore, score, mutable, focus }) => "TODO: component" /*{
       mutable: (val, { deltaScore, score, mutable, focus }) => "TODO: mutable cell",
       immutable: (val, { deltaScore, score, mutable, focus }) => "TODO: immutable cell",

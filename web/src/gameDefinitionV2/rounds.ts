@@ -1,4 +1,4 @@
-import type { MoveFocus } from "@/utils";
+import type { ClassBindings, MoveFocus } from "@/utils";
 import type { VNodeChild } from "vue";
 
 type ComponentFactoryExtra<Mutable extends boolean, Stats> = {
@@ -53,12 +53,26 @@ type TurnComponentFactoryMeta<V, S> =
 type TurnMetaBase<V, Stats> = {
   deltaScore: (value: V) => number;
   turnStats: (value: V) => Stats;
+  label: VNodeChild | (() => VNodeChild);
   component: TurnComponentFactoryMeta<V, Stats>;
+  rowClass?: (playerStats: {
+    value: V;
+    stats: Stats;
+    deltaScore: number;
+    endingScore: number;
+  }[]) => ClassBindings;
 };
 export type TurnMeta<V, Stats, UntakenVal extends V | undefined> = {
   readonly deltaScore: (value: UntakenVal) => number;
   readonly turnStats: (value: UntakenVal) => Stats;
+  readonly label: () => VNodeChild;
   readonly component: TurnComponentFactoryDef<UntakenVal, Stats>;
+  readonly rowClass: (playerStats: {
+    value: V;
+    stats: Stats;
+    deltaScore: number;
+    endingScore: number;
+  }[]) => ClassBindings;
 } & (undefined extends UntakenVal
   ? {
       readonly untakenValue: undefined;
@@ -88,7 +102,7 @@ export const defineTurn: {
   <V, Stats>(meta: TurnMetaNoFallback<V, Stats>): TurnMeta<V, Stats, V | undefined>;
   <V, Stats>(meta: TurnMetaWithFallback<V, Stats>): TurnMeta<V, Stats, V>;
 } = <V, Stats>(meta: TurnMetaDef<V, Stats>) => {
-  const { deltaScore, turnStats, component, untakenValue } = meta;
+  const { deltaScore, turnStats, component, label, rowClass, untakenValue } = meta;
   return {
     deltaScore,
     turnStats,
@@ -99,6 +113,8 @@ export const defineTurn: {
             immutable: component,
           }
         : component,
+    label: typeof label === "function" ? label : () => label,
+    rowClass: rowClass ?? (() => undefined),
     untakenValue,
   };
 };

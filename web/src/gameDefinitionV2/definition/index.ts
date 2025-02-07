@@ -13,6 +13,7 @@ import type {
   TurnMetaType,
   TurnKey,
   TurnStatsType,
+  TurnMetaTypeLookup,
 } from "../types";
 import type { Position } from "..";
 import type { TurnMeta } from "../rounds";
@@ -87,6 +88,9 @@ export class GameDefinition<
     TurnMetaType<TurnType>[keyof TurnMetaType<TurnType>]
   > = new Map();
 
+  // @ts-expect-error
+  private readonly roundMetaFactory: <K extends TurnKey<TurnType>>(key: K) => TurnMetaType<TurnType>[K]
+
   constructor(
     readonly gameType: GameType,
     readonly dbAdapter: DatabaseAdapter<DBConfig, DBResult>,
@@ -106,11 +110,13 @@ export class GameDefinition<
       PlayerId
     >,
     // @ts-expect-error
-    readonly roundMetaFactory: <K extends TurnKey<TurnType>>(key: K) => TurnMetaType<TurnType>[K],
-  ) {}
+    roundMetaFactory: <K extends TurnKey<TurnType>>(key: K) => TurnMetaType<TurnType>[K],
+  ) {
+    this.roundMetaFactory = roundMetaFactory;
+  }
 
   // private getRoundMeta<K extends keyof RoundMetaType>(key: K): RoundMetaType[K] {
-  private getRoundMeta<V, S, U extends V | undefined>(
+  public getRoundMetaT<V, S, U extends V | undefined>(
     key: keyof TurnMetaType<TurnType>,
   ): TurnMeta<V, S, U> {
     if (!this.roundsCache.has(key)) {
@@ -119,6 +125,15 @@ export class GameDefinition<
     }
     // return this.roundsCache.get(key) as RoundMetaType[K];
     return this.roundsCache.get(key) as TurnMeta<V, S, U>;
+  }
+  public getRoundMeta<K extends TurnKey<TurnType>>(key: K): TurnMetaTypeLookup<TurnType, K> {
+    // @ts-expect-error
+    if (!this.roundsCache.has(key)) {
+      // @ts-expect-error
+      this.roundsCache.set(key, this.roundMetaFactory(key));
+    }
+    // @ts-expect-error
+    return this.roundsCache.get(key) as TurnMetaTypeLookup<TurnType, K>;
   }
 
   private makePositions(
@@ -196,8 +211,8 @@ export class GameDefinition<
         ][]) {
           const key = (
             /\d+/.test(strKey) ? parseInt(strKey) : strKey
-          ) as keyof TurnValueType<TurnType>;
-          const r = this.getRoundMeta(key as keyof TurnMetaType<TurnType>);
+          ) as TurnKey<TurnType>;
+          const r = this.getRoundMeta(key);
           const deltaScore = r.deltaScore(value);
           score += deltaScore;
           // @ts-expect-error

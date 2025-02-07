@@ -21,6 +21,10 @@ import PlayerName from "@/components/PlayerName";
 import { useRouter } from "vue-router";
 import SimpleTiebreakDialog from "@/components/game/SimpleTiebreakDialog.vue";
 import LoadingButton from "@/components/LoadingButton";
+import { useBasicConfig } from "@/config/baseConfigLayered";
+import type { ContextMenuItem } from "@/components/contextmenu";
+import { Summary27Component, summaryAccumulator27 } from "@/game/27/gameDefv2";
+import { defaultFieldData, use27RoundsField } from "@/game/27/summary";
 
 const Game27 = createComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -90,6 +94,7 @@ export default defineComponent({
     const playerConfig = usePlayerConfig();
     const router = useRouter();
     const showHistoryOnSubmit = config.showHistoryOnSubmit.readonlyRef();
+    const summaryVersion = useBasicConfig().summaryVersion.mutableRef("local");
     const players = ref(config.defaultPlayers.readonlyRef().value);
     const gameDate = ref(new Date());
     const gameValues = ref(undefined as undefined | Map<string, (number | undefined)[]>);
@@ -257,6 +262,12 @@ export default defineComponent({
 
     const historyStore = use27History();
 
+    const accumulator = ref(summaryAccumulator27.create());
+    const { roundField, roundsFields } = use27RoundsField();
+    const fieldData = defaultFieldData(players, "Wins vs current");
+
+    const currentGameTurns = ref(new Map());
+
     return () => (
       <>
         <div class="gameDiv">
@@ -295,6 +306,10 @@ export default defineComponent({
               (partialGameResult.value = data as Map<string, PlayerDataForStats<TurnData27>>)
             }
             onUpdate:playerStats={(pid, stats) => playerStats.value.set(pid, stats)}
+            onTurnTaken={(turnData) => {
+
+              currentGameTurns.value
+            }}
           >
             {{
               topLeftCell:
@@ -385,14 +400,59 @@ export default defineComponent({
               ),
             }}
           </Game27>
-          {sideDisplay.value === "summary" ? (
-            <Summary27
-              players={players.value}
-              includeAllPlayers
-              games={historyStore.games}
-              inProgressGame={partialGameResult.value}
-            />
-          ) : (
+          {sideDisplay.value === "summary" ? 
+                  summaryVersion.value === "v1" ? (
+                    <Summary27 players={players.value} games={historyStore.games}>
+                      {{
+                        topLeftCell: () => (
+                          <th
+                            v-context-menu={[
+                              [
+                                {
+                                  label: "Use V2 summary",
+                                  action: () => {
+                                    summaryVersion.value = "v2";
+                                  },
+                                } satisfies ContextMenuItem,
+                              ],
+                            ]}
+                          >
+                            &nbsp;
+                          </th>
+                        ),
+                      }}
+                    </Summary27>
+                  ) : (
+                    <Summary27Component
+                      players={players.value}
+                      summaries={accumulator.value.getAllSummaries()}
+                      deltaGame={accumulator.value.makeGameDeltas()}
+                      fieldData={fieldData}
+                      roundsFields={roundsFields.value}
+                      onChangeRoundsField={(f) => {
+                        roundField.value = f;
+                      }}
+                    >
+                      {{
+                        topLeftCell: () => (
+                          <th
+                            v-context-menu={[
+                              [
+                                {
+                                  label: "Use V1 summary",
+                                  action: () => {
+                                    summaryVersion.value = "v1";
+                                  },
+                                } satisfies ContextMenuItem,
+                              ],
+                            ]}
+                          >
+                            &nbsp;
+                          </th>
+                        ),
+                      }}
+                    </Summary27Component>
+                  ) : (
             <GameEntry27
               players={players.value}
               includeAllPlayers
