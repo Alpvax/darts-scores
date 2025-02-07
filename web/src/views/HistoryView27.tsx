@@ -247,6 +247,9 @@ export default defineComponent({
                         if (t.score < 0) {
                           acc.allPositive = false;
                         }
+                        if (t.stats.hits < 1) {
+                          acc.dream = false;
+                        }
                         if (t.stats.cliff) {
                           acc.cliffs += 1;
                         } else if (t.stats.doubledouble) {
@@ -256,11 +259,13 @@ export default defineComponent({
                       },
                       {
                         allPositive: true,
+                        dream: true,
                         cliffs: 0,
                         dd: 0,
                       },
                     );
                     const dataNotables =
+                      (notables.dream ? "🏅" : "") +
                       (notables.allPositive ? "+" : "") +
                       (notables.cliffs > 0
                         ? `c${notables.cliffs > 1 ? SUPERSCRIPT_N[notables.cliffs - 1] : ""}`
