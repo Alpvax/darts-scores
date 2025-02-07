@@ -330,10 +330,17 @@ export const use27History = defineStore("27History", () => {
           ) as (GameResult<TurnData27> & { gameId: string })[],
     ),
     allPlayers: computed(() =>
-      [...games.values()].reduce((s, { players }) => {
-        players.forEach(({ pid }) => s.add(pid));
-        return s;
-      }, new Set<string>()),
+      [...games.values()].reduce((acc, { players }) => {
+        for (const { pid, displayName } of players) {
+          if (!acc.has(pid)) {
+            acc.set(pid, new Set());
+          }
+          if (displayName) {
+            acc.get(pid)!.add(displayName);
+          }
+        }
+        return acc;
+      }, new Map<string, Set<string>>()),
     ),
     saveGame: async (result: Result27) => {
       await addDoc(

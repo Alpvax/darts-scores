@@ -6,11 +6,18 @@ import {
   watch,
   watchEffect,
   type VNodeRef,
+  type Ref,
 } from "vue";
 import PlayerSelection from "@/components/PlayerSelection.vue";
 import { usePlayerStore } from "@/stores/player";
 import type { GameResult } from "@/gameUtils/summary";
-import { defaultSummaryFields, gameMeta, summaryFactory, type TurnData27 } from "@/game/27";
+import {
+  DATE_DM_FORMAT,
+  defaultSummaryFields,
+  gameMeta,
+  summaryFactory,
+  type TurnData27,
+} from "@/game/27";
 import { createSummaryComponent } from "@/components/summary";
 import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
@@ -75,15 +82,24 @@ export default defineComponent({
 
     const players = computed(() =>
       [...historyStore.allPlayers]
-        .filter((pid) => {
+        .flatMap(([pid, names]) => {
           const p = playerStore.getPlayer(pid);
           if (p.loaded) {
-            return !(p.disabled || p.guest);
+            if (p.disabled) {
+              return [];
+            }
+          } else {
+            p.addPastNames(...names);
           }
-          return true;
+          return [p];
         })
-        .toSorted((a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b)),
+        .toSorted(
+          ({ id: a }, { id: b }) => playerStore.playerOrder(a) - playerStore.playerOrder(b),
+        ),
     );
+
+    const showGuestGames = config.displayGuestGames.mutableRef("local");
+    const displayGuestSummaries = config.displayGuestSummaries.mutableRef("local");
 
     type PastGameResult = GameResult<TurnData27> & { gameId: string };
 
@@ -216,10 +232,9 @@ export default defineComponent({
           </div>
           <PlayerSelection
             legend='Select players to filter "Real Wins"'
-            available={[...historyStore.allPlayers]
-              .filter((pid) => {
-                const p = playerStore.getPlayer(pid);
-                return p.loaded && !p.disabled;
+            available={players.value
+              .flatMap((p) => {
+                return p.loaded && !p.guest ? [p.id] : [];
               })
               .toSorted((a, b) => playerStore.playerOrder(a) - playerStore.playerOrder(b))}
             modelValue={playersFilter.value}
@@ -230,7 +245,7 @@ export default defineComponent({
           <thead>
             <tr>
               <td class="tableHeader">Date</td>
-              {players.value.map((pid) => (
+              {gameViewPlayers.value.map((pid) => (
                 <td class="playerName">{playerStore.playerName(pid)}</td>
               ))}
             </tr>
@@ -259,13 +274,16 @@ export default defineComponent({
                   data-game-id={game.gameId}
                 >
                   <td class="rowLabel">{game.date.toLocaleDateString()}</td>
-                  {players.value.map((pid) => {
+                  {gameViewPlayers.value.map((pid) => {
                     const result = game.results.get(pid);
                     const pos = positions.get(pid);
                     const notables = [...(result?.allTurns?.values() ?? [])].reduce(
                       (acc, t) => {
                         if (t.score < 0) {
                           acc.allPositive = false;
+                        }
+                        if (t.stats.hits < 1) {
+                          acc.dream = false;
                         }
                         if (t.stats.cliff) {
                           acc.cliffs += 1;
@@ -276,11 +294,13 @@ export default defineComponent({
                       },
                       {
                         allPositive: true,
+                        dream: true,
                         cliffs: 0,
                         dd: 0,
                       },
                     );
                     const dataNotables =
+                      (notables.dream ? "🏅" : "") +
                       (notables.allPositive ? "+" : "") +
                       (notables.cliffs > 0
                         ? `c${notables.cliffs > 1 ? SUPERSCRIPT_N[notables.cliffs - 1] : ""}`
@@ -368,7 +388,35 @@ export default defineComponent({
             id="pastGameOverlay"
             v-click-outside={() => setDisplayedGame(undefined)}
           >
-            <Game27 class="game twentyseven" gameResult={displayedGame.value} />
+            <Game27 class="game twentyseven" gameResult={displayedGame.value}>
+              {{
+                topLeftCell: () => (
+                  <th class="gameDate">
+                    <span>{DATE_DM_FORMAT.format(displayedGame.value?.date)}</span>
+                    <br />
+                    <span>{displayedGame.value?.date.getFullYear()}</span>
+                  </th>
+                ),
+                footer: (playerScores: PlayerDataFor<typeof gameMeta>[]) => (
+                  <tr class="totalHitsRow">
+                    <th class="rowLabel">Hits</th>
+                    {playerScores.map(({ turns, stats: { hitsCountNZ, hitsTotal } }) => {
+                      const l = turns.size;
+                      return (
+                        <td>
+                          <span>
+                            {hitsCountNZ}/{l}
+                          </span>{" "}
+                          <span>
+                            ({hitsTotal}/{l * 3})
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ),
+              }}
+            </Game27>
             <input type="button" value="Share" onClick={copyPastGameToClipboard} />
           </div>
         )}
