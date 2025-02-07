@@ -221,6 +221,15 @@ export default defineComponent({
                   class={{
                     debugGame: game.isDebugGame,
                     selectedGame: game.gameId === displayedGameId.value,
+                    teamDream:
+                      [...game.results.values()].reduce((hit, { turns }) => {
+                        for (const [turn, { value }] of turns) {
+                          if (value > 0) {
+                            hit.add(turn);
+                          }
+                        }
+                        return hit;
+                      }, new Set<number>()).size >= 20,
                   }}
                   onClick={(e) => {
                     setDisplayedGame(game, e.currentTarget as Element | null);
