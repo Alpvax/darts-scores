@@ -53,10 +53,6 @@ export const use27Config = makeLayeredConfigComposable({
         "jcfFkGCY81brr8agA3g3",
         "jpBEiBzn9QTVN0C6Hn1m",
       ];
-      // Player doesn't play on Fridays
-      if (new Date().getDay() !== 5) {
-        res.push("k7GNyCogBy79JE4qhvAj");
-      }
       return res;
     },
     browser: {
