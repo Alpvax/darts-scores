@@ -21,11 +21,22 @@ import {
 import { createSummaryComponent } from "@/components/summary";
 import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
-import { makePlayerPositions, type PlayerDataFor } from "@/gameUtils/playerData";
-import { extendClass } from "@/utils";
+import { makePlayerPositions } from "@/gameUtils/playerData";
+import { debounce, extendClass } from "@/utils";
 import { autoUpdate, shift, useFloating } from "@floating-ui/vue";
 import { createImmutableComponent } from "@/components/gameV2/immutableGame";
 import { useRoute } from "vue-router";
+import {
+  gameDefinition27,
+  Summary27Component,
+  summaryAccumulator27,
+  type GameResult27,
+} from "@/game/27/gameDefv2";
+import { defaultFieldData, use27RoundsField } from "@/game/27/summary";
+import type { PlayerDataRaw } from "@/gameDefinitionV2/types";
+import type { FixedLengthArray } from "@/utils/types";
+import { useBasicConfig } from "@/config/baseConfigLayered";
+import type { ContextMenuItem } from "@/components/contextmenu";
 
 const Game27 = createImmutableComponent(gameMeta);
 const Summary27 = createSummaryComponent(summaryFactory, defaultSummaryFields);
@@ -61,6 +72,11 @@ export default defineComponent({
     const config = use27Config();
 
     const playersFilter = config.realWinsPlayers.mutableRef("local");
+    const accumulator = ref(summaryAccumulator27.create());
+    const { roundField, roundsFields } = use27RoundsField();
+    const fieldData = defaultFieldData(playersFilter);
+
+    const summaryVersion = useBasicConfig().summaryVersion.mutableRef("local");
 
     const historyStore = use27History();
 
@@ -88,29 +104,53 @@ export default defineComponent({
     type PastGameResult = GameResult<TurnData27> & { gameId: string };
 
     const games = computed(() => historyStore.games as unknown as PastGameResult[]);
-    const lastGamePlayers = computed(
-      () =>
-        new Set(games.value.length > 0 ? games.value[0].players.map(({ pid }) => pid) : undefined),
-    );
-
-    const gameViewPlayers = computed(() =>
-      players.value.flatMap((p) =>
-        (p.loaded && !p.guest) || showGuestGames.value || lastGamePlayers.value.has(p.id)
-          ? [p.id]
-          : [],
-      ),
-    );
-    const summaryPlayers = computed(() =>
-      players.value.flatMap((p) =>
-        (p.loaded && !p.guest) ||
-        lastGamePlayers.value.has(p.id) ||
-        (typeof displayGuestSummaries.value === "boolean"
-          ? displayGuestSummaries.value
-          : displayGuestSummaries.value.includes(p.id))
-          ? [p.id]
-          : [],
-      ),
-    );
+    const convertGame = (gameV1: PastGameResult) => {
+      const playerDataRaw = new Map(
+        [...gameV1.results].map(([pid, { complete, allTurns }]) => {
+          return [
+            pid,
+            {
+              startScore: 27,
+              completed: complete,
+              turns: [...allTurns]
+                .toSorted(([a], [b]) => a - b)
+                .map(([_, { value }]) => value) as unknown as FixedLengthArray<0 | 1 | 2 | 3, 20>,
+              displayName: gameV1.players.find(({ pid: p }) => (pid = p))?.displayName,
+              // jesus: gameV1.results
+            } satisfies PlayerDataRaw<{ startScore: number; jesus?: boolean }, {}>,
+          ];
+        }),
+      );
+      const game = gameDefinition27.calculateGameResult(playerDataRaw, {});
+      const result: GameResult27 = {
+        date: gameV1.date,
+        playerOrder: players.value.filter((pid) => playerDataRaw.has(pid)),
+        results: [...game.players].reduce(
+          (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
+          {},
+        ),
+      };
+      const winners = game.positionsOrdered[0].players;
+      if (winners.length > 1) {
+        result.tiebreak = {
+          players: winners,
+          type: "UNKNOWN",
+          winner: winners[Math.floor(Math.random() * winners.length)],
+        };
+        console.log("Tiebreak:", result.tiebreak); //XXX
+      }
+      return result;
+    };
+    const calculateSummary = () => {
+      accumulator.value = summaryAccumulator27.create();
+      for (const pastGameV1 of games.value) {
+        accumulator.value.pushGame(convertGame(pastGameV1));
+      }
+    };
+    watch(games, debounce(calculateSummary), {
+      immediate: true,
+      deep: true,
+    });
 
     const displayedGameId = ref<string | undefined>();
     const displayedGame = ref<PastGameResult | undefined>();
@@ -218,20 +258,15 @@ export default defineComponent({
               ).playerPositions.value.playerLookup;
               return (
                 <tr
-                  class={{
-                    debugGame: game.isDebugGame,
-                    selectedGame: game.gameId === displayedGameId.value,
-                    teamDream:
-                      [...game.results.values()].reduce((hit, { turns }) => {
-                        for (const [turn, { value }] of turns) {
-                          if (value > 0) {
-                            hit.add(turn);
-                          }
-                        }
-                        return hit;
-                      }, new Set<number>()).size >= 20,
-                  }}
+                  class={game.isDebugGame ? "debugGame" : ""}
                   onClick={(e) => {
+                    if (e.ctrlKey) {
+                      if (e.shiftKey) {
+                        console.log("Game result v2:", convertGame(game));
+                      } else {
+                        console.log("Game result v1:", game);
+                      }
+                    }
                     setDisplayedGame(game, e.currentTarget as Element | null);
                     e.stopPropagation();
                     e.preventDefault();
@@ -295,7 +330,57 @@ export default defineComponent({
             })}
           </tbody>
         </table>
-        <Summary27 players={summaryPlayers.value} games={historyStore.games} />
+        {summaryVersion.value === "v1" ? (
+          <Summary27 players={players.value} games={historyStore.games}>
+            {{
+              topLeftCell: () => (
+                <th
+                  v-context-menu={[
+                    [
+                      {
+                        label: "Use V2 summary",
+                        action: () => {
+                          summaryVersion.value = "v2";
+                        },
+                      } satisfies ContextMenuItem,
+                    ],
+                  ]}
+                >
+                  &nbsp;
+                </th>
+              ),
+            }}
+          </Summary27>
+        ) : (
+          <Summary27Component
+            players={players.value}
+            summaries={accumulator.value.getAllSummaries()}
+            fieldData={fieldData}
+            roundsFields={roundsFields.value}
+            onChangeRoundsField={(f) => {
+              roundField.value = f;
+            }}
+          >
+            {{
+              topLeftCell: () => (
+                <th
+                  v-context-menu={[
+                    [
+                      {
+                        label: "Use V1 summary",
+                        action: () => {
+                          summaryVersion.value = "v1";
+                        },
+                      } satisfies ContextMenuItem,
+                    ],
+                  ]}
+                >
+                  &nbsp;
+                </th>
+              ),
+            }}
+          </Summary27Component>
+        )}
         {displayedGame.value === undefined ? undefined : (
           <div
             style={floatingStyles.value}
