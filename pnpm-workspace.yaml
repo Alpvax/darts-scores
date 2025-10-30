@@ -1,3 +1,9 @@
 packages:
-  - "web"
-  
+  - web
+
+ignoredBuiltDependencies:
+  - protobufjs
+  - vue-demi
+
+onlyBuiltDependencies:
+  - esbuild
