@@ -44,13 +44,21 @@ function makeValueState<T>(key: string, def: BrowserStoragePropDef<T>) {
   const { load, save }: {
     load: (s: string) => T | null;
     save: (value: T) => string;
-  } = {
-    load: "load" in def
-      ? def.load ?? (s => s as T | null)
-      : "validate" in def
-        ? (s => def.validate(s) ? s as T : null)
-        : (() => { throw new Error(`Invalid ValueState definition for key="${key}": ${JSON.stringify(def)}`) })(),
-    save: ("save" in def ? def.save : undefined) ?? (val => val as string),
+  } = isJsonDef(def) ? {
+    load: JSON.parse as (s: string) => T | null,
+    save: JSON.stringify,
+  }
+  : isEnumDef(def) ? {
+    load: s => (def.choices as string[]).includes(s) ? s as T : null,
+    save: s => s as string,
+  }
+  : isValidStringDef(def) ? {
+    load: s => def.validate(s) ? s as T : null,
+    save: s => s as string,
+  }
+  : /*isStringDef(def) ?*/ {
+    load: (def.load ?? (s => s)) as (s: string) => T | null,
+    save: (def.save ?? (s => s)) as (val: T) => string,
   };
   const fallback: () => T | null = typeof def.fallback === "function"
     ? def.fallback as () => T
@@ -117,27 +125,83 @@ function makeValueState<T>(key: string, def: BrowserStoragePropDef<T>) {
   }) as BrowserStorageValue<T>
 }
 
-type BrowserStorageState<T extends {}> = {
+export type BrowserStorageState<T extends {}> = {
   readonly [K in keyof T & string]: BrowserStorageValue<T[K]>;
 }
-type BrowserStoragePropDef<V> = {
+
+type LoadSavePropDef<V> = {
+  kind?: "loadSave";
   fallback?: V | (() => V);
   load: (s: string) => V | null;
   save: (val: V) => string;
-} | (V extends string
-  ? string extends V
-    ? { // V == string, so both load and save are optional (defaulting to identity)
-      fallback?: V | (() => V);
-      load?: (s: string) => V | null;
-      save?: (val: V) => string;
-    }
-    : { // V is a subset of string, so saving is identity, but loading needs validation
-      fallback?: V | (() => V);
-      /** Validate a string is a valid value upon loading */
-      validate: (s: string) => boolean;
-    }
-  : never // V is not related to string, so both load and save must be specified
-);
+};
+const isLoadSaveDef = <V>(def: BrowserStoragePropDef<V>): def is LoadSavePropDef<V> =>
+  // @ts-ignore
+  def.kind === "loadSave" || (Object.hasOwn(def, "load") && typeof def["load"] === "function" && Object.hasOwn(def, "save") && typeof def["save"] === "function");
+
+/** Use load = JSON.parse and save = JSON.stringify */
+type JsonPropDef<V> = {
+  kind: "json";
+  fallback?: V | (() => V);
+  /** Can override the load method if desired */
+  load?: (s: string) => V | null;
+  /** Can override the save method if desired */
+  save?: (val: V) => string;
+}
+const isJsonDef = <V>(def: BrowserStoragePropDef<V>): def is JsonPropDef<V> => def.kind === "json";
+
+// type AnyStringValuePropDef<V extends string> = StringPropDef<V> | EnumPropDef<V> | ValidStringPropDef<V>;
+// // type AnyStringValuePropDef<V extends string> = (string extends V ? StringPropDef : EnumPropDef<V>) | ValidStringPropDef<V>;
+// const isStringValueDef = <V>(def: BrowserStoragePropDef<V>): def is AnyStringValuePropDef<V> =>
+//   def.kind === "string" || Object.hasOwn(def, "validate") || Object.hasOwn(def, "choices");
+
+/** V == string, so both load and save are optional (defaulting to identity) */
+type StringPropDef<V> = {
+  kind: string extends V ? "string" : never;
+  fallback?: string | (() => string);
+  /** Can override the load method if desired */
+  load?: (s: string) => string | null;
+  /** Can override the save method if desired */
+  save?: (val: string) => string;
+}
+const isStringDef = <V>(def: BrowserStoragePropDef<V>): def is StringPropDef<V> => def.kind === "string";
+
+/** V is a subset of string, so saving is identity, but loading needs validation */
+type ValidStringPropDef<V> = {
+  kind?: "validString";
+  fallback?: V | (() => V);
+  /** Validate a string is a valid value upon loading */
+  validate: V extends string ? (s: string) => boolean : never;
+}
+const isValidStringDef = <V>(def: BrowserStoragePropDef<V>): def is ValidStringPropDef<V> => def.kind === "validString" || Object.hasOwn(def, "validate");
+
+/** Simpler approach to specifying ValidStringPropDef as `s => [...choices].includes(s)` */
+type EnumPropDef<V> = {
+  kind?: "enum";
+  fallback?: V | (() => V);
+  choices: V extends string ? V[] : never;
+}
+const isEnumDef = <V>(def: BrowserStoragePropDef<V>): def is EnumPropDef<V> => def.kind === "enum" || Object.hasOwn(def, "choices");
+
+type BrowserStoragePropDef<V> = LoadSavePropDef<V> | JsonPropDef<V> | StringPropDef<V> | EnumPropDef<V> | ValidStringPropDef<V>;//(V extends string ? AnyStringValuePropDef<V> : never);
+// type BrowserStoragePropDef<V> = {
+//   fallback?: V | (() => V);
+//   load: (s: string) => V | null;
+//   save: (val: V) => string;
+// } | (V extends string
+//   ? string extends V
+//     ? { // V == string, so both load and save are optional (defaulting to identity)
+//       fallback?: V | (() => V);
+//       load?: (s: string) => V | null;
+//       save?: (val: V) => string;
+//     }
+//     : { // V is a subset of string, so saving is identity, but loading needs validation
+//       fallback?: V | (() => V);
+//       /** Validate a string is a valid value upon loading */
+//       validate: (s: string) => boolean;
+//     }
+//   : never // V is not related to string, so both load and save must be specified
+// );
 export type BrowserStorageProps<K extends keyof BrowserStorage> = {
   [Prop in keyof BrowserStorage[K] & string]: BrowserStoragePropDef<BrowserStorageValueType<K, Prop>>;
 }
@@ -178,24 +242,25 @@ export const initStorage = <K extends keyof BrowserStorage>(key: K, props: Brows
   }, {} as BrowserStorage[K]);
 }
 
-declare module "$lib/config/browserStorage" {
-  interface BrowserStorage {
-    twentyseven: BrowserStorageState<{
-      defaultView: "history" | "new" | "view",
-    }>;
-  }
-}
+//XXX
+// declare module "$lib/config/impl/browserStorage" {
+//   interface BrowserStorage {
+//     twentyseven: BrowserStorageState<{
+//       defaultView: "history" | "new" | "view",
+//     }>;
+//   }
+// }
 
-type t27 = BrowserStorage["twentyseven"]
-type t27dv = BrowserStorageValueType<"twentyseven", keyof t27>
+// type t27 = BrowserStorage["twentyseven"]
+// type t27dv = BrowserStorageValueType<"twentyseven", keyof t27>
 
-type defView27 = BrowserStorage["twentyseven"]["defaultView"]
-const test_storage = initStorage("twentyseven", {
-  defaultView: {
-    fallback: "history",
-    validate: (s: string) => new Set(["history", "new", "view"]).has(s),
-  } satisfies BrowserStoragePropDef<"history" | "new" | "view">
-} satisfies BrowserStorageProps<"twentyseven">)
+// type defView27 = BrowserStorage["twentyseven"]["defaultView"]
+// const test_storage = initStorage("twentyseven", {
+//   defaultView: {
+//     fallback: "history",
+//     validate: (s: string) => new Set(["history", "new", "view"]).has(s),
+//   } satisfies BrowserStoragePropDef<"history" | "new" | "view">
+// } satisfies BrowserStorageProps<"twentyseven">)
 
 export const setSessionStorage = (key: string, val: string | undefined): void => {
   if (val) {

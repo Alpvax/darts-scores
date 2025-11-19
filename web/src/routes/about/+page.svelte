@@ -4,9 +4,9 @@
 
 <style>
     #logo {
-		max-height: 10vw;
-		max-width: 15vw;
-	}
+    max-height: 10vw;
+    max-width: 15vw;
+  }
 </style>
 
 <h1>About</h1>

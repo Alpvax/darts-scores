@@ -7,8 +7,8 @@ export const reroute: Reroute = async ({ url }) => {
         const [gameType, view] = url.pathname.substring(6).split(/\/(.*)/);
         if (Object.hasOwn(aliasLookup, gameType)) {
             const route = aliasLookup[gameType as GameAlias];
-            console.debug(`Redirecting game alias: "${gameType}" -> "${route}" with view: "${view}": /game${route}/${view}`);
-            return `/game${route}/${view}`
+            console.debug(`Redirecting game alias: "${gameType}" -> "/${route}" with view: "${view}": /game/${route}/${view}`);
+            return `/game/${route}/${view}`
         }
     }
 };

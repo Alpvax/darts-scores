@@ -45,6 +45,7 @@ type ConfigGetter<T extends {}> = <K extends keyof ConfigValuePath<T>>(path: K) 
 type ConfigSetter<T extends {}> = <K extends keyof ConfigValuePath<T>>(path: K, value: ConfigValuePath<T>[K]) => void;
 
 export type ConfigLayer<T extends {}> = {
+  readonly clientOnly: boolean;
   /** Use symbol to guarantee uniqueness or string for ease of use */
   readonly identity: string | symbol;
   /** Get the value from this config layer */
@@ -62,6 +63,7 @@ type VolatileOptions<T extends {}> = {
 export const volatileLayer = <T extends {}>(opts?: VolatileOptions<T>): ConfigLayer<T> => {
   const state = $state((opts?.defaults ?? {}) as T);
   return {
+    clientOnly: false,
     identity: opts?.identifier ?? "volatile",
     get: path => {
       //TODO: maybe make get safer? Check for reactivity
@@ -121,6 +123,7 @@ export const BROWSER_SESSION_STORAGE_LAYER_KEY = Symbol("Browser SessionStorage"
  */
 export const browserStorageLayer = <K extends keyof BrowserStorage>(location: "local" | "session", group: K, identifier?: string | symbol): ConfigLayer<BrowserStorage[K]> => location === "local"
 ? {
+  clientOnly: true,
   identity: identifier ?? BROWSER_LOCAL_STORAGE_LAYER_KEY,
   // @ts-expect-error
   get: (path) => getBrowserStorage(group, path).local,
@@ -128,6 +131,7 @@ export const browserStorageLayer = <K extends keyof BrowserStorage>(location: "l
   set: (path, value) => getBrowserStorage(group, path).local = value,
 }
 : {
+  clientOnly: true,
   identity: identifier ?? BROWSER_SESSION_STORAGE_LAYER_KEY,
   // @ts-expect-error
   get: (path) => getBrowserStorage(group, path).session,

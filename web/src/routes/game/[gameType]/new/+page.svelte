@@ -1,1 +1,0 @@
-<h2>TODO: Implement viewing past games</h2>
