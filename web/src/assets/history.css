@@ -24,6 +24,7 @@ div.historyDiv {
   }
   & table.gamesList {
     grid-area: games;
+    height: min-content;
     width: min-content;
     text-align: center;
 
