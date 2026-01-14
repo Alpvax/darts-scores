@@ -231,3 +231,39 @@ export const numberOrdinal = (num: number) => {
   }
   return "th";
 };
+
+/**
+ * Create a comparison function with the given comparison precision
+ * @param precision The number of decimal places to compare.
+ * e.g. 2 would make `3.142` and `3.138` compare as equal (round(314.2 - 313.8) == 0)
+ * e.g. -2 would make `365.25` and `406.3` compare as equal (round(3.6525 - 4.063) == 0)
+ */
+export const floatCompareFunc = (precision: number) => {
+  const mult = Math.pow(10, precision);
+  return (a: number, b: number) => Math.round((a - b) * mult);
+};
+
+export const mapObjectValues = <T, U, Keys extends string | number | symbol>(
+  obj: { [K in Keys]: T },
+  f: (value: T, key: Keys, index: number) => U,
+): { [K in Keys]: U } =>
+  (Object.entries(obj) as [Keys, T][]).reduce(
+    (acc, [key, value], index) => Object.assign(acc, { [key]: f(value, key, index) }),
+    {} as any,
+  );
+
+export const createRecord = <T, Keys extends string | number | symbol>(
+  keys: Iterable<Keys>,
+  f: (key: Keys, index: number) => T,
+): { [K in Keys]: T } =>
+  [...keys].reduce((acc, key, index) => Object.assign(acc, { [key]: f(key, index) }), {} as any);
+
+export const debounce = <A extends [...any[]]>(func: (...args: A) => any, timeout = 300) => {
+  let timer: number;
+  return (...args: A) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
+  };
+};

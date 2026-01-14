@@ -2,6 +2,7 @@ import { initDBData } from "@/config/database";
 import { makeLayeredConfigComposable, type AnyLayeredDef } from "@/config/layeredConfig";
 import type { SideDisplay } from "@/views/GameView27";
 import { DocumentReference, doc, getFirestore } from "firebase/firestore";
+import type { RoundsField27 } from "./gameDefv2";
 
 type TwentySevenMeta = {
   defaultPlayers: string[];
@@ -85,20 +86,12 @@ export const use27Config = makeLayeredConfigComposable({
     },
     merge: "replace",
   },
-  displayGuestGames: {
-    fallback: false as boolean,
+  summaryRoundsField: {
+    fallback: "total" as RoundsField27,
     browser: {
-      key: "twentyseven:showGuestGames",
-      convert: "json",
+      key: "twentyseven:summaryRoundsField",
+      convert: "rawString",
     },
     merge: "replace",
-  },
-  displayGuestSummaries: {
-    fallback: [] as boolean | string[],
-    browser: {
-      key: "twentyseven:guestSummaries",
-      convert: "json",
-    },
-    merge: "replace",
-  },
+  } satisfies AnyLayeredDef<RoundsField27>,
 } as const);

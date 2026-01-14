@@ -31,16 +31,6 @@ div.historyDiv {
     & tr.debugGame > .rowLabel {
       color: orange !important;
     }
-    & tr.selectedGame {
-      background-color: var(--colour-table-hover);
-    }
-
-    & tr.teamDream > .rowLabel::after {
-      content: "🏅";
-    }
-    & tr.teamDream > td {
-      color: #228b22;
-    }
 
     & td {
       padding: 0 0.2em;

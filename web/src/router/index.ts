@@ -64,6 +64,15 @@ const router = createRouter({
           },
           component: () => import("@/views/SummaryView27.vue"),
         },
+        {
+          path: "summaryV2",
+          meta: {
+            title: {
+              viewType: "Summary V2",
+            },
+          },
+          component: () => import("@/views/SummaryView27v2.vue"),
+        },
       ],
     },
     // {

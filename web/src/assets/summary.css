@@ -1,5 +1,6 @@
 table#gameSummaryTable {
   font-size: 1.8vh;
+  border-collapse: collapse;
   & tbody {
     font-size: 0.8em;
     line-height: 1.2;
@@ -7,10 +8,76 @@ table#gameSummaryTable {
   & tbody tr:hover {
     background-color: var(--colour-table-hover);
   }
+
   & .rowLabel {
     font-weight: bold;
     text-align: right;
     white-space: nowrap;
+  }
+
+  & tr.expandableRow > th {
+    /* padding-left: calc(10px + 1ch); */
+  }
+  & tr.expandableRow > th::before {
+    /* & tr.expandableRow::before { */
+    float: left;
+    padding-right: 1ch;
+    position: relative;
+    left: 0.5em;
+    content: "−";
+    font-weight: bold;
+    color: grey;
+  }
+  & tr.expandableRow:not(.parentRow) > th::before {
+    /* & tr.expandableRow:not(.parentRow)::before { */
+    content: "+";
+  }
+  & tr.parentRow {
+    background-color: var(--colour-table-hover);
+  }
+  & tr.childRow {
+    font-size: 0.8em;
+    border-collapse: collapse;
+
+    /* &::before {
+      float: left;
+      position: relative;
+      left: 0.3em;
+      font-size: small;
+      content: "├";
+      color: grey;
+    } */
+
+    & th,
+    tr {
+      border-width: 0px;
+    }
+
+    & .rowLabel {
+      font-weight: normal;
+      &::before {
+        float: left;
+        position: relative;
+        left: 0.3em;
+        font-size: small;
+        content: "├";
+        color: grey;
+      }
+    }
+  }
+  & tr.childRow:has(+ tr:not(.childRow)) {
+    & .rowLabel::before {
+      /* &::before { */
+      content: "└";
+    }
+    & th,
+    td {
+      border-bottom: grey 0.5px dotted;
+    }
+  }
+  & tr.primaryChildRow .rowLabel {
+    text-decoration: underline;
+    font-weight: bold;
   }
 
   & .playerName {
@@ -31,8 +98,10 @@ table#gameSummaryTable {
     font-size: 0.8em;
     /* vertical-align: calc(1em / 20); */
     padding-left: 0.5ch;
-    position: absolute;
     top: 15%;
+  }
+  & .summaryDeltaValue:not(.nonAbsSummaryDelta) {
+    position: absolute;
   }
   & .summaryDeltaValue.better {
     color: green;
@@ -52,13 +121,13 @@ table#gameSummaryTable {
   & td.favourite:not(.best) {
     background-color: #ceff7e;
   }
-  & tr[data-summary-row^="rounds"] {
+  & tr[data-summary-row^="round"]:not(.childRow) {
     font-size: 0.9em;
   }
-  & tr:not([data-summary-row^="rounds"]) + tr[data-summary-row^="rounds"] {
+  & tr:not([data-summary-row^="round"]) + tr[data-summary-row^="round"] {
     & th,
     & td {
-      border-top: grey 1px dashed;
+      border-top: darkgray 1px dashed;
     }
   }
 }
