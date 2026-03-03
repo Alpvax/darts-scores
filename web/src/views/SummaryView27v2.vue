@@ -1056,8 +1056,7 @@ export default defineComponent({
     :players="players"
     :summaries="summaries"
     :delta-game="deltaGame"
-    :field-data="fieldData"
-    :field-data-v2="fieldDataV2"
+    :field-data="fieldDataV2"
     :rounds-fields="roundsFields"
     @change-rounds-field="
       (f) => {

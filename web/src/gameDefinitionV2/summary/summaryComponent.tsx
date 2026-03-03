@@ -56,7 +56,7 @@ export const createSummaryComponent = <
       },
       deltaGame: {
         type: Object as PropType<
-          Map<string, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>>
+          Map<string, PlayerSummaryValues<G, SummaryPartTypes, RoundsField>> | undefined
         >,
       },
       fieldData: {

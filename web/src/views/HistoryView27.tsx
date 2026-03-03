@@ -21,7 +21,7 @@ import {
 import { createSummaryComponent } from "@/components/summary";
 import { use27History } from "@/game/27/history";
 import { use27Config } from "@/game/27/config";
-import { makePlayerPositions } from "@/gameUtils/playerData";
+import { makePlayerPositions, type PlayerDataFor } from "@/gameUtils/playerData";
 import { debounce, extendClass } from "@/utils";
 import { autoUpdate, shift, useFloating } from "@floating-ui/vue";
 import { createImmutableComponent } from "@/components/gameV2/immutableGame";
@@ -69,14 +69,14 @@ export default defineComponent({
   setup(props) {
     const playerStore = usePlayerStore();
 
-    const config = use27Config();
+    const config = useBasicConfig();
 
-    const playersFilter = config.realWinsPlayers.mutableRef("local");
+    const playersFilter = use27Config().realWinsPlayers.mutableRef("local");
     const accumulator = ref(summaryAccumulator27.create());
     const { roundField, roundsFields } = use27RoundsField();
     const fieldData = defaultFieldData(playersFilter);
 
-    const summaryVersion = useBasicConfig().summaryVersion.mutableRef("local");
+    const summaryVersion = config.summaryVersion.mutableRef("local");
 
     const historyStore = use27History();
 
@@ -124,7 +124,7 @@ export default defineComponent({
       const game = gameDefinition27.calculateGameResult(playerDataRaw, {});
       const result: GameResult27 = {
         date: gameV1.date,
-        playerOrder: players.value.filter((pid) => playerDataRaw.has(pid)),
+        playerOrder: players.value.flatMap(({id:pid}) => playerDataRaw.has(pid) ? [pid] : []),
         results: [...game.players].reduce(
           (acc, [pid, pData]) => Object.assign(acc, { [pid]: pData }),
           {},
@@ -245,8 +245,8 @@ export default defineComponent({
           <thead>
             <tr>
               <td class="tableHeader">Date</td>
-              {gameViewPlayers.value.map((pid) => (
-                <td class="playerName">{playerStore.playerName(pid)}</td>
+              {players.value.map((p) => (
+                <td class="playerName">{p.name}</td>
               ))}
             </tr>
           </thead>
@@ -274,9 +274,9 @@ export default defineComponent({
                   data-game-id={game.gameId}
                 >
                   <td class="rowLabel">{game.date.toLocaleDateString()}</td>
-                  {gameViewPlayers.value.map((pid) => {
-                    const result = game.results.get(pid);
-                    const pos = positions.get(pid);
+                  {players.value.map((p) => {
+                    const result = game.results.get(p.id);
+                    const pos = positions.get(p.id);
                     const notables = [...(result?.allTurns?.values() ?? [])].reduce(
                       (acc, t) => {
                         if (t.score < 0) {
@@ -313,7 +313,7 @@ export default defineComponent({
                         class={extendClass({
                           winner:
                             game.tiebreakWinner !== undefined
-                              ? pid === game.tiebreakWinner
+                              ? p.id === game.tiebreakWinner
                               : pos?.pos === 1,
                           tie: pos?.pos === 1 && pos && pos.players.length > 1,
                         })}
@@ -331,7 +331,7 @@ export default defineComponent({
           </tbody>
         </table>
         {summaryVersion.value === "v1" ? (
-          <Summary27 players={players.value} games={historyStore.games}>
+          <Summary27 players={players.value.map(({id}) => id)} games={historyStore.games}>
             {{
               topLeftCell: () => (
                 <th
@@ -353,7 +353,7 @@ export default defineComponent({
           </Summary27>
         ) : (
           <Summary27Component
-            players={players.value}
+            players={players.value.map(({id}) => id)}
             summaries={accumulator.value.getAllSummaries()}
             fieldData={fieldData}
             roundsFields={roundsFields.value}

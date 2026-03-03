@@ -118,25 +118,30 @@ const emptyWinsStats = (): WinsStats => ({
 });
 const pushStats = (
   stats: WinsStats,
-  numGames: number,
   tieDelta: number,
   outrightDelta: number,
   tiebreakDelta: number,
   anyDelta: number,
-): WinsStats => ({
-  totalOutright: outrightDelta,
-  meanOutright: (stats.totalOutright + outrightDelta) / numGames - stats.meanOutright,
-  tiebreakWins: tiebreakDelta,
-  tiebreaksPlayed: tieDelta,
-  tiebreakWinRate:
-    stats.tiebreaksPlayed + tieDelta > 0
-      ? (stats.tiebreakWins + tiebreakDelta) / (stats.tiebreaksPlayed + tieDelta) -
-        stats.tiebreakWinRate
-      : 0,
-  total: anyDelta,
-  mean: (stats.total + anyDelta) / numGames - stats.mean,
-  gameCount: stats.gameCount + 1,
-});
+): WinsStats => {
+  let tiebreaksPlayed = stats.tiebreaksPlayed + tieDelta;
+  let totalOutright = stats.totalOutright + outrightDelta;
+  let tiebreakWins = stats.tiebreakWins + tiebreakDelta;
+  let total = stats.total + anyDelta;
+  let gameCount = stats.gameCount + 1;
+  return {
+    totalOutright,
+    meanOutright: totalOutright / gameCount,
+    tiebreakWins,
+    tiebreaksPlayed,
+    tiebreakWinRate:
+      tiebreaksPlayed > 0
+        ? (tiebreakWins) / (tiebreaksPlayed)
+        : 0,
+    total,
+    mean: total / gameCount,
+    gameCount,
+  };
+};
 
 class WinsAccumulatorInstance<
   G extends GameDefinition<any, any, any, any, any, any, any, any, PlayerId>,
@@ -318,7 +323,6 @@ class WinsAccumulatorInstance<
 
     this.allInternal = pushStats(
       this.allInternal,
-      numGames,
       tieDelta,
       outrightDelta,
       tiebreakDelta,
@@ -330,7 +334,7 @@ class WinsAccumulatorInstance<
     const { key, stats } = this.getWithExactFull(opponents);
     this.byOpponentsMap.set(
       key,
-      pushStats(stats, numGames, tieDelta, outrightDelta, tiebreakDelta, anyDelta),
+      pushStats(stats, tieDelta, outrightDelta, tiebreakDelta, anyDelta),
     );
     // Invalidate caches
     this.byOpponentsCacheAtLeast.clear();

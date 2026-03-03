@@ -77,4 +77,20 @@ export const useBasicConfig = makeLayeredConfigComposable({
     },
     merge: "replace",
   } satisfies AnyLayeredDef<"v1" | "v2">,
+  displayGuestGames: {
+    fallback: false,
+    browser: {
+      key: "displayGuestGames",
+      convert: "json",
+    },
+    merge: "replace",
+  } satisfies AnyLayeredDef<boolean>,
+  displayGuestSummaries: {
+    fallback: false,
+    browser: {
+      key: "displayGuestSummaries",
+      convert: "json",
+    },
+    merge: "replace",
+  } satisfies AnyLayeredDef<boolean>,
 });
